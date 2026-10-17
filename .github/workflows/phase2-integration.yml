@@ -1,0 +1,38 @@
+name: Phase 2 integration QA
+
+on:
+  push:
+    branches:
+      - feat/phase2-runtime-integration
+  pull_request:
+    branches:
+      - feat/phase2-runtime-integration
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Art D asset contract (when complete)
+        run: |
+          if [ -f public/assets/art-d/player.png ]; then
+            node scripts/verify-art-d.mjs
+          else
+            echo "Art D atlas pending; skipping asset verification until player atlas is delivered."
+          fi
