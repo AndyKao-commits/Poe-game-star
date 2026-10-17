@@ -214,3 +214,65 @@ test('inventory works in landscape mobile viewport', async ({ page }) => {
   expect(defense.defense).toBe(7);
   expect(defense.maxHp).toBe(115);
 });
+
+test('C gear bonuses stay in sync with A skill resources and D HUD', async ({ page }) => {
+  await waitForGame(page);
+
+  await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      grantLootForTests: (itemId: string, rarity: string) => boolean;
+    };
+    if (!scene.grantLootForTests('ashen_blade', 'uncommon')) throw new Error('weapon grant failed');
+    if (!scene.grantLootForTests('ruin_mail', 'common')) throw new Error('armor grant failed');
+  });
+
+  await page.locator('[data-inventory]').click();
+  await expect(page.locator('[data-inventory-panel]')).toBeVisible();
+  await page.locator('[data-equip-id="ashen_blade"]').click();
+  await page.locator('[data-equip-id="ruin_mail"]').click();
+
+  const equipped = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getPlayerForTests: () => {
+        stats: { attack: number; defense: number; hp: number; maxHp: number; mp: number };
+        getSkillUiState: () => { mana: number; maxMana: number };
+      };
+    };
+    const player = scene.getPlayerForTests();
+    return { ...player.stats, skill: player.getSkillUiState() };
+  });
+  expect(equipped.attack).toBe(17);
+  expect(equipped.defense).toBe(7);
+  expect(equipped.maxHp).toBe(115);
+  expect(equipped.skill.mana).toBe(equipped.mp);
+
+  // Opening C inventory must gate A skills even if the keyboard receives input.
+  await page.keyboard.down('KeyQ');
+  await page.waitForTimeout(80);
+  await page.keyboard.up('KeyQ');
+  const blockedMp = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getPlayerForTests: () => { stats: { mp: number } };
+    };
+    return scene.getPlayerForTests().stats.mp;
+  });
+  expect(blockedMp).toBe(equipped.mp);
+
+  await page.locator('[data-inv-close]').click();
+  await expect(page.locator('[data-inventory-panel]')).toBeHidden();
+  await expect(page.locator('[data-hp-text]')).toHaveText('100/115');
+  await page.locator('#game-root canvas').click();
+  await page.keyboard.down('KeyQ');
+  await page.waitForTimeout(80);
+  await page.keyboard.up('KeyQ');
+
+  await expect.poll(async () => page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getPlayerForTests: () => { stats: { mp: number } };
+    };
+    return scene.getPlayerForTests().stats.mp;
+  })).toBe(equipped.mp - 12);
+
+  await expect(page.locator('[data-mp-text]')).toHaveText(`${equipped.mp - 12}/${equipped.skill.maxMana}`);
+});
+
