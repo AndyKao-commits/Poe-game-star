@@ -24,6 +24,8 @@ export class InputController {
     active: false,
   };
   private enabled = true;
+  /** After modal close, ignore attack until the pointer is fully released. */
+  private suppressAttackUntilRelease = false;
   private readonly cursors: {
     up: Phaser.Input.Keyboard.Key;
     down: Phaser.Input.Keyboard.Key;
@@ -45,6 +47,7 @@ export class InputController {
     this.enabled = enabled;
     if (!enabled) {
       this.clearTouch();
+      this.suppressAttackUntilRelease = true;
     }
   }
 
@@ -80,10 +83,20 @@ export class InputController {
     });
 
     const pointer = this.scene.input.activePointer;
+    const mouseDown =
+      pointer.leftButtonDown() && pointer.wasTouch !== true;
+    if (this.suppressAttackUntilRelease) {
+      const touchAttacking = this.touch.attackHeld;
+      if (!mouseDown && !touchAttacking) {
+        this.suppressAttackUntilRelease = false;
+      }
+    }
     const mouseAttack =
+      !this.suppressAttackUntilRelease &&
       !this.touch.attackHeld &&
-      pointer.leftButtonDown() &&
-      pointer.wasTouch !== true;
+      mouseDown;
+    const touchAttack =
+      !this.suppressAttackUntilRelease && this.touch.attackHeld;
 
     const moving = this.touch.moving || keyMove.moving;
     const moveX = this.touch.moving ? this.touch.moveX : keyMove.x;
@@ -93,7 +106,7 @@ export class InputController {
       moveX,
       moveY,
       moving,
-      attackHeld: this.touch.attackHeld || mouseAttack,
+      attackHeld: touchAttack || mouseAttack,
       // Desktop mouse aim is resolved via sampleMouseWorld(); touch uses auto-aim.
       aimAngle: null,
       touchActive: this.touch.active,

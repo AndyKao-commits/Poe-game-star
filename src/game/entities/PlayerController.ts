@@ -18,6 +18,10 @@ import { moveWithCollision, type TileMapData } from '@core/collision/grid';
 import { createPlayerStateMachine } from '@core/entities/stateMachine';
 import { PlayerLifecycle } from '@core/entities/playerLifecycle';
 import { RESPAWN_GRACE_MS } from '@core/encounter/reset';
+import {
+  deriveCombatStats,
+  type EquipmentState,
+} from '@core/equipment/equipment';
 import { resolveAutoAimAngle } from '@core/input/autoAim';
 import { worldToScreen, type Vec2 } from '@core/iso/coordinates';
 import { facingFromAngle, facingFromVector, type Facing } from '@core/movement/direction';
@@ -38,6 +42,7 @@ export interface Attackable {
 
 export class PlayerController {
   readonly entity: WorldEntity;
+  /** Live combat stats (naked base + equipment). Never stack bonuses onto this. */
   stats: CombatStats;
   readonly cooldown = new AttackCooldown(ATTACK_COOLDOWN_MS);
   readonly lifecycle = new PlayerLifecycle();
@@ -48,6 +53,9 @@ export class PlayerController {
   private pendingTargets: Attackable[] = [];
   private readonly spawn: Vec2;
   private deathVisualPlayed = false;
+  /** Naked template maxima/offense — equipment is re-derived from this each sync. */
+  private nakedBase: CombatStats = createPlayerStats();
+  private equipment: EquipmentState = {};
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -58,7 +66,8 @@ export class PlayerController {
     attackConfig?: Partial<AttackTimelineConfig>,
   ) {
     this.spawn = { ...spawn };
-    this.stats = createPlayerStats();
+    this.nakedBase = createPlayerStats();
+    this.stats = { ...this.nakedBase };
     this.attackTimeline = new AttackTimeline({
       moveLockMs: attackConfig?.moveLockMs ?? 280,
       hitFrameMs: attackConfig?.hitFrameMs ?? 120,
@@ -66,6 +75,32 @@ export class PlayerController {
     });
     this.entity = new WorldEntity(scene, 'player', spawn);
     this.playAnim('idle');
+  }
+
+  get equipmentState(): EquipmentState {
+    return this.equipment;
+  }
+
+  /**
+   * Recompute live stats from naked base + equipment.
+   * `keep` preserves current HP/MP (clamped); `full` restores to derived maxima (respawn).
+   */
+  syncEquipment(equipment: EquipmentState, vitals: 'keep' | 'full' = 'keep'): void {
+    this.equipment = equipment;
+    this.nakedBase = createPlayerStats();
+    if (vitals === 'full') {
+      this.stats = deriveCombatStats(this.nakedBase, equipment);
+      this.stats = {
+        ...this.stats,
+        hp: this.stats.maxHp,
+        mp: this.stats.maxMp,
+      };
+      return;
+    }
+    this.stats = deriveCombatStats(
+      { ...this.nakedBase, hp: this.stats.hp, mp: this.stats.mp },
+      equipment,
+    );
   }
 
   get position(): Vec2 {
@@ -246,7 +281,10 @@ export class PlayerController {
 
   respawn(): void {
     const restored = this.lifecycle.respawn(this.spawn);
+    // Apply naked vitals first, then re-derive with persisted equipment (full heal).
+    this.nakedBase = restored.stats;
     this.stats = restored.stats;
+    this.syncEquipment(this.equipment, 'full');
     this.entity.position = restored.position;
     this.cooldown.reset();
     this.attackTimeline.reset();

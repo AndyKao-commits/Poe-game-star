@@ -1,6 +1,21 @@
 import Phaser from 'phaser';
 import { createProgression, xpToNextLevel, type ProgressionState } from '@core/progression/experience';
 import { claimKillReward, createKillRewardLedger, type KillRewardLedger } from '@core/progression/killRewards';
+import { createSeededRng, rollLoot } from '@core/loot/lootTable';
+import { ENEMY_LOOT_TABLE } from '@core/loot/enemyLoot';
+import {
+  claimKillLoot,
+  createGearKit,
+  createLootClaimLedger,
+  equipFromInventory,
+  grantLoot,
+  unequipToInventory,
+  type GearKit,
+  type LootClaimLedger,
+} from '@core/loadout/gearKit';
+import type { EquipmentSlot } from '@core/equipment/equipment';
+import type { Rarity } from '@core/loot/rarity';
+import { InventoryPanel } from '@ui/inventoryPanel';
 import { mapPixelBounds } from '@core/collision/grid';
 import { createRuinTestMap, type RuinMapBlueprint } from '@core/map/ruinMap';
 import { clampDeltaMs } from '@core/time/delta';
@@ -25,6 +40,11 @@ export class GameScene extends Phaser.Scene {
   private player!: PlayerController;
   private progression: ProgressionState = createProgression();
   private rewardLedger: KillRewardLedger = createKillRewardLedger();
+  private gearKit: GearKit = createGearKit();
+  private lootLedger: LootClaimLedger = createLootClaimLedger();
+  private lootRng = createSeededRng(0xA51E4);
+  private inventoryPanel: InventoryPanel | null = null;
+  private inventoryOpen = false;
   private enemyKillIds = new Map<EnemyController, string>();
   private nextEnemyKillId = 0;
   private enemies: EnemyController[] = [];
@@ -53,6 +73,10 @@ export class GameScene extends Phaser.Scene {
     this.lastTouchVisible = null;
     this.progression = createProgression();
     this.rewardLedger = createKillRewardLedger();
+    this.gearKit = createGearKit();
+    this.lootLedger = createLootClaimLedger();
+    this.lootRng = createSeededRng(0xA51E4);
+    this.inventoryOpen = false;
     this.enemyKillIds.clear();
     this.nextEnemyKillId = 0;
     this.feedback = new CombatFeedbackSystem(this);
@@ -97,10 +121,26 @@ export class GameScene extends Phaser.Scene {
     this.hud?.destroy();
     this.hud = new HudController(hudRoot);
     this.hud.setRestartHandler(() => this.handleRestart());
+    this.hud.setInventoryHandler(() => this.toggleInventory());
     this.disposables.add(() => {
       this.hud?.destroy();
       this.hud = null;
     });
+
+    const invRoot = document.getElementById('inventory-root');
+    if (!invRoot) throw new Error('Missing #inventory-root');
+    this.inventoryPanel?.destroy();
+    this.inventoryPanel = new InventoryPanel(invRoot, {
+      onClose: () => this.setInventoryOpen(false),
+      onEquip: (itemId, rarity) => this.handleEquip(itemId, rarity),
+      onUnequip: (slot) => this.handleUnequip(slot),
+    });
+    this.disposables.add(() => {
+      this.inventoryPanel?.destroy();
+      this.inventoryPanel = null;
+    });
+    this.player.syncEquipment(this.gearKit.equipment, 'full');
+    this.refreshInventoryPanel();
 
     const touchRoot = document.getElementById('touch-root');
     if (!touchRoot) throw new Error('Missing #touch-root');
@@ -162,6 +202,16 @@ export class GameScene extends Phaser.Scene {
       this.orientationGate = null;
     });
 
+    const onInventoryHotkey = (e: KeyboardEvent): void => {
+      if (e.code !== 'KeyI' && e.code !== 'KeyB') return;
+      if (e.repeat) return;
+      if (this.player?.lifecycle.isDead) return;
+      e.preventDefault();
+      this.toggleInventory();
+    };
+    window.addEventListener('keydown', onInventoryHotkey);
+    this.disposables.add(() => window.removeEventListener('keydown', onInventoryHotkey));
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardown());
     this.syncControlAvailability();
@@ -175,9 +225,12 @@ export class GameScene extends Phaser.Scene {
     this.spawnGraceMs = tickSpawnGrace(this.spawnGraceMs, delta);
 
     const dead = this.player.lifecycle.isDead;
+    if (dead && this.inventoryOpen) {
+      this.setInventoryOpen(false);
+    }
     this.applyDeathControlState(dead);
 
-    if (!dead) {
+    if (!dead && !this.inventoryOpen) {
       this.touchControls?.update(delta);
     }
 
@@ -209,21 +262,102 @@ export class GameScene extends Phaser.Scene {
   private applyDeathControlState(dead: boolean): void {
     if (this.lastDead === dead) return;
     this.lastDead = dead;
-    this.playerInput.setEnabled(!dead);
+    this.syncGameplayInputGate();
     if (dead) {
       // Hide immediately and clear all pointer state
       this.setTouchVisible(false);
       this.touchControls?.setEnabled(false);
     } else {
-      this.touchControls?.setEnabled(true);
       this.syncControlAvailability();
     }
   }
 
+  /** Combat/move input is disabled while dead or while the inventory modal is open. */
+  private syncGameplayInputGate(): void {
+    const dead = this.player?.lifecycle.isDead ?? false;
+    const allow = !dead && !this.inventoryOpen;
+    this.playerInput.setEnabled(allow);
+    if (!allow) {
+      this.playerInput.clearTouch();
+      this.touchControls?.setEnabled(false);
+    } else {
+      this.touchControls?.setEnabled(true);
+    }
+  }
+
   private syncControlAvailability(): void {
-    const show = this.touchWanted && !this.player?.lifecycle.isDead;
+    const show =
+      this.touchWanted &&
+      !this.player?.lifecycle.isDead &&
+      !this.inventoryOpen;
     this.setTouchVisible(show);
     this.touchControls?.layout();
+  }
+
+  private toggleInventory(): void {
+    if (this.player?.lifecycle.isDead) return;
+    this.setInventoryOpen(!this.inventoryOpen);
+  }
+
+  private setInventoryOpen(open: boolean): void {
+    if (this.inventoryOpen === open) {
+      if (open) this.refreshInventoryPanel();
+      return;
+    }
+    this.inventoryOpen = open;
+    if (open) {
+      // Clear stuck touch pointers so closing the modal cannot resume a held attack.
+      this.playerInput.clearTouch();
+      this.touchControls?.setEnabled(false);
+      this.refreshInventoryPanel();
+      this.inventoryPanel?.setOpen(true);
+    } else {
+      this.inventoryPanel?.setOpen(false);
+    }
+    this.syncGameplayInputGate();
+    this.syncControlAvailability();
+  }
+
+  private refreshInventoryPanel(): void {
+    this.inventoryPanel?.render(this.gearKit);
+  }
+
+  private handleEquip(itemId: string, rarity: Rarity): void {
+    const result = equipFromInventory(this.gearKit, itemId, rarity);
+    if (!result.ok) {
+      const msg =
+        result.reason === 'inventory_full'
+          ? '背包已滿，無法替換裝備'
+          : result.reason === 'missing'
+            ? '物品不存在'
+            : '無法裝備';
+      this.inventoryPanel?.setStatus(msg);
+      this.refreshInventoryPanel();
+      return;
+    }
+    this.gearKit = result.kit;
+    this.player.syncEquipment(this.gearKit.equipment, 'keep');
+    this.inventoryPanel?.setStatus(`已裝備 ${itemId}`);
+    this.refreshInventoryPanel();
+  }
+
+  private handleUnequip(slot: EquipmentSlot): void {
+    const result = unequipToInventory(this.gearKit, slot);
+    if (!result.ok) {
+      const msg =
+        result.reason === 'inventory_full'
+          ? '背包已滿，無法卸下'
+          : result.reason === 'empty'
+            ? '該欄位沒有裝備'
+            : '無法卸下';
+      this.inventoryPanel?.setStatus(msg);
+      this.refreshInventoryPanel();
+      return;
+    }
+    this.gearKit = result.kit;
+    this.player.syncEquipment(this.gearKit.equipment, 'keep');
+    this.inventoryPanel?.setStatus(`已卸下 ${slot}`);
+    this.refreshInventoryPanel();
   }
 
   private setTouchVisible(show: boolean): void {
@@ -256,7 +390,10 @@ export class GameScene extends Phaser.Scene {
       this.enemies = [];
     }
 
+    // Inventory + equipment persist across death; respawn re-derives stats.
+    this.setInventoryOpen(false);
     this.player.respawn();
+    this.player.syncEquipment(this.gearKit.equipment, 'full');
     this.spawnEnemiesFromBlueprint();
     this.spawnGraceMs = plan.graceMs;
     this.playerInput.clearTouch();
@@ -289,6 +426,22 @@ export class GameScene extends Phaser.Scene {
       if (!claimed) continue;
       this.rewardLedger = claimed.ledger;
       this.progression = claimed.progression.state;
+
+      // Exactly-once loot for the same kill identity (no double drops on re-hit / anim).
+      const drop = rollLoot(ENEMY_LOOT_TABLE, this.lootRng);
+      const loot = claimKillLoot(this.lootLedger, this.gearKit, killId, drop);
+      this.lootLedger = loot.ledger;
+      this.gearKit = loot.kit;
+      if (loot.granted && this.inventoryOpen) {
+        this.inventoryPanel?.setStatus(`獲得 ${loot.granted.itemId} (${loot.granted.rarity})`);
+        this.refreshInventoryPanel();
+      } else if (loot.bagFull && this.inventoryOpen) {
+        this.inventoryPanel?.setStatus('背包已滿，掉落未能拾取');
+        this.refreshInventoryPanel();
+      } else if (loot.granted) {
+        this.hud?.flashLoot(loot.granted.itemId, loot.granted.rarity);
+      }
+
       // A claimed corpse no longer needs to be checked on every frame.
       this.enemyKillIds.delete(enemy);
     }
@@ -316,6 +469,35 @@ export class GameScene extends Phaser.Scene {
 
   getPlayerForTests(): PlayerController {
     return this.player;
+  }
+
+  getGearKitForTests(): GearKit {
+    return this.gearKit;
+  }
+
+  getInventoryOpenForTests(): boolean {
+    return this.inventoryOpen;
+  }
+
+  setInventoryOpenForTests(open: boolean): void {
+    this.setInventoryOpen(open);
+  }
+
+  grantLootForTests(itemId: string, rarity: Rarity): boolean {
+    const result = grantLoot(this.gearKit, { itemId, rarity });
+    if (!result.ok) return false;
+    this.gearKit = result.kit;
+    this.refreshInventoryPanel();
+    return true;
+  }
+
+  equipForTests(itemId: string, rarity: Rarity): boolean {
+    const result = equipFromInventory(this.gearKit, itemId, rarity);
+    if (!result.ok) return false;
+    this.gearKit = result.kit;
+    this.player.syncEquipment(this.gearKit.equipment, 'keep');
+    this.refreshInventoryPanel();
+    return true;
   }
 
   getInputForTests(): InputController {
