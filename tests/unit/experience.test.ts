@@ -11,6 +11,18 @@ describe('Phase 2 experience progression', () => {
     expect(xpToNextLevel(1)).toBe(85);
   });
 
+  it('matches documented threshold floor(50 + 25*level + 10*level²)', () => {
+    const expected = (level: number) =>
+      Math.floor(50 + 25 * level + 10 * level * level);
+    for (const level of [1, 2, 3, 5, 10, 20, 50]) {
+      expect(xpToNextLevel(level)).toBe(expected(level));
+    }
+    // Spot-check known values used by design docs / other tests.
+    expect(xpToNextLevel(1)).toBe(85);
+    expect(xpToNextLevel(2)).toBe(140);
+    expect(xpToNextLevel(3)).toBe(215);
+  });
+
   it('awards partial XP without mutating the original', () => {
     const initial = createProgression();
     const award = awardExperience(initial, 40);
@@ -36,6 +48,16 @@ describe('Phase 2 experience progression', () => {
       state: { level: 3, xp: 75, totalXp: 300 },
       levelsGained: 2,
     });
+  });
+
+  it('awards zero XP as a no-op (levels unchanged)', () => {
+    const initial = createProgression();
+    const award = awardExperience(initial, 0);
+    expect(award).toEqual({
+      state: { level: 1, xp: 0, totalXp: 0 },
+      levelsGained: 0,
+    });
+    expect(initial).toEqual({ level: 1, xp: 0, totalXp: 0 });
   });
 
   it('rejects negative, fractional and invalid state values', () => {

@@ -1,4 +1,5 @@
 /** Deterministic, engine-independent experience progression. */
+
 export interface ProgressionState {
   level: number;
   xp: number;
@@ -10,7 +11,18 @@ export interface ExperienceAward {
   levelsGained: number;
 }
 
-/** XP required to advance from the given level to the next. */
+/**
+ * XP required to advance from the given level to the next.
+ *
+ * Threshold: `floor(50 + 25*level + 10*level²)`.
+ *
+ * Rationale (kept from PR #4 / Issue #5 review — no curve change):
+ * - Constant 50 + linear 25*level give a reachable first climb (L1→L2 = 85 XP),
+ *   so a few trash kills feel meaningful without forcing a grind.
+ * - Quadratic 10*level² dominates later levels, slowing power spikes before
+ *   soft caps / diminishing returns exist in Phase 2.
+ * - Integer-only math keeps awards deterministic across clients and tests.
+ */
 export function xpToNextLevel(level: number): number {
   if (!Number.isSafeInteger(level) || level < 1) {
     throw new RangeError('level must be a positive safe integer');
