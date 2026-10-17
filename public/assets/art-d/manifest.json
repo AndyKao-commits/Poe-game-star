@@ -1,0 +1,123 @@
+{
+  "version": "D-v1-prototype",
+  "status": "binary PNGs pending GitHub upload",
+  "license": "Original procedural artwork created for Ashen Reliquary",
+  "note": "Manifest alone does not mean PNGs are present. Binary asset package is available in conversation; do not integrate until files exist in this directory.",
+  "player": {
+    "file": "player.png",
+    "size": [
+      256,
+      192
+    ],
+    "frame": [
+      32,
+      32
+    ],
+    "columns": [
+      "e",
+      "se",
+      "s",
+      "sw",
+      "w",
+      "nw",
+      "n",
+      "ne"
+    ],
+    "rows": [
+      "idle0",
+      "idle1",
+      "run0",
+      "run1",
+      "attack-windup",
+      "attack-strike"
+    ],
+    "anchor": [
+      0.5,
+      1
+    ]
+  },
+  "enemies": {
+    "files": [
+      "crawler.png",
+      "sentinel.png"
+    ],
+    "size": [
+      128,
+      160
+    ],
+    "frame": [
+      32,
+      32
+    ],
+    "rows": [
+      "idle",
+      "chase",
+      "hurt",
+      "windup",
+      "attack"
+    ],
+    "anchor": [
+      0.5,
+      1
+    ]
+  },
+  "tiles": {
+    "files": [
+      "tile-floor.png",
+      "tile-wall.png",
+      "tile-obstacle.png",
+      "tile-void.png"
+    ],
+    "size": [
+      64,
+      32
+    ]
+  },
+  "effects": [
+    {
+      "file": "slash.png",
+      "size": [
+        48,
+        48
+      ]
+    },
+    {
+      "file": "telegraph.png",
+      "size": [
+        48,
+        48
+      ]
+    },
+    {
+      "file": "hit.png",
+      "size": [
+        48,
+        48
+      ]
+    }
+  ],
+  "ui": [
+    {
+      "file": "ui-attack.png",
+      "size": [
+        32,
+        32
+      ]
+    },
+    {
+      "file": "ui-skill.png",
+      "size": [
+        32,
+        32
+      ]
+    },
+    {
+      "file": "ui-potion.png",
+      "size": [
+        32,
+        32
+      ]
+    }
+  ],
+  "integration": "Stage separately; placeholder generator writes public/assets/*.png"
+}
