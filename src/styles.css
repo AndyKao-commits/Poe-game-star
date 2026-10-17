@@ -533,3 +533,219 @@ body,
   font: inherit;
   letter-spacing: 0.06em;
 }
+
+/* C inventory / equipment UI */
+.hud-actions {
+  top: calc(12px + var(--safe-top));
+  right: calc(96px + var(--safe-right));
+  padding: 6px 8px;
+  pointer-events: auto;
+  z-index: 12;
+}
+
+.hud-inv-btn {
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: rgba(201, 162, 39, 0.12);
+  color: var(--ink);
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.hud-inv-btn:hover,
+.hud-inv-btn:focus-visible {
+  background: rgba(201, 162, 39, 0.28);
+}
+
+.hud-loot-toast {
+  position: absolute;
+  left: 50%;
+  top: calc(18% + var(--safe-top));
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  background: rgba(12, 14, 20, 0.88);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font-size: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 15;
+}
+
+.hud-loot-toast.is-visible {
+  opacity: 1;
+}
+
+/* —— Inventory / equipment modal (functional placeholder UI) —— */
+#inventory-root.is-open,
+#inventory-root:not([hidden]) {
+  pointer-events: auto;
+}
+
+.inv-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 8, 12, 0.55);
+  pointer-events: auto;
+}
+
+.inv-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 24px - var(--safe-left) - var(--safe-right)));
+  max-height: min(86vh, calc(100vh - 24px - var(--safe-top) - var(--safe-bottom)));
+  overflow: auto;
+  background: rgba(12, 14, 20, 0.94);
+  border: 1px solid var(--border);
+  padding: 14px 16px 12px;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.inv-title {
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.inv-capacity {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.inv-section-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.inv-equip-list,
+.inv-bag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inv-equip-row,
+.inv-bag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.inv-equip-meta,
+.inv-bag-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.inv-slot-name,
+.inv-item-sub,
+.inv-equip-bonus {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.inv-equip-name,
+.inv-item-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rarity-common .inv-item-name,
+.inv-equip-name.rarity-common { color: #c8c2b6; }
+.rarity-uncommon .inv-item-name,
+.inv-equip-name.rarity-uncommon { color: #6fbf73; }
+.rarity-rare .inv-item-name,
+.inv-equip-name.rarity-rare { color: #5b9fd6; }
+.rarity-epic .inv-item-name,
+.inv-equip-name.rarity-epic { color: #b07adf; }
+.rarity-legendary .inv-item-name,
+.inv-equip-name.rarity-legendary { color: #d4a017; }
+
+.inv-btn {
+  flex-shrink: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: rgba(201, 162, 39, 0.12);
+  color: var(--ink);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.inv-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.inv-btn:not(:disabled):hover,
+.inv-btn:not(:disabled):focus-visible {
+  background: rgba(201, 162, 39, 0.28);
+}
+
+.inv-empty {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px 0;
+}
+
+.inv-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 8px;
+}
+
+.inv-status {
+  color: var(--accent);
+  min-height: 1em;
+}
+
+@media (orientation: landscape) and (max-height: 480px) {
+  .inv-panel {
+    max-height: calc(100vh - 12px - var(--safe-top) - var(--safe-bottom));
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .hud-actions {
+    right: calc(88px + var(--safe-right));
+  }
+}
+
+
+#inventory-root { position:absolute; inset:0; z-index:45; pointer-events:none; }
+#inventory-root[hidden] { display:none; }
