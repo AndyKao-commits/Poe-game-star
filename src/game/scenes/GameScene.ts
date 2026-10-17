@@ -9,10 +9,13 @@ import {
   tickSpawnGrace,
 } from '@core/encounter/reset';
 import { HudController } from '@ui/hud';
+import { TouchControlsOverlay } from '@ui/touchControls';
+import { OrientationGate } from '@ui/orientationGate';
 import { EnemyController } from '../entities/EnemyController';
 import { PlayerController } from '../entities/PlayerController';
 import { renderTileMap } from '../map/TileRenderer';
 import { CombatFeedbackSystem } from '../systems/CombatFeedback';
+import { InputController } from '../input/InputController';
 
 export class GameScene extends Phaser.Scene {
   private player!: PlayerController;
@@ -23,6 +26,10 @@ export class GameScene extends Phaser.Scene {
   private readonly disposables = new DisposableBag();
   private restartCount = 0;
   private spawnGraceMs = 0;
+  private playerInput!: InputController;
+  private touchControls: TouchControlsOverlay | null = null;
+  private orientationGate: OrientationGate | null = null;
+  private touchWanted = false;
 
   constructor() {
     super('GameScene');
@@ -34,11 +41,15 @@ export class GameScene extends Phaser.Scene {
     this.blueprint = createRuinTestMap();
     renderTileMap(this, this.blueprint.map);
 
+    this.playerInput = new InputController(this);
+    this.disposables.add(() => this.playerInput.destroy());
+
     this.player = new PlayerController(
       this,
       this.blueprint.playerSpawn,
       this.blueprint.map,
       this.feedback,
+      this.playerInput,
     );
     this.spawnEnemiesFromBlueprint();
 
@@ -55,6 +66,8 @@ export class GameScene extends Phaser.Scene {
 
     const onResize = (): void => {
       this.cameras.main.setZoom(this.computeZoom());
+      this.touchControls?.layout();
+      this.orientationGate?.refresh();
     };
     this.scale.on('resize', onResize);
     this.disposables.add(() => {
@@ -71,8 +84,32 @@ export class GameScene extends Phaser.Scene {
       this.hud = null;
     });
 
+    const touchRoot = document.getElementById('touch-root');
+    if (!touchRoot) throw new Error('Missing #touch-root');
+    this.touchControls?.destroy();
+    this.touchControls = new TouchControlsOverlay(touchRoot, this.playerInput);
+    this.disposables.add(() => {
+      this.touchControls?.destroy();
+      this.touchControls = null;
+    });
+
+    const orientRoot = document.getElementById('orient-root');
+    if (!orientRoot) throw new Error('Missing #orient-root');
+    this.orientationGate?.destroy();
+    this.orientationGate = new OrientationGate(orientRoot, {
+      onOrientationChange: (_orientation, showTouch) => {
+        this.touchWanted = showTouch;
+        this.syncControlAvailability();
+      },
+    });
+    this.disposables.add(() => {
+      this.orientationGate?.destroy();
+      this.orientationGate = null;
+    });
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardown());
+    this.syncControlAvailability();
   }
 
   update(_time: number, rawDelta: number): void {
@@ -82,15 +119,18 @@ export class GameScene extends Phaser.Scene {
     delta = this.feedback.update(delta);
     this.spawnGraceMs = tickSpawnGrace(this.spawnGraceMs, delta);
 
+    const dead = this.player.lifecycle.isDead;
+    this.playerInput.setEnabled(!dead);
+    this.touchControls?.setEnabled(!dead);
+    this.touchControls?.update(delta);
+
     this.player.update(delta, this.enemies);
     const suppressDamage = !canReceiveEncounterDamage(this.spawnGraceMs);
     for (const enemy of this.enemies) {
       enemy.update(delta, this.player, { suppressDamage });
     }
 
-    if (this.player.lifecycle.consumeDeathEvent()) {
-      // one-shot; HUD reacts via dead flag
-    }
+    this.player.lifecycle.consumeDeathEvent();
 
     this.hud.update({
       hp: this.player.stats.hp,
@@ -98,8 +138,14 @@ export class GameScene extends Phaser.Scene {
       mp: this.player.stats.mp,
       maxMp: this.player.stats.maxMp,
       fps: this.game.loop.actualFps,
-      dead: this.player.lifecycle.isDead,
+      dead,
     });
+  }
+
+  private syncControlAvailability(): void {
+    const show = this.touchWanted && !this.player?.lifecycle.isDead;
+    this.touchControls?.setVisible(show);
+    this.touchControls?.layout();
   }
 
   private handleRestart(): void {
@@ -128,6 +174,8 @@ export class GameScene extends Phaser.Scene {
     this.player.respawn();
     this.spawnEnemiesFromBlueprint();
     this.spawnGraceMs = plan.graceMs;
+    this.playerInput.clearTouch();
+    this.syncControlAvailability();
 
     this.cameras.main.startFollow(this.player.entity.sprite, true, 0.12, 0.12);
     this.hud?.update({
@@ -146,7 +194,6 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  /** Exposed for tests / diagnostics. */
   getRestartCount(): number {
     return this.restartCount;
   }
@@ -159,12 +206,18 @@ export class GameScene extends Phaser.Scene {
     return this.spawnGraceMs;
   }
 
-  /** Test hook — do not use in gameplay code. */
   getPlayerForTests(): PlayerController {
     return this.player;
   }
 
-  /** Test hook to drive restart without clicking HUD. */
+  getInputForTests(): InputController {
+    return this.playerInput;
+  }
+
+  getOrientationGateForTests(): OrientationGate | null {
+    return this.orientationGate;
+  }
+
   restartForTests(): void {
     this.handleRestart();
   }
