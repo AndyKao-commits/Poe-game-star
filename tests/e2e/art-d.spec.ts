@@ -92,3 +92,39 @@ test('enemy telegraph render state is consistent with combat phase', async ({ pa
   expect(result.count).toBeGreaterThan(0);
   expect(result.invalid).toEqual([]);
 });
+
+test('enemy telegraph state stays valid across a scene restart', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+  await page.waitForFunction(() => {
+    const scene = window.__ASHEN_GAME__?.scene?.getScene?.('GameScene') as
+      | { getEnemyVisualsForTests?: () => unknown[]; restartForTests?: () => void }
+      | undefined;
+    return Boolean(scene?.getEnemyVisualsForTests?.().length && scene?.restartForTests);
+  });
+  await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      restartForTests: () => void;
+    };
+    scene.restartForTests();
+  });
+  await page.waitForFunction(() => {
+    const scene = window.__ASHEN_GAME__?.scene?.getScene?.('GameScene') as
+      | { getEnemyVisualsForTests?: () => Array<{ alive: boolean }> }
+      | undefined;
+    return Boolean(scene?.getEnemyVisualsForTests?.().some((enemy) => enemy.alive));
+  });
+  const visuals = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getEnemyVisualsForTests: () => Array<{
+        alive: boolean;
+        telegraphVisible: boolean;
+        telegraphPosition: { x: number; y: number } | null;
+      }>;
+    };
+    return scene.getEnemyVisualsForTests();
+  });
+  expect(visuals.length).toBeGreaterThan(0);
+  expect(visuals.every((enemy) => enemy.alive)).toBe(true);
+  expect(visuals.every((enemy) => !enemy.telegraphVisible)).toBe(true);
+});
