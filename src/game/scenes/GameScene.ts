@@ -30,6 +30,8 @@ export class GameScene extends Phaser.Scene {
   private touchControls: TouchControlsOverlay | null = null;
   private orientationGate: OrientationGate | null = null;
   private touchWanted = false;
+  private lastDead: boolean | null = null;
+  private lastTouchVisible: boolean | null = null;
 
   constructor() {
     super('GameScene');
@@ -37,6 +39,8 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.disposables.reset();
+    this.lastDead = null;
+    this.lastTouchVisible = null;
     this.feedback = new CombatFeedbackSystem(this);
     this.blueprint = createRuinTestMap();
     renderTileMap(this, this.blueprint.map);
@@ -120,9 +124,11 @@ export class GameScene extends Phaser.Scene {
     this.spawnGraceMs = tickSpawnGrace(this.spawnGraceMs, delta);
 
     const dead = this.player.lifecycle.isDead;
-    this.playerInput.setEnabled(!dead);
-    this.touchControls?.setEnabled(!dead);
-    this.touchControls?.update(delta);
+    this.applyDeathControlState(dead);
+
+    if (!dead) {
+      this.touchControls?.update(delta);
+    }
 
     this.player.update(delta, this.enemies);
     const suppressDamage = !canReceiveEncounterDamage(this.spawnGraceMs);
@@ -142,10 +148,31 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Only mutates DOM when dead/alive edge changes. */
+  private applyDeathControlState(dead: boolean): void {
+    if (this.lastDead === dead) return;
+    this.lastDead = dead;
+    this.playerInput.setEnabled(!dead);
+    if (dead) {
+      // Hide immediately and clear all pointer state
+      this.setTouchVisible(false);
+      this.touchControls?.setEnabled(false);
+    } else {
+      this.touchControls?.setEnabled(true);
+      this.syncControlAvailability();
+    }
+  }
+
   private syncControlAvailability(): void {
     const show = this.touchWanted && !this.player?.lifecycle.isDead;
-    this.touchControls?.setVisible(show);
+    this.setTouchVisible(show);
     this.touchControls?.layout();
+  }
+
+  private setTouchVisible(show: boolean): void {
+    if (this.lastTouchVisible === show) return;
+    this.lastTouchVisible = show;
+    this.touchControls?.setVisible(show);
   }
 
   private handleRestart(): void {
@@ -175,7 +202,9 @@ export class GameScene extends Phaser.Scene {
     this.spawnEnemiesFromBlueprint();
     this.spawnGraceMs = plan.graceMs;
     this.playerInput.clearTouch();
-    this.syncControlAvailability();
+    // Force re-evaluate visibility after respawn (clears lastDead cache)
+    this.lastDead = null;
+    this.applyDeathControlState(false);
 
     this.cameras.main.startFollow(this.player.entity.sprite, true, 0.12, 0.12);
     this.hud?.update({
@@ -216,6 +245,10 @@ export class GameScene extends Phaser.Scene {
 
   getOrientationGateForTests(): OrientationGate | null {
     return this.orientationGate;
+  }
+
+  getTouchControlsForTests(): TouchControlsOverlay | null {
+    return this.touchControls;
   }
 
   restartForTests(): void {

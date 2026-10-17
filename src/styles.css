@@ -217,12 +217,14 @@ body,
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 5;
 }
 
 .touch-hit {
   position: absolute;
   pointer-events: auto;
   touch-action: none;
+  z-index: 1;
 }
 
 .move-zone {
@@ -232,15 +234,19 @@ body,
   height: 65%;
   padding-left: var(--safe-left);
   padding-bottom: var(--safe-bottom);
+  z-index: 1;
 }
 
 .attack-zone {
   right: 0;
   bottom: 0;
   width: 42%;
-  height: 55%;
+  height: 48%;
   padding-right: var(--safe-right);
   padding-bottom: var(--safe-bottom);
+  /* Keep below top chrome so mode select is never covered */
+  top: auto;
+  z-index: 1;
 }
 
 .touch-stick {
@@ -281,6 +287,7 @@ body,
   width: min(28vh, 160px);
   height: min(28vh, 160px);
   pointer-events: none;
+  z-index: 6;
 }
 
 .touch-attack,
@@ -295,6 +302,7 @@ body,
   pointer-events: auto;
   touch-action: none;
   background: rgba(12, 14, 20, 0.45);
+  z-index: 7;
 }
 
 .touch-attack {
@@ -304,6 +312,7 @@ body,
   height: min(14vh, 84px);
   background: rgba(196, 92, 74, 0.45);
   border-color: rgba(232, 224, 212, 0.55);
+  z-index: 8;
 }
 
 .touch-attack.is-active {
@@ -365,18 +374,21 @@ body,
   background: rgba(12, 14, 20, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 4px 8px;
+  z-index: 10;
 }
 
 .touch-mode select {
-  background: transparent;
+  background: rgba(12, 14, 20, 0.9);
   color: var(--ink);
   border: 1px solid rgba(255, 255, 255, 0.15);
   font: inherit;
   pointer-events: auto;
+  z-index: 11;
 }
 
 .touch-layer.is-disabled .touch-hit,
-.touch-layer.is-disabled .touch-attack {
+.touch-layer.is-disabled .touch-attack,
+.touch-layer.is-disabled .touch-mode {
   pointer-events: none;
 }
 
