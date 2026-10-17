@@ -805,3 +805,20 @@ body,
 .touch-skill[data-skill-e] {
   background-image: url('/assets/art-d/ui-skill.png');
 }
+
+/* Mobile skill cooldown countdown, sourced from the live combat caster state. */
+.touch-skill .touch-cooldown-count {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  font-size: clamp(12px, 3.2vh, 19px);
+  font-weight: 800;
+  color: #fff5dc;
+  text-shadow: 0 1px 3px #17120e, 0 0 5px #17120e;
+  pointer-events: none;
+}
+.touch-skill .touch-cooldown-count[hidden] {
+  display: none;
+}
