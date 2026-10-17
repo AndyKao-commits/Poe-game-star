@@ -16,9 +16,16 @@ test('loads the playable prototype shell', async ({ page }) => {
   await waitForGame(page);
   await expect(page.locator('[data-hp-text]')).toHaveText(/100\/100/);
   await expect(page.locator('[data-mp-text]')).toHaveText(/50\/50/);
+  await expect(page.locator('[data-xp-text]')).toHaveText(/\d+\/\d+/);
+  await expect(page.locator('[data-level]')).toHaveText(/Lv\s*1/);
+  await expect(page.locator('[data-gold]')).toHaveText(/0 G/);
   await expect(page.locator('.hud-hints')).toContainText('移動');
   await expect(page.locator('[data-fps]')).toContainText('FPS');
   await expect(page.locator('[data-death]')).toBeHidden();
+  // Skills stay unavailable until engineering A wires caster state (no fake CDs).
+  await expect(page.locator('[data-hud-skill="q"]')).toHaveAttribute('data-skill-state', 'unavailable');
+  await expect(page.locator('[data-inventory-panel]')).toBeHidden();
+  await expect(page.locator('[data-equipment-panel]')).toBeHidden();
 });
 
 test('supports move, attack, death, and full encounter restart', async ({ page }) => {

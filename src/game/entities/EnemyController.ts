@@ -12,6 +12,7 @@ import { createEnemyStateMachine } from '@core/entities/stateMachine';
 import { chaseVelocity } from '@core/ai/chase';
 import { EnemyAttackBrain } from '@core/ai/enemyAttack';
 import type { Vec2 } from '@core/iso/coordinates';
+import { DAMAGE_FLASH, TELEGRAPH_AMBER } from '@ui/telegraphTheme';
 import { WorldEntity } from '../world/WorldEntity';
 import type { CombatFeedbackSystem } from '../systems/CombatFeedback';
 import type Phaser from 'phaser';
@@ -82,7 +83,8 @@ export class EnemyController {
     }
 
     if (tick.telegraphing) {
-      this.entity.sprite.setTint(0xffcc44);
+      // Art D telegraph amber — timing from EnemyAttackBrain, not decorative timers.
+      this.entity.sprite.setTint(TELEGRAPH_AMBER);
     } else if (!this.dead && this.brain.state !== 'hurt') {
       this.entity.sprite.clearTint();
     }
@@ -105,7 +107,7 @@ export class EnemyController {
     this.stats.hp = next.hp;
     this.brain.forceHurt(220);
     this.sm.force('hurt');
-    this.feedback.flash(this.entity.sprite, 0xff6666);
+    this.feedback.flash(this.entity.sprite, DAMAGE_FLASH);
 
     if (meta?.attackerPos && this.feedback.knockbackEnabled) {
       const kb = knockbackDelta(
