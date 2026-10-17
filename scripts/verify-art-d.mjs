@@ -80,7 +80,7 @@ for (const [file, width, height, cellW, cellH] of expected) {
     console.log('OK', file, w + 'x' + h, 'alpha-capable');
   }
 }
-if (manifest.status?.includes('pending')) {
+if (/\b(?:upload|binary delivery)\s+pending\b|\bpending\s+(?:upload|binary delivery)\b/i.test(manifest.status ?? '')) {
   console.warn('Manifest still marks binary delivery as pending.');
 }
 console.log(expected.length - errors + '/' + expected.length + ' Art D PNG headers verified');
