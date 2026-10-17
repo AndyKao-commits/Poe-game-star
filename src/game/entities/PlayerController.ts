@@ -20,6 +20,7 @@ import { moveWithCollision, type TileMapData } from '@core/collision/grid';
 import { createPlayerStateMachine } from '@core/entities/stateMachine';
 import { PlayerLifecycle } from '@core/entities/playerLifecycle';
 import { RESPAWN_GRACE_MS } from '@core/encounter/reset';
+import { deriveCombatStats, type EquipmentState } from '@core/equipment/equipment';
 import { resolveAutoAimAngle } from '@core/input/autoAim';
 import { worldToScreen, type Vec2 } from '@core/iso/coordinates';
 import { facingFromAngle, facingFromVector, type Facing } from '@core/movement/direction';
@@ -58,6 +59,8 @@ export type { SkillUiState };
 export class PlayerController {
   readonly entity: WorldEntity;
   stats: CombatStats;
+  private readonly nakedBase: CombatStats = createPlayerStats();
+  private equipment: EquipmentState = {};
   readonly cooldown = new AttackCooldown(ATTACK_COOLDOWN_MS);
   readonly lifecycle = new PlayerLifecycle();
   readonly iframes = new Invulnerability(PLAYER_IFRAME_MS);
@@ -92,6 +95,32 @@ export class PlayerController {
     });
     this.entity = new WorldEntity(scene, 'player', spawn);
     this.playAnim('idle');
+  }
+
+  /** Re-derive from naked stats so swapping gear never stacks bonuses. */
+  syncEquipment(equipment: EquipmentState, vitals: 'keep' | 'full' = 'keep'): void {
+    this.equipment = equipment;
+    const currentHp = this.stats.hp;
+    const currentMp = this.stats.mp;
+    const derived = deriveCombatStats(this.nakedBase, equipment);
+    this.stats = {
+      ...derived,
+      hp: vitals === 'full' ? derived.maxHp : Math.min(currentHp, derived.maxHp),
+      mp: vitals === 'full' ? derived.maxMp : Math.min(currentMp, derived.maxMp),
+    };
+    // Caster is the authoritative mana/cooldown state; preserve cooldowns on gear changes.
+    this.caster = {
+      ...this.caster,
+      resources: {
+        ...this.caster.resources,
+        mana: this.stats.mp,
+        maxMana: this.stats.maxMp,
+      },
+    };
+  }
+
+  get equipmentState(): EquipmentState {
+    return this.equipment;
   }
 
   get position(): Vec2 {
@@ -404,6 +433,7 @@ export class PlayerController {
   respawn(): void {
     const restored = this.lifecycle.respawn(this.spawn);
     this.stats = restored.stats;
+    this.syncEquipment(this.equipment, 'full');
     this.entity.position = restored.position;
     this.cooldown.reset();
     this.attackTimeline.reset();
