@@ -1,18 +1,32 @@
 :root {
   color-scheme: dark;
-  --bg-deep: #0a0c10;
-  --bg-panel: rgba(12, 14, 20, 0.82);
+  /* Art Bible D v1 palette */
+  --stone: #3a3434;
+  --deep-shadow: #181820;
+  --weathered-iron: #5a525c;
+  --crimson-cloth: #6d303c;
+  --aged-brass: #a88b54;
+  --telegraph-amber: #d5a64a;
+  --damage: #d65c50;
+
+  --bg-deep: var(--deep-shadow);
+  --bg-panel: rgba(24, 24, 32, 0.86);
   --ink: #e8e0d4;
   --muted: #9a9080;
-  --hp: #c45c4a;
+  --hp: var(--damage);
   --mp: #4a7ec4;
-  --accent: #c9a227;
-  --border: rgba(201, 162, 39, 0.35);
+  --xp: var(--aged-brass);
+  --accent: var(--aged-brass);
+  --border: rgba(168, 139, 84, 0.4);
   --hud-font: 'Segoe UI', 'Noto Sans TC', sans-serif;
+  --hud-display: 'Segoe UI', 'Noto Sans TC', sans-serif;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
+  /* Compact landscape gutters keep battlefield center clear */
+  --hud-gutter: 10px;
+  --touch-cluster-size: min(26vh, 148px);
 }
 
 * {
@@ -41,7 +55,7 @@ body,
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: radial-gradient(ellipse at 50% 30%, #161a24 0%, var(--bg-deep) 70%);
+  background: radial-gradient(ellipse at 50% 28%, #2a2428 0%, var(--bg-deep) 72%);
   font-family: var(--hud-font);
   color: var(--ink);
 }
@@ -84,41 +98,64 @@ body,
   background: var(--bg-panel);
   border: 1px solid var(--border);
   backdrop-filter: blur(4px);
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-radius: 2px;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  /* Decorative chrome never steals taps */
+  pointer-events: none;
 }
 
 .hud-stats {
-  top: calc(12px + var(--safe-top));
-  left: calc(12px + var(--safe-left));
-  min-width: 200px;
+  top: calc(var(--hud-gutter) + var(--safe-top));
+  left: calc(var(--hud-gutter) + var(--safe-left));
+  min-width: 168px;
+  max-width: min(42vw, 240px);
 }
 
 .hud-title {
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-family: var(--hud-display);
+  font-size: 10px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--accent);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+}
+
+.hud-vitals {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .hud-bar-row {
   display: grid;
-  grid-template-columns: 28px 1fr 40px;
-  gap: 8px;
+  grid-template-columns: 22px 1fr 52px;
+  gap: 6px;
   align-items: center;
-  margin-bottom: 6px;
-  font-size: 12px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-bar-label {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.hud-bar-value {
+  text-align: right;
+  color: var(--ink);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  font-size: 11px;
 }
 
 .hud-bar-track {
-  height: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  height: 7px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
 }
 
@@ -127,6 +164,7 @@ body,
   width: 100%;
   transform-origin: left center;
   transition: transform 0.12s linear;
+  will-change: transform;
 }
 
 .hud-bar-fill.hp {
@@ -137,9 +175,137 @@ body,
   background: linear-gradient(90deg, #2a4a8a, var(--mp));
 }
 
+.hud-bar-fill.xp {
+  background: linear-gradient(90deg, #5a4830, var(--xp));
+}
+
+.hud-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-level {
+  color: var(--ink);
+}
+
+.hud-gold {
+  color: var(--accent);
+}
+
+/* Desktop skill strip — hidden on coarse pointers (touch uses right cluster) */
+.hud-skills {
+  top: calc(var(--hud-gutter) + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+}
+
+.hud-skill {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 2px;
+  border: 2px solid rgba(232, 224, 212, 0.45);
+  background: rgba(12, 14, 20, 0.72);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  pointer-events: auto;
+  touch-action: none;
+  overflow: hidden;
+  --skill-cd: 0;
+}
+
+.hud-skill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from 0deg,
+    rgba(0, 0, 0, 0.72) calc(var(--skill-cd) * 360deg),
+    transparent 0
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hud-skill.is-cooldown::after {
+  opacity: 1;
+}
+
+.hud-skill-key {
+  position: relative;
+  z-index: 1;
+}
+
+.hud-skill-cd {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  text-shadow: 0 1px 2px #000;
+  pointer-events: none;
+}
+
+.hud-skill.is-ready {
+  border-color: rgba(168, 139, 84, 0.75);
+}
+
+.hud-skill.is-ready:active,
+.hud-skill.is-pressed {
+  background: rgba(168, 139, 84, 0.35);
+}
+
+.hud-skill.is-cooldown {
+  border-color: rgba(90, 82, 92, 0.8);
+  color: var(--muted);
+}
+
+.hud-skill.is-insufficient-mana,
+.hud-skill.is-insufficient-stamina {
+  border-color: rgba(74, 126, 196, 0.55);
+  opacity: 0.72;
+}
+
+.hud-skill.is-insufficient-stamina {
+  border-color: rgba(213, 166, 74, 0.55);
+}
+
+.hud-skill.is-disabled,
+.hud-skill.is-dead,
+.hud-skill.is-unavailable,
+.hud-skill.is-locked {
+  opacity: 0.38;
+  filter: grayscale(0.55);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .hud-skills {
+    display: none;
+  }
+}
+
 .hud-hints {
-  bottom: calc(12px + var(--safe-bottom));
-  left: calc(12px + var(--safe-left));
+  bottom: calc(var(--hud-gutter) + var(--safe-bottom));
+  left: calc(var(--hud-gutter) + var(--safe-left));
   font-size: 12px;
   line-height: 1.5;
   color: var(--muted);
@@ -161,12 +327,154 @@ body,
 }
 
 .hud-fps {
-  top: calc(12px + var(--safe-top));
-  right: calc(12px + var(--safe-right));
-  font-size: 12px;
+  top: calc(var(--hud-gutter) + var(--safe-top));
+  right: calc(var(--hud-gutter) + var(--safe-right));
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
   z-index: 12;
+  padding: 4px 8px;
+}
+
+/* Shared modal shell (death / inventory / equipment) */
+.hud-modal,
+.hud-death {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+  background: rgba(6, 8, 12, 0.72);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.hud-modal.is-visible,
+.hud-death.is-visible {
+  display: grid;
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.hud-modal[hidden],
+.hud-death[hidden] {
+  display: none !important;
+}
+
+.hud-modal-card,
+.hud-death-card {
+  text-align: center;
+  padding: 22px 28px;
+  background: rgba(24, 24, 32, 0.94);
+  border: 1px solid var(--border);
+  min-width: min(72vw, 260px);
+  max-width: min(90vw, 360px);
+  pointer-events: auto;
+}
+
+.hud-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.hud-modal-title,
+.hud-death-title {
+  font-family: var(--hud-display);
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin: 0;
+}
+
+.hud-death-title {
+  color: var(--hp);
+  margin-bottom: 8px;
+}
+
+.hud-modal-close {
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: var(--ink);
+  width: 32px;
+  height: 32px;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.hud-modal-body {
+  text-align: left;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.hud-modal-footer {
+  margin-top: 12px;
+  text-align: right;
+}
+
+.hud-modal-meta,
+.hud-modal-empty {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+
+.hud-inv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.hud-inv-row,
+.hud-eq-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hud-eq-row {
+  grid-template-columns: 64px 1fr;
+}
+
+.hud-inv-rarity,
+.hud-eq-slot,
+.hud-eq-empty {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.hud-death-copy {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.hud-restart {
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+  background: rgba(168, 139, 84, 0.16);
+  color: var(--ink);
+  padding: 8px 18px;
+  font: inherit;
+  letter-spacing: 0.06em;
+}
+
+.hud-restart:hover {
+  background: rgba(168, 139, 84, 0.28);
 }
 
 .input-debug-hud {
@@ -182,63 +490,6 @@ body,
   border: 1px solid rgba(214, 245, 200, 0.35);
   pointer-events: none;
   white-space: pre;
-}
-
-.hud-death {
-  position: absolute;
-  inset: 0;
-  display: none;
-  place-items: center;
-  background: rgba(6, 8, 12, 0.72);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.hud-death.is-visible {
-  display: grid;
-  pointer-events: auto;
-  opacity: 1;
-}
-
-.hud-death[hidden] {
-  display: none !important;
-}
-
-.hud-death-card {
-  text-align: center;
-  padding: 28px 36px;
-  background: rgba(12, 14, 20, 0.92);
-  border: 1px solid var(--border);
-  min-width: 240px;
-}
-
-.hud-death-title {
-  font-size: 28px;
-  letter-spacing: 0.08em;
-  color: var(--hp);
-  margin-bottom: 8px;
-}
-
-.hud-death-copy {
-  margin: 0 0 18px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.hud-restart {
-  pointer-events: auto;
-  cursor: pointer;
-  border: 1px solid var(--accent);
-  background: rgba(201, 162, 39, 0.15);
-  color: var(--ink);
-  padding: 8px 18px;
-  font: inherit;
-  letter-spacing: 0.06em;
-}
-
-.hud-restart:hover {
-  background: rgba(201, 162, 39, 0.28);
 }
 
 /* —— Touch overlay (does not resize canvas) —— */
@@ -267,9 +518,9 @@ body,
 
 .move-zone {
   left: 0;
-  top: 35%;
-  width: 48%;
-  height: 65%;
+  top: 32%;
+  width: 44%;
+  height: 68%;
   padding-left: var(--safe-left);
   padding-bottom: var(--safe-bottom);
   z-index: 1;
@@ -278,11 +529,10 @@ body,
 .attack-zone {
   right: 0;
   bottom: 0;
-  width: 42%;
-  height: 48%;
+  width: 40%;
+  height: 52%;
   padding-right: var(--safe-right);
   padding-bottom: var(--safe-bottom);
-  /* Keep below top chrome so mode select is never covered */
   top: auto;
   z-index: 1;
 }
@@ -302,28 +552,30 @@ body,
   top: 0;
   border-radius: 50%;
   transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 .touch-stick-base {
-  width: min(22vh, 120px);
-  height: min(22vh, 120px);
+  width: min(20vh, 112px);
+  height: min(20vh, 112px);
   border: 2px solid rgba(232, 224, 212, 0.35);
   background: rgba(10, 12, 16, 0.28);
 }
 
 .touch-stick-knob {
-  width: min(9vh, 48px);
-  height: min(9vh, 48px);
+  width: min(8vh, 44px);
+  height: min(8vh, 44px);
   background: rgba(232, 224, 212, 0.55);
-  border: 2px solid rgba(201, 162, 39, 0.7);
+  border: 2px solid rgba(168, 139, 84, 0.7);
 }
 
+/* Right action cluster — keep clear of left joystick & safe notches */
 .touch-actions {
   position: absolute;
-  right: calc(4vw + var(--safe-right));
-  bottom: calc(6vh + var(--safe-bottom));
-  width: min(28vh, 160px);
-  height: min(28vh, 160px);
+  right: calc(3vw + var(--safe-right));
+  bottom: calc(5vh + var(--safe-bottom));
+  width: var(--touch-cluster-size);
+  height: var(--touch-cluster-size);
   pointer-events: none;
   z-index: 6;
 }
@@ -341,54 +593,87 @@ body,
   touch-action: none;
   background: rgba(12, 14, 20, 0.45);
   z-index: 7;
+  --skill-cd: 0;
+  overflow: hidden;
 }
 
 .touch-attack {
   right: 0;
   bottom: 0;
-  width: min(14vh, 84px);
-  height: min(14vh, 84px);
-  background: rgba(196, 92, 74, 0.45);
+  width: min(13vh, 78px);
+  height: min(13vh, 78px);
+  background: rgba(214, 92, 80, 0.45);
   border-color: rgba(232, 224, 212, 0.55);
   z-index: 8;
 }
 
 .touch-attack.is-active {
-  background: rgba(196, 92, 74, 0.75);
+  background: rgba(214, 92, 80, 0.75);
 }
 
 .touch-skill {
-  width: min(8vh, 48px);
-  height: min(8vh, 48px);
-  font-size: 12px;
+  width: min(7.5vh, 46px);
+  height: min(7.5vh, 46px);
+  font-size: 11px;
+  border-radius: 2px;
 }
 
-.touch-skill.is-locked {
+.touch-skill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from 0deg,
+    rgba(0, 0, 0, 0.7) calc(var(--skill-cd) * 360deg),
+    transparent 0
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+
+.touch-skill.is-cooldown::after {
+  opacity: 1;
+}
+
+.touch-skill.is-ready {
+  border-color: rgba(168, 139, 84, 0.7);
+}
+
+.touch-skill.is-insufficient-mana,
+.touch-skill.is-insufficient-stamina {
+  opacity: 0.7;
+}
+
+.touch-skill.is-locked,
+.touch-skill.is-unavailable,
+.touch-skill.is-disabled,
+.touch-skill.is-dead {
   opacity: 0.35;
   filter: grayscale(0.6);
   cursor: not-allowed;
   pointer-events: none;
 }
 
+/* Positions keep Q/E/dodge above attack and away from left stick */
 .touch-skill[data-skill-q] {
-  right: min(16vh, 96px);
-  bottom: min(2vh, 12px);
+  right: min(15vh, 90px);
+  bottom: min(1.5vh, 10px);
 }
 
 .touch-skill[data-skill-e] {
-  right: min(2vh, 12px);
-  bottom: min(16vh, 96px);
+  right: min(1.5vh, 10px);
+  bottom: min(15vh, 90px);
 }
 
 .touch-skill[data-dodge] {
-  right: min(17vh, 102px);
-  bottom: min(14vh, 84px);
+  right: min(16vh, 96px);
+  bottom: min(13vh, 78px);
 }
 
 .touch-hint {
   position: absolute;
   left: 50%;
-  bottom: calc(18vh + var(--safe-bottom));
+  bottom: calc(16vh + var(--safe-bottom));
   transform: translateX(-50%);
   padding: 6px 12px;
   font-size: 12px;
@@ -399,14 +684,12 @@ body,
   pointer-events: none;
 }
 
-/* Independent of .touch-visual opacity — always recoverable in hidden mode */
 .touch-settings {
   position: absolute;
-  top: calc(44px + var(--safe-top));
-  right: calc(12px + var(--safe-right));
+  top: calc(40px + var(--safe-top));
+  right: calc(var(--hud-gutter) + var(--safe-right));
   z-index: 30;
   pointer-events: auto;
-  /* none: block double-tap zoom; select still receives clicks/taps */
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
@@ -435,6 +718,7 @@ body,
 
 .touch-layer.is-disabled .touch-hit,
 .touch-layer.is-disabled .touch-attack,
+.touch-layer.is-disabled .touch-skill,
 .touch-layer.is-disabled .touch-settings {
   pointer-events: none;
 }
@@ -495,9 +779,119 @@ body,
 .orient-start {
   cursor: pointer;
   border: 1px solid var(--accent);
-  background: rgba(201, 162, 39, 0.18);
+  background: rgba(168, 139, 84, 0.18);
   color: var(--ink);
   padding: 10px 20px;
   font: inherit;
   letter-spacing: 0.06em;
+}
+
+/* —— iPhone / small landscape presets (16:9 and wider) —— */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root {
+    --hud-gutter: 6px;
+    --touch-cluster-size: min(30vh, 132px);
+  }
+
+  .hud-stats {
+    min-width: 148px;
+    padding: 6px 8px;
+  }
+
+  .hud-title {
+    font-size: 9px;
+    margin-bottom: 4px;
+  }
+
+  .hud-bar-row {
+    grid-template-columns: 18px 1fr 46px;
+    gap: 4px;
+    font-size: 10px;
+  }
+
+  .hud-bar-track {
+    height: 5px;
+  }
+
+  .hud-bar-value {
+    font-size: 10px;
+  }
+
+  .hud-meta-row {
+    font-size: 10px;
+    margin-top: 4px;
+  }
+
+  .hud-fps {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+
+  .touch-hint {
+    display: none;
+  }
+
+  .touch-settings {
+    top: calc(8px + var(--safe-top));
+  }
+
+  .move-zone {
+    width: 42%;
+    top: 30%;
+  }
+
+  .attack-zone {
+    width: 38%;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 420px) {
+  .hud-stats {
+    max-width: min(36vw, 200px);
+  }
+
+  .hud-bar-row.hud-xp-row .hud-bar-value {
+    font-size: 9px;
+  }
+
+  .touch-skill {
+    width: min(8.5vh, 40px);
+    height: min(8.5vh, 40px);
+    font-size: 10px;
+  }
+
+  .touch-attack {
+    width: min(14vh, 68px);
+    height: min(14vh, 68px);
+  }
+}
+
+/* Wide phones (≈19.5:9) — keep center clear, pull chrome to notches */
+@media (orientation: landscape) and (min-aspect-ratio: 18/9) {
+  .hud-stats {
+    left: calc(max(var(--hud-gutter), 4px) + var(--safe-left));
+  }
+
+  .touch-actions {
+    right: calc(max(2vw, 4px) + var(--safe-right));
+  }
+}
+
+/* —— Reduced motion / low-end —— */
+@media (prefers-reduced-motion: reduce) {
+  .hud-bar-fill,
+  .hud-modal,
+  .hud-death,
+  .touch-visual {
+    transition: none !important;
+  }
+
+  .hud-skill::after,
+  .touch-skill::after {
+    display: none;
+  }
+
+  .orient-icon {
+    animation: none !important;
+  }
 }
