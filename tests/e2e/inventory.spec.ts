@@ -338,3 +338,20 @@ test('armor equip and unequip synchronize defense and HP HUD', async ({ page }) 
   await page.locator('[data-inv-close]').click();
   await expect(combat).toHaveText('ATK 12 · DEF 5');
 });
+
+test('equipped gear shows localized bonus labels and clears on unequip', async ({ page }) => {
+  await waitForGame(page);
+  await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      grantLootForTests: (itemId: string, rarity: string) => boolean;
+    };
+    if (!scene.grantLootForTests('ruin_mail', 'common')) throw new Error('armor grant failed');
+  });
+  await page.locator('[data-inventory]').click();
+  await page.locator('[data-equip-id="ruin_mail"]').click();
+  const armor = page.locator('[data-slot="armor"]');
+  await expect(armor.locator('.inv-equip-bonus')).toContainText('防禦 +2');
+  await expect(armor.locator('.inv-equip-bonus')).toContainText('生命上限 +15');
+  await armor.locator('[data-unequip="armor"]').click();
+  await expect(armor.locator('.inv-equip-bonus')).toHaveCount(0);
+});
