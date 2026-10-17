@@ -197,6 +197,10 @@ export class GameScene extends Phaser.Scene {
       maxMp: this.player.stats.maxMp,
       fps: this.game.loop.actualFps,
       dead,
+      level: this.progression.level,
+      xp: this.progression.xp,
+      xpToNext: xpToNextLevel(this.progression.level),
+      gold: this.rewardLedger.gold,
     });
     this.inputDebugHud?.update();
   }
@@ -267,6 +271,10 @@ export class GameScene extends Phaser.Scene {
       maxMp: this.player.stats.maxMp,
       fps: this.game.loop.actualFps,
       dead: false,
+      level: this.progression.level,
+      xp: this.progression.xp,
+      xpToNext: xpToNextLevel(this.progression.level),
+      gold: this.rewardLedger.gold,
     });
   }
 
