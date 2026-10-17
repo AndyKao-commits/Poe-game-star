@@ -30,6 +30,14 @@ test.describe('Art D landscape action button layout', () => {
       expect(box.y, `${selector} top`).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width, `${selector} right`).toBeLessThanOrEqual(844);
       expect(box.y + box.height, `${selector} bottom`).toBeLessThanOrEqual(390);
+      const hitTarget = await button.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        const x = bounds.left + bounds.width / 2;
+        const y = bounds.top + bounds.height / 2;
+        const top = document.elementFromPoint(x, y);
+        return top === element || element.contains(top);
+      });
+      expect(hitTarget, `${selector} center receives pointer input`).toBe(true);
       if (selector !== '[data-dodge]') {
         await expect(button).toHaveCSS('background-image', new RegExp('assets/art-d/ui-(attack|skill)\\.png'));
       }
