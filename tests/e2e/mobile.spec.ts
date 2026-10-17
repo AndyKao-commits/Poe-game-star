@@ -578,3 +578,317 @@ test.describe('desktop WASD regression', () => {
     await page.keyboard.up('KeyD');
   });
 });
+
+/**
+ * Anti-zoom coverage (Chromium simulation — NOT a real iPhone Safari claim).
+ * Verifies the immersive guard cancels zoom-like defaults across the page and
+ * that visualViewport.scale stays at 1 when the API exists.
+ */
+test.describe('immersive anti-zoom (simulated)', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'anti-zoom harness runs on Chromium; real iPhone Safari remains manual QA',
+  );
+
+  test.use({
+    viewport: { width: 844, height: 390 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  async function installZoomProbe(page: import('@playwright/test').Page): Promise<void> {
+    await page.evaluate(() => {
+      const w = window as unknown as {
+        __ASHEN_ZOOM_PROBE__?: {
+          prevented: string[];
+          scaleSamples: number[];
+        };
+      };
+      w.__ASHEN_ZOOM_PROBE__ = { prevented: [], scaleSamples: [] };
+      const probe = w.__ASHEN_ZOOM_PROBE__;
+      const orig = Event.prototype.preventDefault;
+      Event.prototype.preventDefault = function preventDefaultPatched(this: Event) {
+        if (
+          this.type === 'touchend' ||
+          this.type === 'touchmove' ||
+          this.type === 'dblclick' ||
+          this.type === 'gesturestart' ||
+          this.type === 'gesturechange' ||
+          this.type === 'gestureend'
+        ) {
+          probe.prevented.push(this.type);
+        }
+        return orig.apply(this, []);
+      };
+    });
+  }
+
+  async function readZoomProbe(page: import('@playwright/test').Page): Promise<{
+    prevented: string[];
+    scale: number | null;
+  }> {
+    return page.evaluate(() => {
+      const w = window as unknown as {
+        __ASHEN_ZOOM_PROBE__?: { prevented: string[] };
+      };
+      const scale =
+        window.visualViewport && typeof window.visualViewport.scale === 'number'
+          ? window.visualViewport.scale
+          : null;
+      return {
+        prevented: w.__ASHEN_ZOOM_PROBE__?.prevented ?? [],
+        scale,
+      };
+    });
+  }
+
+  async function rapidDoubleTap(
+    page: import('@playwright/test').Page,
+    targetSelector: string,
+    client?: { x: number; y: number },
+  ): Promise<void> {
+    await page.evaluate(
+      ({ selector, x, y }) => {
+        const el = document.querySelector(selector) as HTMLElement | null;
+        if (!el) throw new Error(`missing ${selector}`);
+        const rect = el.getBoundingClientRect();
+        const cx = x ?? rect.left + rect.width / 2;
+        const cy = y ?? rect.top + rect.height / 2;
+
+        const toList = (touches: Array<Record<string, unknown>>) => {
+          const list = touches.slice() as Array<Record<string, unknown>> & {
+            item: (i: number) => Record<string, unknown> | null;
+          };
+          list.item = (i: number) => touches[i] ?? null;
+          return list;
+        };
+
+        const fire = (type: string, active: Array<Record<string, unknown>>, changed: Array<Record<string, unknown>>) => {
+          const ev = new Event(type, { bubbles: true, cancelable: true });
+          Object.defineProperties(ev, {
+            touches: { value: toList(active) },
+            targetTouches: { value: toList(active) },
+            changedTouches: { value: toList(changed) },
+          });
+          // Dispatch on the element; document capture listeners still see it.
+          el.dispatchEvent(ev);
+        };
+
+        const mk = (id: number) => ({
+          identifier: id,
+          clientX: cx,
+          clientY: cy,
+          pageX: cx,
+          pageY: cy,
+          screenX: cx,
+          screenY: cy,
+          target: el,
+          radiusX: 1,
+          radiusY: 1,
+          rotationAngle: 0,
+          force: 1,
+        });
+
+        // Tap 1
+        fire('touchstart', [mk(1)], [mk(1)]);
+        fire('touchend', [], [mk(1)]);
+        // Tap 2 (rapid) — guard should preventDefault on this touchend
+        fire('touchstart', [mk(2)], [mk(2)]);
+        fire('touchend', [], [mk(2)]);
+        el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, clientX: cx, clientY: cy }));
+      },
+      { selector: targetSelector, x: client?.x ?? null, y: client?.y ?? null },
+    );
+  }
+
+  test('double-tap across map / HUD / attack does not raise visualViewport scale', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+    await enableTouchOverlay(page);
+    await installZoomProbe(page);
+
+    const canvasBox = await page.locator('#game-root canvas').boundingBox();
+    expect(canvasBox).toBeTruthy();
+    if (!canvasBox) return;
+
+    // Map center
+    await rapidDoubleTap(page, '#game-root canvas', {
+      x: canvasBox.x + canvasBox.width / 2,
+      y: canvasBox.y + canvasBox.height / 2,
+    });
+    // Blank-ish lower-center (often pass-through)
+    await rapidDoubleTap(page, '#game-root canvas', {
+      x: canvasBox.x + canvasBox.width * 0.55,
+      y: canvasBox.y + canvasBox.height * 0.72,
+    });
+    // Near HUD (stats panel)
+    await rapidDoubleTap(page, '.hud-stats');
+    // Near FPS HUD
+    await rapidDoubleTap(page, '.hud-fps');
+    // Attack button
+    await rapidDoubleTap(page, '[data-attack]');
+
+    const probe = await readZoomProbe(page);
+    expect(probe.prevented.length).toBeGreaterThan(0);
+    expect(probe.prevented.some((t) => t === 'touchend' || t === 'dblclick')).toBe(true);
+    if (probe.scale !== null) {
+      expect(probe.scale).toBe(1);
+    }
+
+    // Viewport meta remains locked
+    const viewport = await page.locator('meta[name="viewport"]').getAttribute('content');
+    expect(viewport).toMatch(/width=device-width/);
+    expect(viewport).toMatch(/maximum-scale=1/);
+    expect(viewport).toMatch(/user-scalable=no/);
+    expect(viewport).toMatch(/viewport-fit=cover/);
+  });
+
+  test('multi-touch gesture defaults are cancelled while dual play still works', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+    await enableTouchOverlay(page);
+    await installZoomProbe(page);
+
+    const box = await page.locator('[data-move-zone]').boundingBox();
+    const attackBox = await page.locator('[data-attack]').boundingBox();
+    expect(box && attackBox).toBeTruthy();
+    if (!box || !attackBox) return;
+
+    const sx = box.x + box.width * 0.35;
+    const sy = box.y + box.height * 0.55;
+    const ax = attackBox.x + attackBox.width / 2;
+    const ay = attackBox.y + attackBox.height / 2;
+    const before = await readPlayerPos(page);
+
+    await page.evaluate(
+      ({ sx, sy, ax, ay }) => {
+        const zone = document.querySelector('[data-move-zone]') as HTMLElement;
+        const btn = document.querySelector('[data-attack]') as HTMLElement;
+        const toList = (touches: Array<Record<string, unknown>>) => {
+          const list = touches.slice() as Array<Record<string, unknown>> & {
+            item: (i: number) => Record<string, unknown> | null;
+          };
+          list.item = (i: number) => touches[i] ?? null;
+          return list;
+        };
+        const fire = (
+          target: EventTarget,
+          type: string,
+          active: Array<Record<string, unknown>>,
+          changed: Array<Record<string, unknown>>,
+        ) => {
+          const ev = new Event(type, { bubbles: true, cancelable: true });
+          Object.defineProperties(ev, {
+            touches: { value: toList(active) },
+            targetTouches: { value: toList(active) },
+            changedTouches: { value: toList(changed) },
+          });
+          target.dispatchEvent(ev);
+          window.dispatchEvent(ev);
+        };
+        const move = {
+          identifier: 71,
+          clientX: sx,
+          clientY: sy,
+          pageX: sx,
+          pageY: sy,
+          screenX: sx,
+          screenY: sy,
+          target: zone,
+          radiusX: 1,
+          radiusY: 1,
+          rotationAngle: 0,
+          force: 1,
+        };
+        const move2 = { ...move, clientX: sx + 48, pageX: sx + 48, screenX: sx + 48 };
+        const atk = {
+          identifier: 72,
+          clientX: ax,
+          clientY: ay,
+          pageX: ax,
+          pageY: ay,
+          screenX: ax,
+          screenY: ay,
+          target: btn,
+          radiusX: 1,
+          radiusY: 1,
+          rotationAngle: 0,
+          force: 1,
+        };
+
+        fire(zone, 'touchstart', [move], [move]);
+        fire(zone, 'touchmove', [move2], [move2]);
+        fire(btn, 'touchstart', [move2, atk], [atk]);
+        // Synthetic Safari gesture + two-finger move (page pinch attempt)
+        for (const type of ['gesturestart', 'gesturechange', 'gestureend'] as const) {
+          const gev = new Event(type, { bubbles: true, cancelable: true });
+          document.dispatchEvent(gev);
+        }
+        fire(window, 'touchmove', [move2, atk], [move2, atk]);
+      },
+      { sx, sy, ax, ay },
+    );
+
+    const sample = await readInputSample(page);
+    expect(sample.moving).toBe(true);
+    expect(sample.attackHeld).toBe(true);
+
+    await expect
+      .poll(async () => {
+        const pos = await readPlayerPos(page);
+        return Math.hypot(pos.x - before.x, pos.y - before.y);
+      }, { timeout: 5_000 })
+      .toBeGreaterThan(0.04);
+
+    const probe = await readZoomProbe(page);
+    expect(
+      probe.prevented.some(
+        (t) => t === 'gesturestart' || t === 'gesturechange' || t === 'touchmove',
+      ),
+    ).toBe(true);
+    if (probe.scale !== null) {
+      expect(probe.scale).toBe(1);
+    }
+
+    // Settings still usable after multi-touch
+    await page.locator('[data-mode]').selectOption('hidden');
+    await expect(page.locator('[data-mode]')).toHaveValue('hidden');
+    await page.locator('[data-mode]').selectOption('always');
+    await expect(page.locator('[data-mode]')).toHaveValue('always');
+  });
+
+  test('gesture guard covers immersive surface targets', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+    await enableTouchOverlay(page);
+
+    const coverage = await page.evaluate(() => {
+      const game = window.__ASHEN_GAME__;
+      const scene = game?.scene.getScene('GameScene') as {
+        getGestureGuardForTests: () => {
+          isSurfaceTargetForTests: (t: EventTarget | null) => boolean;
+        } | null;
+      };
+      const guard = scene.getGestureGuardForTests();
+      if (!guard) return null;
+      const canvas = document.querySelector('#game-root canvas');
+      const hud = document.querySelector('.hud-stats');
+      const attack = document.querySelector('[data-attack]');
+      const settings = document.querySelector('[data-touch-settings]');
+      return {
+        canvas: guard.isSurfaceTargetForTests(canvas),
+        hud: guard.isSurfaceTargetForTests(hud),
+        attack: guard.isSurfaceTargetForTests(attack),
+        settings: guard.isSurfaceTargetForTests(settings),
+        body: guard.isSurfaceTargetForTests(document.body),
+      };
+    });
+
+    expect(coverage).toBeTruthy();
+    expect(coverage?.canvas).toBe(true);
+    expect(coverage?.hud).toBe(true);
+    expect(coverage?.attack).toBe(true);
+    expect(coverage?.settings).toBe(true);
+    expect(coverage?.body).toBe(true);
+  });
+});

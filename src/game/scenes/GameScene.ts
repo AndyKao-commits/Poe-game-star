@@ -101,10 +101,11 @@ export class GameScene extends Phaser.Scene {
       this.touchControls = null;
     });
 
-    const gameRoot = document.getElementById('game-root');
-    if (!gameRoot) throw new Error('Missing #game-root');
+    // Guard the whole immersive shell so blank map / HUD / pass-through taps
+    // cannot double-tap-zoom — not only #game-root or the attack button.
+    const appRoot = document.getElementById('app') ?? document.body;
     this.gestureGuard?.destroy();
-    this.gestureGuard = new SafariGestureGuard(gameRoot);
+    this.gestureGuard = new SafariGestureGuard(appRoot);
     this.disposables.add(() => {
       this.gestureGuard?.destroy();
       this.gestureGuard = null;
@@ -290,6 +291,10 @@ export class GameScene extends Phaser.Scene {
 
   getTouchControlsForTests(): TouchControlsOverlay | null {
     return this.touchControls;
+  }
+
+  getGestureGuardForTests(): SafariGestureGuard | null {
+    return this.gestureGuard;
   }
 
   restartForTests(): void {
