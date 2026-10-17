@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { createProgression, xpToNextLevel, type ProgressionState } from '@core/progression/experience';
 import { claimKillReward, createKillRewardLedger, type KillRewardLedger } from '@core/progression/killRewards';
+import { createSeededRng, rollLoot } from '@core/loot/lootTable';
+import { ENEMY_LOOT_TABLE } from '@core/loot/enemyLoot';
 import { mapPixelBounds } from '@core/collision/grid';
 import { createRuinTestMap, type RuinMapBlueprint } from '@core/map/ruinMap';
 import { clampDeltaMs } from '@core/time/delta';
@@ -26,6 +28,8 @@ export class GameScene extends Phaser.Scene {
   private player!: PlayerController;
   private progression: ProgressionState = createProgression();
   private rewardLedger: KillRewardLedger = createKillRewardLedger();
+  private readonly lootRng = createSeededRng(0xA51E4);
+  private lootRolls = 0;
   private enemyKillIds = new Map<EnemyController, string>();
   private nextEnemyKillId = 0;
   private enemies: EnemyController[] = [];
@@ -54,6 +58,7 @@ export class GameScene extends Phaser.Scene {
     this.lastTouchVisible = null;
     this.progression = createProgression();
     this.rewardLedger = createKillRewardLedger();
+    this.lootRolls = 0;
     this.enemyKillIds.clear();
     this.nextEnemyKillId = 0;
     this.feedback = new CombatFeedbackSystem(this);
@@ -293,6 +298,10 @@ export class GameScene extends Phaser.Scene {
       if (!claimed) continue;
       this.rewardLedger = claimed.ledger;
       this.progression = claimed.progression.state;
+      // Claim identity is shared with XP/gold: one loot roll per unique kill.
+      const drop = rollLoot(ENEMY_LOOT_TABLE, this.lootRng);
+      if (drop) this.lootRolls++;
+
       // A claimed corpse no longer needs to be checked on every frame.
       this.enemyKillIds.delete(enemy);
     }
@@ -308,6 +317,10 @@ export class GameScene extends Phaser.Scene {
       this.enemyKillIds.set(enemy, `enemy-${++this.nextEnemyKillId}`);
       return enemy;
     });
+  }
+
+  getLootRollCountForTests(): number {
+    return this.lootRolls;
   }
 
   getRestartCount(): number {
