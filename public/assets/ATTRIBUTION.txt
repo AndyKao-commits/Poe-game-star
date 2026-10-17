@@ -1,0 +1,4 @@
+Ashen Reliquary placeholder assets
+Generated procedurally by scripts/generate-placeholders.mjs
+Original pixel placeholders — free to replace with licensed art.
+Not derived from concept illustrations or third-party sprite sheets.
