@@ -1,3 +1,5 @@
+import type { SkillId } from '../skills/definitions';
+
 export interface SharedInputState {
   /** Normalized world-space move vector. */
   moveX: number;
@@ -12,6 +14,11 @@ export interface SharedInputState {
   aimAngle: number | null;
   /** True when the active move/attack came from touch this frame. */
   touchActive: boolean;
+  /**
+   * Edge-triggered skill presses collected since the previous sample().
+   * Consumed (cleared) each sample so a single tap cannot re-fire every frame.
+   */
+  skillPresses: SkillId[];
 }
 
 export function idleInputState(): SharedInputState {
@@ -22,5 +29,6 @@ export function idleInputState(): SharedInputState {
     attackHeld: false,
     aimAngle: null,
     touchActive: false,
+    skillPresses: [],
   };
 }

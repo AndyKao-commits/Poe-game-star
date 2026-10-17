@@ -10,9 +10,16 @@ import {
   resolveControlOpacity,
   type ControlVisibilityMode,
 } from '@core/input/visibility';
+import type { SkillId } from '@core/skills/definitions';
+import type { SkillUiState } from '@core/skills/skillUi';
 import type { InputController } from '../game/input/InputController';
 
 const JOYSTICK_MAX_RADIUS_VH = 0.11;
+const SKILL_BUTTONS: Array<{ id: SkillId; attr: string; label: string }> = [
+  { id: 'q', attr: 'data-skill-q', label: 'Q' },
+  { id: 'e', attr: 'data-skill-e', label: 'E' },
+  { id: 'dodge', attr: 'data-dodge', label: '閃' },
+];
 
 export interface TouchControlsDebugState {
   movePointerId: number | null;
@@ -43,6 +50,7 @@ export class TouchControlsOverlay {
   private readonly stickKnob: HTMLElement;
   private readonly attackBtn: HTMLButtonElement;
   private readonly attackZone: HTMLElement;
+  private readonly skillButtons: Record<SkillId, HTMLButtonElement>;
   private readonly settings: HTMLElement;
   private readonly modeSelect: HTMLSelectElement;
   private readonly hint: HTMLElement;
@@ -51,6 +59,9 @@ export class TouchControlsOverlay {
   private moveTouchId: number | null = null;
   private attackPointerId: number | null = null;
   private attackTouchId: number | null = null;
+  /** Active skill contact source — blocks iOS Pointer+Touch double-cast. */
+  private readonly skillHeld: Partial<Record<SkillId, 'pointer' | 'touch'>> = {};
+  private lastSkillUi: SkillUiState | null = null;
   private originX = 0;
   private originY = 0;
   private stickX = 0;
@@ -78,6 +89,10 @@ export class TouchControlsOverlay {
   private readonly onBlur: () => void;
   private readonly onVisibility: () => void;
   private readonly onModeChange: () => void;
+  private readonly onSkillPointerDown: (e: Event) => void;
+  private readonly onSkillPointerUp: (e: Event) => void;
+  private readonly onSkillTouchStart: (e: Event) => void;
+  private readonly onSkillTouchEnd: (e: Event) => void;
 
   constructor(
     root: HTMLElement,
@@ -90,15 +105,15 @@ export class TouchControlsOverlay {
         <div class="touch-hit move-zone" data-move-zone></div>
         <div class="touch-hit attack-zone" data-attack-zone></div>
         <div class="touch-visual" data-touch-visual style="transition: opacity ${CONTROL_FADE_MS}ms ease">
-          <div class="touch-hint" data-touch-hint>左半拖曳移動 · 右下攻擊 · 可與移動同時操作</div>
+          <div class="touch-hint" data-touch-hint>左半移動 · 右下攻擊 · Q/E/閃可與搖桿同時操作</div>
           <div class="touch-stick" data-stick hidden>
             <div class="touch-stick-base" data-stick-base></div>
             <div class="touch-stick-knob" data-stick-knob></div>
           </div>
           <div class="touch-actions" data-actions>
-            <button type="button" class="touch-skill is-locked" data-skill-q disabled aria-disabled="true">Q</button>
-            <button type="button" class="touch-skill is-locked" data-skill-e disabled aria-disabled="true">E</button>
-            <button type="button" class="touch-skill is-locked" data-dodge disabled aria-disabled="true">閃</button>
+            <button type="button" class="touch-skill" data-skill-q aria-label="Heavy Strike">Q</button>
+            <button type="button" class="touch-skill" data-skill-e aria-label="Arc Burst">E</button>
+            <button type="button" class="touch-skill" data-dodge aria-label="閃避">閃</button>
             <button type="button" class="touch-attack" data-attack aria-label="普通攻擊">攻</button>
           </div>
         </div>
@@ -122,6 +137,11 @@ export class TouchControlsOverlay {
     this.stickKnob = this.root.querySelector('[data-stick-knob]')!;
     this.attackBtn = this.root.querySelector('[data-attack]')!;
     this.attackZone = this.root.querySelector('[data-attack-zone]')!;
+    this.skillButtons = {
+      q: this.root.querySelector('[data-skill-q]')!,
+      e: this.root.querySelector('[data-skill-e]')!,
+      dodge: this.root.querySelector('[data-dodge]')!,
+    };
     this.settings = this.root.querySelector('[data-touch-settings]')!;
     this.modeSelect = this.root.querySelector('[data-mode]')!;
     this.hint = this.root.querySelector('[data-touch-hint]')!;
@@ -132,6 +152,10 @@ export class TouchControlsOverlay {
     this.onTouchStart = (e) => this.handleTouchStart(e as TouchEvent);
     this.onTouchMove = (e) => this.handleTouchMove(e as TouchEvent);
     this.onTouchEnd = (e) => this.handleTouchEnd(e as TouchEvent);
+    this.onSkillPointerDown = (e) => this.handleSkillPointerDown(e as PointerEvent);
+    this.onSkillPointerUp = (e) => this.handleSkillPointerUp(e as PointerEvent);
+    this.onSkillTouchStart = (e) => this.handleSkillTouchStart(e as TouchEvent);
+    this.onSkillTouchEnd = (e) => this.handleSkillTouchEnd(e as TouchEvent);
     this.onBlur = () => this.resetAllPointers();
     this.onVisibility = () => {
       if (document.hidden) this.resetAllPointers();
@@ -149,6 +173,16 @@ export class TouchControlsOverlay {
     this.moveZone.addEventListener('touchstart', this.onTouchStart, touchOpts);
     this.attackZone.addEventListener('touchstart', this.onTouchStart, touchOpts);
     this.attackBtn.addEventListener('touchstart', this.onTouchStart, touchOpts);
+
+    for (const { id } of SKILL_BUTTONS) {
+      const btn = this.skillButtons[id];
+      btn.addEventListener('pointerdown', this.onSkillPointerDown);
+      btn.addEventListener('pointerup', this.onSkillPointerUp);
+      btn.addEventListener('pointercancel', this.onSkillPointerUp);
+      btn.addEventListener('touchstart', this.onSkillTouchStart, touchOpts);
+      btn.addEventListener('touchend', this.onSkillTouchEnd, touchOpts);
+      btn.addEventListener('touchcancel', this.onSkillTouchEnd, touchOpts);
+    }
 
     // Window-level move/up: pointer capture is unreliable on iOS Safari.
     window.addEventListener('pointermove', this.onPointerMove);
@@ -217,15 +251,43 @@ export class TouchControlsOverlay {
     this.maxRadiusPx = Math.max(36, Math.min(72, h * JOYSTICK_MAX_RADIUS_VH));
   }
 
+  /**
+   * Refresh skill button cooldown / resource chrome from PlayerController.
+   * Called once per frame from GameScene (shared file — minimal one-liner).
+   */
+  setSkillUi(state: SkillUiState): void {
+    this.lastSkillUi = state;
+    for (const { id } of SKILL_BUTTONS) {
+      const btn = this.skillButtons[id];
+      const remaining = state.cooldowns[id] ?? 0;
+      const total = Math.max(1, state.cooldownTotal[id] ?? 1);
+      const ratio = remaining > 0 ? remaining / total : 0;
+      btn.style.setProperty('--cd-ratio', String(ratio));
+      btn.classList.toggle('is-cooldown', remaining > 0);
+      const reason = state.failReason[id];
+      const noResource =
+        reason === 'insufficient_mana' || reason === 'insufficient_stamina';
+      btn.classList.toggle('is-no-resource', Boolean(noResource) && remaining <= 0);
+      const blocked = state.dead || state.disabled || !this.enabled;
+      btn.disabled = blocked;
+      btn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
+      btn.classList.toggle('is-ready', state.canCast[id] && !blocked);
+    }
+  }
+
   /** Advance idle fade clock; call from the game loop. */
   update(deltaMs: number): void {
     if (this.disposed || !this.visible) return;
-    this.interacting = this.hasMoveContact() || this.hasAttackContact();
+    this.interacting =
+      this.hasMoveContact() || this.hasAttackContact() || Object.keys(this.skillHeld).length > 0;
     this.idleMs = advanceIdleMs(this.idleMs, deltaMs, this.interacting);
     this.applyOpacity(false);
     if (this.hintShown && this.idleMs > CONTROL_IDLE_DELAY_MS) {
       this.hint.hidden = true;
       this.hintShown = false;
+    }
+    if (this.lastSkillUi) {
+      this.setSkillUi(this.lastSkillUi);
     }
   }
 
@@ -240,6 +302,15 @@ export class TouchControlsOverlay {
     this.moveZone.removeEventListener('touchstart', this.onTouchStart, touchOpts);
     this.attackZone.removeEventListener('touchstart', this.onTouchStart, touchOpts);
     this.attackBtn.removeEventListener('touchstart', this.onTouchStart, touchOpts);
+    for (const { id } of SKILL_BUTTONS) {
+      const btn = this.skillButtons[id];
+      btn.removeEventListener('pointerdown', this.onSkillPointerDown);
+      btn.removeEventListener('pointerup', this.onSkillPointerUp);
+      btn.removeEventListener('pointercancel', this.onSkillPointerUp);
+      btn.removeEventListener('touchstart', this.onSkillTouchStart, touchOpts);
+      btn.removeEventListener('touchend', this.onSkillTouchEnd, touchOpts);
+      btn.removeEventListener('touchcancel', this.onSkillTouchEnd, touchOpts);
+    }
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('pointercancel', this.onPointerUp);
@@ -260,12 +331,67 @@ export class TouchControlsOverlay {
     return this.attackPointerId !== null || this.attackTouchId !== null;
   }
 
+  private skillIdFromTarget(target: EventTarget | null): SkillId | null {
+    if (!(target instanceof Element)) return null;
+    if (target.closest('[data-skill-q]')) return 'q';
+    if (target.closest('[data-skill-e]')) return 'e';
+    if (target.closest('[data-dodge]')) return 'dodge';
+    return null;
+  }
+
+  private handleSkillPointerDown(e: PointerEvent): void {
+    if (!this.enabled || !this.visible) return;
+    const id = this.skillIdFromTarget(e.target);
+    if (!id) return;
+    // Touch path already claimed this press — ignore twin pointerdown (iOS).
+    if (this.skillHeld[id]) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.skillHeld[id] = 'pointer';
+    this.input.queueSkillPress(id);
+    this.skillButtons[id].classList.add('is-active');
+    this.markInteract();
+  }
+
+  private handleSkillPointerUp(e: PointerEvent): void {
+    const id = this.skillIdFromTarget(e.target);
+    if (!id) return;
+    if (this.skillHeld[id] === 'pointer') {
+      delete this.skillHeld[id];
+      this.skillButtons[id].classList.remove('is-active');
+    }
+  }
+
+  private handleSkillTouchStart(e: TouchEvent): void {
+    if (!this.enabled || !this.visible) return;
+    const id = this.skillIdFromTarget(e.target);
+    if (!id) return;
+    if (this.skillHeld[id]) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.skillHeld[id] = 'touch';
+    this.input.queueSkillPress(id);
+    this.skillButtons[id].classList.add('is-active');
+    this.markInteract();
+  }
+
+  private handleSkillTouchEnd(e: TouchEvent): void {
+    const id = this.skillIdFromTarget(e.target);
+    if (!id) return;
+    if (this.skillHeld[id] === 'touch' || this.skillHeld[id] === 'pointer') {
+      delete this.skillHeld[id];
+      this.skillButtons[id].classList.remove('is-active');
+    }
+  }
+
   private handlePointerDown(e: PointerEvent): void {
     if (!this.enabled || !this.visible) return;
     const target = e.target as HTMLElement;
     if (target.closest('[data-touch-settings]') || target.closest('[data-touch-mode]') || target.closest('select')) {
       return;
     }
+    // Skill buttons have dedicated handlers; never treat them as attack-zone.
+    if (this.skillIdFromTarget(target)) return;
 
     const inMove = Boolean(target.closest('[data-move-zone]'));
     const inAttack = Boolean(
@@ -324,6 +450,7 @@ export class TouchControlsOverlay {
     if (target.closest('[data-touch-settings]') || target.closest('[data-touch-mode]') || target.closest('select')) {
       return;
     }
+    if (this.skillIdFromTarget(target)) return;
 
     const inMove = Boolean(target.closest('[data-move-zone]'));
     const inAttack = Boolean(
@@ -534,6 +661,10 @@ export class TouchControlsOverlay {
   private resetAllPointers(): void {
     this.clearMove();
     this.clearAttack();
+    for (const id of Object.keys(this.skillHeld) as SkillId[]) {
+      delete this.skillHeld[id];
+      this.skillButtons[id]?.classList.remove('is-active');
+    }
     this.pushSample();
   }
 

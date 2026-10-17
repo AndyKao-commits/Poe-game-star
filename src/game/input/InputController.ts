@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { idleInputState, type SharedInputState } from '@core/input/sharedState';
 import { movementFromInput } from '@core/movement/direction';
 import { screenToWorld, type Vec2 } from '@core/iso/coordinates';
+import { isSkillId, type SkillId } from '@core/skills/definitions';
 
 export interface TouchInputSample {
   moveX: number;
@@ -12,7 +13,7 @@ export interface TouchInputSample {
 }
 
 /**
- * Unifies desktop (WASD + mouse) and mobile overlay into one sample
+ * Unifies desktop (WASD + mouse + Q/E/Space) and mobile overlay into one sample
  * consumed by PlayerController. Touch UI pushes samples; keyboard is polled.
  */
 export class InputController {
@@ -24,11 +25,25 @@ export class InputController {
     active: false,
   };
   private enabled = true;
+  /** Deduped edge presses from touch / synthetic sources until the next sample(). */
+  private pendingSkillPresses: SkillId[] = [];
+  /** Previous-frame key downs for reliable edge detection (JustDown can miss short taps). */
+  private prevSkillDown: Record<SkillId, boolean> = {
+    q: false,
+    e: false,
+    dodge: false,
+  };
   private readonly cursors: {
     up: Phaser.Input.Keyboard.Key;
     down: Phaser.Input.Keyboard.Key;
     left: Phaser.Input.Keyboard.Key;
     right: Phaser.Input.Keyboard.Key;
+  };
+  private readonly skillKeys: {
+    q: Phaser.Input.Keyboard.Key;
+    e: Phaser.Input.Keyboard.Key;
+    dodge: Phaser.Input.Keyboard.Key;
+    dodgeAlt: Phaser.Input.Keyboard.Key;
   };
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -39,12 +54,20 @@ export class InputController {
       left: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
       right: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
+    this.skillKeys = {
+      q: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q),
+      e: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E),
+      dodge: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
+      dodgeAlt: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT),
+    };
   }
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
     if (!enabled) {
       this.clearTouch();
+      this.pendingSkillPresses = [];
+      this.prevSkillDown = { q: false, e: false, dodge: false };
     }
   }
 
@@ -57,6 +80,17 @@ export class InputController {
     this.touch = { ...sample };
   }
 
+  /**
+   * Queue a one-shot skill press (touch button). Duplicate ids in the same
+   * sample window are ignored so iOS Pointer+Touch pairs cannot double-cast.
+   */
+  queueSkillPress(skillId: SkillId | string): void {
+    if (!this.enabled) return;
+    if (!isSkillId(skillId)) return;
+    if (this.pendingSkillPresses.includes(skillId)) return;
+    this.pendingSkillPresses.push(skillId);
+  }
+
   clearTouch(): void {
     this.touch = {
       moveX: 0,
@@ -65,6 +99,7 @@ export class InputController {
       attackHeld: false,
       active: false,
     };
+    this.pendingSkillPresses = [];
   }
 
   sample(): SharedInputState {
@@ -89,6 +124,8 @@ export class InputController {
     const moveX = this.touch.moving ? this.touch.moveX : keyMove.x;
     const moveY = this.touch.moving ? this.touch.moveY : keyMove.y;
 
+    const skillPresses = this.collectSkillPresses();
+
     return {
       moveX,
       moveY,
@@ -97,6 +134,7 @@ export class InputController {
       // Desktop mouse aim is resolved via sampleMouseWorld(); touch uses auto-aim.
       aimAngle: null,
       touchActive: this.touch.active,
+      skillPresses,
     };
   }
 
@@ -119,5 +157,23 @@ export class InputController {
 
   destroy(): void {
     this.clearTouch();
+  }
+
+  private collectSkillPresses(): SkillId[] {
+    const presses: SkillId[] = [...this.pendingSkillPresses];
+    this.pendingSkillPresses = [];
+
+    const qDown = this.skillKeys.q.isDown;
+    const eDown = this.skillKeys.e.isDown;
+    const dodgeDown = this.skillKeys.dodge.isDown || this.skillKeys.dodgeAlt.isDown;
+
+    if (qDown && !this.prevSkillDown.q && !presses.includes('q')) presses.push('q');
+    if (eDown && !this.prevSkillDown.e && !presses.includes('e')) presses.push('e');
+    if (dodgeDown && !this.prevSkillDown.dodge && !presses.includes('dodge')) {
+      presses.push('dodge');
+    }
+
+    this.prevSkillDown = { q: qDown, e: eDown, dodge: dodgeDown };
+    return presses;
   }
 }
