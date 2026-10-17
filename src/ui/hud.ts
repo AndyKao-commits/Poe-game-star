@@ -45,6 +45,8 @@ export class HudController {
           <div class="hud-bar-track"><div class="hud-bar-fill mp" data-mp-fill></div></div>
           <span data-mp-text>50/50</span>
         </div>
+        <div class="hud-bar-row"><span data-progression-text>Lv 1 · 0/85 XP · 0 G</span></div>
+        <div class="hud-bar-track"><div class="hud-bar-fill mp" data-xp-fill></div></div>
       </div>
       <div class="hud-panel hud-hints">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移動</div>
