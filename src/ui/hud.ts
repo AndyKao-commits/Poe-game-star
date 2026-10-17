@@ -1,5 +1,4 @@
 import { allSkillUiSnapshots, applySkillButtonDom } from './skillStatus';
-import { GearPanelsController } from './gearPanels';
 import type { SkillCasterState } from '@core/skills';
 export interface HudSnapshot {
   hp: number;
@@ -32,7 +31,6 @@ export class HudController {
   private boundInventory: () => void;
   private inventoryBtn!: HTMLButtonElement;
   private skillButtons = new Map<string, HTMLElement>();
-  private gearPanels!: GearPanelsController;
   private lootToast!: HTMLElement;
   private lootToastTimer: number | null = null;
 
@@ -100,7 +98,6 @@ export class HudController {
     }
     this.restartBtn.addEventListener('click', this.boundRestart);
     this.inventoryBtn.addEventListener('click', this.boundInventory);
-    this.gearPanels = new GearPanelsController(this.root);
   }
 
   setRestartHandler(handler: (() => void) | null): void {
@@ -161,7 +158,6 @@ export class HudController {
     this.onRestart = null;
     this.onInventory = null;
     this.skillButtons.clear();
-    this.gearPanels.destroy();
     this.root.innerHTML = '';
   }
 }
