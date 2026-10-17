@@ -31,7 +31,7 @@ Date: 2026-10-17. Target: `feat/phase2-runtime-integration` (PR #12). **Do not m
 
 ## Art D release gate
 
-Art branch `feat/phase2-art-direction`; `public/assets/art-d/manifest.json` exists, 13 PNGs are pending. **Do not load or overwrite placeholders**. After all 13 PNGs are committed, validate PNG signatures, dimensions, alpha, sheet grid, texture keys, animation frame ordering, isometric anchors, VFX timing and iPhone Safari performance before a dedicated art integration PR.
+Art D prototype: all 13 PNG files are present in `public/assets/art-d/` on the integration branch, and the asset contract checker exists. **Do not load or overwrite production placeholders yet.** File presence and automated PNG checks do not establish visual approval. Validate texture keys, animation frame ordering, isometric anchors, VFX timing and iPhone Safari performance before a dedicated art integration PR.
 
 ## Review findings / follow-ups
 
@@ -52,7 +52,7 @@ Art branch `feat/phase2-art-direction`; `public/assets/art-d/manifest.json` exis
 - E fixed AI windup/death/respawn race in `5b0d941` and added regression test in `8236af3`; test has not yet been independently executed.
 - PR #20 inventory was marked Ready, but GitHub rejected the merge with HTTP 405 **merge conflicts**. This is a real conflict, not merely a Draft block. Do not retry a blind merge.
 - Integration conflict resolution must preserve A's skill caster state and touch input, C's equipment-derived stats and inventory gating, B's enemy roster, and D's HUD semantics.
-- Art D issue #18 updated with explicit 13-PNG upload request; manifest still reports binaries pending.
+- Art D issue #18 originally requested 13 PNGs; the files have since been delivered to the integration branch and the manifest has been updated. Issue wording may still be stale.
 - Production `main` remains untouched. Combined tests are pending.
 
 ### C + A reconciliation invariants
