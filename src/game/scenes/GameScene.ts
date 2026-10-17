@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { createProgression, xpToNextLevel, type ProgressionState } from '@core/progression/experience';
+import { claimKillReward, createKillRewardLedger, type KillRewardLedger } from '@core/progression/killRewards';
 import { mapPixelBounds } from '@core/collision/grid';
 import { createRuinTestMap, type RuinMapBlueprint } from '@core/map/ruinMap';
 import { clampDeltaMs } from '@core/time/delta';
@@ -21,6 +23,10 @@ import { InputController } from '../input/InputController';
 
 export class GameScene extends Phaser.Scene {
   private player!: PlayerController;
+  private progression: ProgressionState = createProgression();
+  private rewardLedger: KillRewardLedger = createKillRewardLedger();
+  private enemyKillIds = new Map<EnemyController, string>();
+  private nextEnemyKillId = 0;
   private enemies: EnemyController[] = [];
   private hud: HudController | null = null;
   private feedback!: CombatFeedbackSystem;
@@ -45,6 +51,10 @@ export class GameScene extends Phaser.Scene {
     this.disposables.reset();
     this.lastDead = null;
     this.lastTouchVisible = null;
+    this.progression = createProgression();
+    this.rewardLedger = createKillRewardLedger();
+    this.enemyKillIds.clear();
+    this.nextEnemyKillId = 0;
     this.feedback = new CombatFeedbackSystem(this);
     this.blueprint = createRuinTestMap();
     renderTileMap(this, this.blueprint.map);
@@ -177,6 +187,7 @@ export class GameScene extends Phaser.Scene {
       enemy.update(delta, this.player, { suppressDamage });
     }
 
+    this.collectEnemyKillRewards();
     this.player.lifecycle.consumeDeathEvent();
 
     this.hud.update({
@@ -257,6 +268,19 @@ export class GameScene extends Phaser.Scene {
       fps: this.game.loop.actualFps,
       dead: false,
     });
+  }
+
+  private collectEnemyKillRewards(): void {
+    for (const enemy of this.enemies) {
+      if (enemy.alive) continue;
+      const killId = this.enemyKillIds.get(enemy);
+      if (!killId) continue;
+      // Each spawned enemy instance has a unique ID, including after encounter resets.
+      const claimed = claimKillReward(this.rewardLedger, this.progression, killId, { xp: 25, gold: 5 });
+      if (!claimed) continue;
+      this.rewardLedger = claimed.ledger;
+      this.progression = claimed.progression.state;
+    }
   }
 
   private spawnEnemiesFromBlueprint(): void {
