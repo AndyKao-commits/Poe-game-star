@@ -48,6 +48,7 @@ export class EnemyController {
   private readonly sm = createEnemyStateMachine();
   private readonly rng: () => number;
   private dead = false;
+  private readonly animationPrefix: 'crawler' | 'sentinel';
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -65,8 +66,9 @@ export class EnemyController {
     this.rng = opts.rng ?? Math.random;
     this.brain = new EnemyAttackBrain(this.archetype.attack);
     this.stats = createEnemyStats(opts.maxHp ?? 40, 8, 2);
-    this.entity = new WorldEntity(scene, 'enemy', spawn);
-    this.entity.sprite.play('enemy-idle');
+    this.animationPrefix = this.encounter.role === 'ruin_sentinel' ? 'sentinel' : 'crawler';
+    this.entity = new WorldEntity(scene, this.animationPrefix, spawn);
+    this.entity.sprite.play(`${this.animationPrefix}-idle`);
   }
 
   get position(): Vec2 {
@@ -186,7 +188,7 @@ export class EnemyController {
               : phase === 'recovery'
                 ? 'enemy-idle'
                 : 'enemy-idle';
-    this.play(key);
+    this.play(`${this.animationPrefix}-${key.slice('enemy-'.length)}`);
   }
 
   private play(key: string): void {
