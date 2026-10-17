@@ -1,8 +1,9 @@
 import {
   applyDamage,
+  calculateDamage,
   createEnemyStats,
+  DEFAULT_CRIT_CHANCE,
   isDead,
-  rollDamage,
   type CombatStats,
 } from '@core/combat/damage';
 import { knockbackDelta } from '@core/combat/feedback';
@@ -55,13 +56,17 @@ export class EnemyController {
     return this.brain.state;
   }
 
-  update(deltaMs: number, player: PlayerCombatTarget): void {
+  update(
+    deltaMs: number,
+    player: PlayerCombatTarget,
+    options: { suppressDamage?: boolean } = {},
+  ): void {
     if (this.dead) return;
 
     const tick = this.brain.update(deltaMs, this.entity.position, player.position);
     this.syncAnim(tick.phase);
 
-    if (tick.dealDamage && player.alive) {
+    if (tick.dealDamage && player.alive && !options.suppressDamage) {
       player.receiveAttack(this.stats.attack, this.entity.position);
     }
 
@@ -91,7 +96,11 @@ export class EnemyController {
   ): { amount: number; isCrit: boolean; killed: boolean } {
     if (this.dead) return { amount: 0, isCrit: false, killed: false };
 
-    const roll = rollDamage(attackerAttack, this.stats.defense);
+    const roll = calculateDamage({
+      baseAttack: attackerAttack,
+      defense: this.stats.defense,
+      critChance: DEFAULT_CRIT_CHANCE,
+    });
     const next = applyDamage(this.stats, roll.amount);
     this.stats.hp = next.hp;
     this.brain.forceHurt(220);

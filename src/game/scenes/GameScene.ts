@@ -3,6 +3,11 @@ import { mapPixelBounds } from '@core/collision/grid';
 import { createRuinTestMap, type RuinMapBlueprint } from '@core/map/ruinMap';
 import { clampDeltaMs } from '@core/time/delta';
 import { DisposableBag } from '@core/scene/disposables';
+import {
+  canReceiveEncounterDamage,
+  planEncounterReset,
+  tickSpawnGrace,
+} from '@core/encounter/reset';
 import { HudController } from '@ui/hud';
 import { EnemyController } from '../entities/EnemyController';
 import { PlayerController } from '../entities/PlayerController';
@@ -17,6 +22,7 @@ export class GameScene extends Phaser.Scene {
   private blueprint!: RuinMapBlueprint;
   private readonly disposables = new DisposableBag();
   private restartCount = 0;
+  private spawnGraceMs = 0;
 
   constructor() {
     super('GameScene');
@@ -34,9 +40,7 @@ export class GameScene extends Phaser.Scene {
       this.blueprint.map,
       this.feedback,
     );
-    this.enemies = this.blueprint.enemySpawns.map(
-      (spawn) => new EnemyController(this, spawn, this.blueprint.map, this.feedback),
-    );
+    this.spawnEnemiesFromBlueprint();
 
     const bounds = mapPixelBounds(this.blueprint.map);
     const pad = 64;
@@ -59,7 +63,6 @@ export class GameScene extends Phaser.Scene {
 
     const hudRoot = document.getElementById('hud-root');
     if (!hudRoot) throw new Error('Missing #hud-root');
-    // Prevent duplicate HUD if create() runs again without shutdown
     this.hud?.destroy();
     this.hud = new HudController(hudRoot);
     this.hud.setRestartHandler(() => this.handleRestart());
@@ -77,10 +80,12 @@ export class GameScene extends Phaser.Scene {
 
     let delta = clampDeltaMs(rawDelta);
     delta = this.feedback.update(delta);
+    this.spawnGraceMs = tickSpawnGrace(this.spawnGraceMs, delta);
 
     this.player.update(delta, this.enemies);
+    const suppressDamage = !canReceiveEncounterDamage(this.spawnGraceMs);
     for (const enemy of this.enemies) {
-      enemy.update(delta, this.player);
+      enemy.update(delta, this.player, { suppressDamage });
     }
 
     if (this.player.lifecycle.consumeDeathEvent()) {
@@ -98,22 +103,32 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleRestart(): void {
-    if (!this.player.lifecycle.isDead) return;
+    const plan = planEncounterReset({
+      enemySpawnCount: this.blueprint.enemySpawns.length,
+      isPlayerDead: this.player.lifecycle.isDead,
+    });
+    if (!plan.allowed) return;
+
     this.restartCount += 1;
-    this.player.respawn();
-    // Soft-reset enemies that died; keep survivors where they are
-    for (const enemy of this.enemies) {
-      if (!enemy.alive) {
+
+    if (plan.clearTweens) {
+      this.tweens.killAll();
+    }
+    if (plan.clearTimers) {
+      this.time.removeAllEvents();
+    }
+
+    if (plan.destroyAllEnemies) {
+      for (const enemy of this.enemies) {
         enemy.destroy();
       }
+      this.enemies = [];
     }
-    this.enemies = this.enemies.filter((e) => e.alive);
-    // Respawn a few if map cleared
-    if (this.enemies.length === 0) {
-      this.enemies = this.blueprint.enemySpawns.map(
-        (spawn) => new EnemyController(this, spawn, this.blueprint.map, this.feedback),
-      );
-    }
+
+    this.player.respawn();
+    this.spawnEnemiesFromBlueprint();
+    this.spawnGraceMs = plan.graceMs;
+
     this.cameras.main.startFollow(this.player.entity.sprite, true, 0.12, 0.12);
     this.hud?.update({
       hp: this.player.stats.hp,
@@ -125,14 +140,33 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private spawnEnemiesFromBlueprint(): void {
+    this.enemies = this.blueprint.enemySpawns.map(
+      (spawn) => new EnemyController(this, spawn, this.blueprint.map, this.feedback),
+    );
+  }
+
   /** Exposed for tests / diagnostics. */
   getRestartCount(): number {
     return this.restartCount;
   }
 
+  getEnemyCountForTests(): number {
+    return this.enemies.length;
+  }
+
+  getSpawnGraceForTests(): number {
+    return this.spawnGraceMs;
+  }
+
   /** Test hook — do not use in gameplay code. */
   getPlayerForTests(): PlayerController {
     return this.player;
+  }
+
+  /** Test hook to drive restart without clicking HUD. */
+  restartForTests(): void {
+    this.handleRestart();
   }
 
   private teardown(): void {

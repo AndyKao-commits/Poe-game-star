@@ -10,10 +10,28 @@ export interface CombatStats {
 export interface DamageRoll {
   amount: number;
   isCrit: boolean;
+  rawDamage: number;
+  mitigation: number;
 }
 
-export const DEFAULT_CRIT_CHANCE = 0.15;
+/** GDD V0.1 player default crit chance. */
+export const DEFAULT_CRIT_CHANCE = 0.05;
+/** Crit multiplier when a crit lands (non-crit uses 1). */
 export const DEFAULT_CRIT_MULTIPLIER = 1.5;
+/** Phase-1 enemies do not crit unless overridden. */
+export const ENEMY_CRIT_CHANCE = 0;
+
+export interface DamageInput {
+  baseAttack: number;
+  defense: number;
+  skillMultiplier?: number;
+  increasedDamage?: number;
+  flatDamage?: number;
+  critChance?: number;
+  /** Multiplier applied only when the roll crits. Non-crit always uses 1. */
+  critMultiplier?: number;
+  rng?: () => number;
+}
 
 export function createPlayerStats(): CombatStats {
   return {
@@ -37,29 +55,76 @@ export function createEnemyStats(maxHp = 40, attack = 8, defense = 2): CombatSta
   };
 }
 
-/** Flat damage: max(1, attack - defense). */
-export function computeDamage(attackerAttack: number, defenderDefense: number): number {
-  return Math.max(1, Math.floor(attackerAttack - defenderDefense));
+/**
+ * Shared mitigation curve: defense / (defense + 100).
+ * Negative defense is clamped to 0.
+ */
+export function computeMitigation(defense: number): number {
+  const d = Math.max(0, defense);
+  return d / (d + 100);
 }
 
+/**
+ * Unified GDD V0.1 damage entry for players, monsters, and skills.
+ *
+ * rawDamage = baseAttack * skillMultiplier * (1 + increasedDamage) + flatDamage
+ * mitigation = defense / (defense + 100)
+ * finalDamage = max(1, floor(rawDamage * (1 - mitigation) * critMultiplier))
+ *
+ * Non-crit critMultiplier is always 1.
+ */
+export function calculateDamage(input: DamageInput): DamageRoll {
+  const skillMultiplier = input.skillMultiplier ?? 1;
+  const increasedDamage = input.increasedDamage ?? 0;
+  const flatDamage = input.flatDamage ?? 0;
+  const rawDamage =
+    input.baseAttack * skillMultiplier * (1 + increasedDamage) + flatDamage;
+  const mitigation = computeMitigation(input.defense);
+
+  const critChance = input.critChance ?? DEFAULT_CRIT_CHANCE;
+  const critOnHit = input.critMultiplier ?? DEFAULT_CRIT_MULTIPLIER;
+  const rng = input.rng ?? Math.random;
+  const isCrit = rng() < critChance;
+  const critMultiplier = isCrit ? critOnHit : 1;
+
+  const amount = Math.max(1, Math.floor(rawDamage * (1 - mitigation) * critMultiplier));
+  return { amount, isCrit, rawDamage, mitigation };
+}
+
+/**
+ * Convenience wrapper: basic auto-attack with no skill modifiers.
+ * Prefer `calculateDamage` for skills.
+ */
 export function rollDamage(
-  attackerAttack: number,
-  defenderDefense: number,
+  baseAttack: number,
+  defense: number,
   options: {
+    skillMultiplier?: number;
+    increasedDamage?: number;
+    flatDamage?: number;
     critChance?: number;
     critMultiplier?: number;
     rng?: () => number;
   } = {},
 ): DamageRoll {
-  const base = computeDamage(attackerAttack, defenderDefense);
-  const critChance = options.critChance ?? DEFAULT_CRIT_CHANCE;
-  const critMultiplier = options.critMultiplier ?? DEFAULT_CRIT_MULTIPLIER;
-  const rng = options.rng ?? Math.random;
-  const isCrit = rng() < critChance;
-  return {
-    amount: isCrit ? Math.max(1, Math.floor(base * critMultiplier)) : base,
-    isCrit,
-  };
+  return calculateDamage({
+    baseAttack,
+    defense,
+    ...options,
+  });
+}
+
+/**
+ * Non-crit damage helper (critChance forced to 0) for deterministic previews.
+ * @deprecated Prefer calculateDamage / rollDamage with an injected rng.
+ */
+export function computeDamage(baseAttack: number, defense: number): number {
+  return calculateDamage({
+    baseAttack,
+    defense,
+    critChance: 0,
+    rng: () => 1,
+  }).amount;
 }
 
 export function applyDamage(stats: CombatStats, rawDamage: number): CombatStats {

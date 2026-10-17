@@ -7,8 +7,9 @@ import {
 import { AttackTimeline, type AttackTimelineConfig } from '@core/combat/attackTimeline';
 import {
   applyDamage,
+  calculateDamage,
   createPlayerStats,
-  rollDamage,
+  ENEMY_CRIT_CHANCE,
   type CombatStats,
 } from '@core/combat/damage';
 import { knockbackDelta } from '@core/combat/feedback';
@@ -16,6 +17,7 @@ import { Invulnerability, PLAYER_IFRAME_MS } from '@core/combat/invulnerability'
 import { moveWithCollision, type TileMapData } from '@core/collision/grid';
 import { createPlayerStateMachine } from '@core/entities/stateMachine';
 import { PlayerLifecycle } from '@core/entities/playerLifecycle';
+import { RESPAWN_GRACE_MS } from '@core/encounter/reset';
 import { screenToWorld, worldToScreen, type Vec2 } from '@core/iso/coordinates';
 import {
   facingFromAngle,
@@ -222,7 +224,7 @@ export class PlayerController {
     return { accepted: true, died };
   }
 
-  /** Used by enemy brains that pass attack power instead of flat damage. */
+  /** Used by enemy brains that pass attack power — shared GDD damage entry. */
   receiveAttack(
     attackerAttack: number,
     attackerPos: Vec2,
@@ -230,7 +232,11 @@ export class PlayerController {
     if (this.lifecycle.isDead || this.iframes.active) {
       return { accepted: false, died: false, amount: 0, isCrit: false };
     }
-    const roll = rollDamage(attackerAttack, this.stats.defense);
+    const roll = calculateDamage({
+      baseAttack: attackerAttack,
+      defense: this.stats.defense,
+      critChance: ENEMY_CRIT_CHANCE,
+    });
     const result = this.takeDamage(roll.amount, { attackerPos });
     if (result.accepted) {
       this.feedback.floatDamage({
@@ -248,7 +254,6 @@ export class PlayerController {
     this.entity.position = restored.position;
     this.cooldown.reset();
     this.attackTimeline.reset();
-    this.iframes.clear();
     this.pendingTargets = [];
     this.deathVisualPlayed = false;
     this.sm.force('idle');
@@ -256,6 +261,9 @@ export class PlayerController {
     this.entity.sprite.setVisible(true);
     this.entity.sprite.clearTint();
     this.entity.sprite.setAngle(0);
+    // Grace i-frames so leftover enemy strike frames cannot land on frame 0
+    this.iframes.clear();
+    this.iframes.trigger(RESPAWN_GRACE_MS);
     this.playAnim('idle');
     this.entity.syncTransform();
   }
