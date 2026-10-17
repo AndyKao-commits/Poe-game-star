@@ -27,6 +27,8 @@ export class InputController {
   private enabled = true;
   /** Require release of held keys after a modal/input gate closes. */
   private awaitSkillRelease = false;
+  /** Block mouse attacks until the button is released after a modal closes. */
+  private awaitAttackRelease = false;
   /** Deduped edge presses from touch / synthetic sources until the next sample(). */
   private pendingSkillPresses: SkillId[] = [];
   /** Previous-frame key downs for reliable edge detection (JustDown can miss short taps). */
@@ -68,6 +70,7 @@ export class InputController {
     this.enabled = enabled;
     if (!enabled) {
       this.awaitSkillRelease = true;
+      this.awaitAttackRelease = true;
       this.clearTouch();
       this.pendingSkillPresses = [];
       this.prevSkillDown = { q: false, e: false, dodge: false };
@@ -118,7 +121,11 @@ export class InputController {
     });
 
     const pointer = this.scene.input.activePointer;
+    if (this.awaitAttackRelease && !pointer.leftButtonDown()) {
+      this.awaitAttackRelease = false;
+    }
     const mouseAttack =
+      !this.awaitAttackRelease &&
       !this.touch.attackHeld &&
       pointer.leftButtonDown() &&
       pointer.wasTouch !== true;
