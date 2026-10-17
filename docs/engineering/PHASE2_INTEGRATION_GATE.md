@@ -40,3 +40,7 @@ Art branch `feat/phase2-art-direction`; `public/assets/art-d/manifest.json` exis
 - #21 reports real iPhone multi-touch still requires manual QA.
 - #22 UI skill strip intentionally shows unavailable until runtime caster wiring is integrated.
 - All four PRs currently draft; agent-reported test counts are **not** independently verified by Engineering E.
+
+## Merge gate observation (2026-10-17)
+
+- Engineering E attempted merging PR #19 with expected head `80a3f60`; GitHub rejected HTTP 405 because PR remains **Draft**. No merge occurred. Engineering E left a review comment requesting Ready for review plus final test evidence and target-death/respawn checks. Do not bypass draft status.
