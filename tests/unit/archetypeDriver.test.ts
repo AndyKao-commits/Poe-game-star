@@ -16,6 +16,29 @@ function openMap(): ReturnType<typeof createTileMap> {
 }
 
 describe('archetype combat driver', () => {
+  it('cancels pending windup on target death before a rapid respawn', () => {
+    const map = openMap();
+    const brain = new EnemyAttackBrain(AGGRESSIVE_MELEE.attack);
+    const self = { x: 4, y: 4 };
+    const target = { x: 4.4, y: 4 };
+    const start = stepArchetypeCombat(map, {
+      archetype: AGGRESSIVE_MELEE, brain, self, target, deltaMs: 16, rng: () => 0,
+    });
+    expect(start.tick.telegraphing).toBe(true);
+    const dead = stepArchetypeCombat(map, {
+      archetype: AGGRESSIVE_MELEE, brain, self, target, deltaMs: 400,
+      targetAlive: false, rng: () => 0,
+    });
+    expect(dead.tick.telegraphing).toBe(false);
+    expect(dead.tick.dealDamage).toBe(false);
+    expect(brain.inAttackSequence).toBe(false);
+    const respawn = stepArchetypeCombat(map, {
+      archetype: AGGRESSIVE_MELEE, brain, self, target, deltaMs: 16, rng: () => 0,
+    });
+    expect(respawn.tick.dealDamage).toBe(false);
+    expect(respawn.tick.telegraphing).toBe(true);
+  });
+
   it('Corrupted Crawler aggressively chases then telegraphs before damage', () => {
     const map = openMap();
     const brain = new EnemyAttackBrain(AGGRESSIVE_MELEE.attack);
