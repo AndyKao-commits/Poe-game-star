@@ -20,6 +20,8 @@ test.describe('Art D landscape action button layout', () => {
       scene.getOrientationGateForTests()?.setCoarsePointerForTests(true);
     });
 
+    await expect(page.locator('[data-move-zone]')).toBeVisible();
+    await expect(page.locator('[data-actions]')).toBeVisible();
     // Movement zone and attack cluster must not collide on a landscape phone.
     const moveZone = await page.locator('[data-move-zone]').boundingBox();
     const actions = await page.locator('[data-actions]').boundingBox();
