@@ -246,6 +246,7 @@ export class GameScene extends Phaser.Scene {
       xp: this.progression.xp,
       xpToNext: xpToNextLevel(this.progression.level),
       gold: this.rewardLedger.gold,
+      skills: this.player.getCasterState(),
     });
     this.inputDebugHud?.update();
   }
