@@ -11,6 +11,8 @@ export interface HudSnapshot {
   xp?: number;
   xpToNext?: number;
   gold?: number;
+  attack?: number;
+  defense?: number;
   skills?: SkillCasterState | null;
 }
 
@@ -22,6 +24,7 @@ export class HudController {
   private mpText!: HTMLElement;
   private fpsText!: HTMLElement;
   private progressionText!: HTMLElement;
+  private combatStatsText!: HTMLElement;
   private xpFill!: HTMLElement;
   private deathOverlay!: HTMLElement;
   private restartBtn!: HTMLButtonElement;
@@ -55,6 +58,7 @@ export class HudController {
           <div class="hud-bar-track"><div class="hud-bar-fill mp" data-mp-fill></div></div>
           <span data-mp-text>50/50</span>
         </div>
+        <div class="hud-bar-row"><span data-combat-stats>ATK -- · DEF --</span></div>
         <div class="hud-bar-row"><span data-progression-text>Lv 1 · 0/85 XP · 0 G</span></div>
         <div class="hud-bar-track"><div class="hud-bar-fill mp" data-xp-fill></div></div>
       </div>
@@ -87,6 +91,7 @@ export class HudController {
     this.mpText = this.root.querySelector('[data-mp-text]')!;
     this.fpsText = this.root.querySelector('[data-fps]')!;
     this.progressionText = this.root.querySelector('[data-progression-text]')!;
+    this.combatStatsText = this.root.querySelector('[data-combat-stats]')!;
     this.xpFill = this.root.querySelector('[data-xp-fill]')!;
     this.deathOverlay = this.root.querySelector('[data-death]')!;
     this.restartBtn = this.root.querySelector('[data-restart]')!;
@@ -138,6 +143,7 @@ export class HudController {
     this.hpText.textContent = `${Math.ceil(snapshot.hp)}/${snapshot.maxHp}`;
     this.mpText.textContent = `${Math.ceil(snapshot.mp)}/${snapshot.maxMp}`;
     this.fpsText.textContent = `FPS ${Math.round(snapshot.fps)}`;
+    this.combatStatsText.textContent = `ATK ${snapshot.attack ?? '--'} · DEF ${snapshot.defense ?? '--'}`;
     const nextXp = snapshot.xpToNext ?? 85;
     const xp = snapshot.xp ?? 0;
     this.progressionText.textContent = `Lv ${snapshot.level ?? 1} · ${xp}/${nextXp} XP · ${snapshot.gold ?? 0} G`;
