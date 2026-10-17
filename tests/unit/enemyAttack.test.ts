@@ -56,4 +56,39 @@ describe('enemy attack AI', () => {
     expect(tick.phase).toBe('dead');
     expect(tick.dealDamage).toBe(false);
   });
+
+  it('allowAttack false blocks new windups while preserving auto-engage baseline', () => {
+    const gated = new EnemyAttackBrain();
+    const blocked = gated.update(16, { x: 0, y: 0 }, { x: 0.4, y: 0 }, {
+      allowAttack: false,
+    });
+    expect(blocked.phase).toBe('chase');
+    expect(blocked.telegraphing).toBe(false);
+    expect(blocked.canMove).toBe(true);
+
+    const committed = gated.update(16, { x: 0, y: 0 }, { x: 0.4, y: 0 }, {
+      allowAttack: true,
+    });
+    expect(committed.phase).toBe('windup');
+    expect(committed.telegraphing).toBe(true);
+
+    // Baseline (no allowAttack) still auto-engages
+    const baseline = new EnemyAttackBrain();
+    const auto = baseline.update(16, { x: 0, y: 0 }, { x: 0.4, y: 0 });
+    expect(auto.phase).toBe('windup');
+  });
+
+  it('keeps canMove true during chase so retreat locomotion can run', () => {
+    const brain = new EnemyAttackBrain();
+    // Start a strike to enter cooldown, then leave attack sequence
+    brain.update(0, { x: 0, y: 0 }, { x: 0.4, y: 0 });
+    brain.update(400, { x: 0, y: 0 }, { x: 0.4, y: 0 });
+    brain.update(120, { x: 0, y: 0 }, { x: 0.4, y: 0 }); // finish strike
+    brain.update(280, { x: 0, y: 0 }, { x: 0.4, y: 0 }); // finish recovery
+    const tick = brain.update(16, { x: 0, y: 0 }, { x: 0.4, y: 0 }, {
+      allowAttack: false,
+    });
+    expect(tick.canMove).toBe(true);
+    expect(brain.inAttackSequence).toBe(false);
+  });
 });

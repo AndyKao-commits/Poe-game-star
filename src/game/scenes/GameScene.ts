@@ -16,6 +16,7 @@ import { OrientationGate } from '@ui/orientationGate';
 import { SafariGestureGuard } from '@ui/safariGestureGuard';
 import { InputDebugHud } from '@ui/inputDebugHud';
 import { EnemyController } from '../entities/EnemyController';
+import { encounterSpecForSpawnIndex } from '../encounters/enemyRoster';
 import { PlayerController } from '../entities/PlayerController';
 import { renderTileMap } from '../map/TileRenderer';
 import { CombatFeedbackSystem } from '../systems/CombatFeedback';
@@ -295,8 +296,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnEnemiesFromBlueprint(): void {
-    this.enemies = this.blueprint.enemySpawns.map((spawn) => {
-      const enemy = new EnemyController(this, spawn, this.blueprint.map, this.feedback);
+    // Roster assignment lives in enemyRoster — keep this scene touch minimal
+    // so Track E / UI integration can continue owning broader GameScene edits.
+    this.enemies = this.blueprint.enemySpawns.map((spawn, index) => {
+      const enemy = new EnemyController(this, spawn, this.blueprint.map, this.feedback, {
+        encounter: encounterSpecForSpawnIndex(index),
+      });
       this.enemyKillIds.set(enemy, `enemy-${++this.nextEnemyKillId}`);
       return enemy;
     });
