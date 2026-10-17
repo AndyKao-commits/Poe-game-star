@@ -55,3 +55,40 @@ test('Art D textures load and monster animations are registered', async ({ page 
     { key: 'art-d-ui-potion', width: 32, height: 32 },
   ]);
 });
+
+test('enemy telegraph render state is consistent with combat phase', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+  await page.waitForFunction(() => {
+    const scene = window.__ASHEN_GAME__?.scene?.getScene?.('GameScene') as
+      | { getEnemyVisualsForTests?: () => unknown[] }
+      | undefined;
+    return Boolean(scene?.getEnemyVisualsForTests?.().length);
+  });
+  const result = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getEnemyVisualsForTests: () => Array<{
+        alive: boolean;
+        phase: string;
+        telegraphVisible: boolean;
+        telegraphPosition: { x: number; y: number } | null;
+        spritePosition: { x: number; y: number };
+      }>;
+    };
+    const enemies = scene.getEnemyVisualsForTests();
+    return {
+      count: enemies.length,
+      invalid: enemies.filter((enemy) =>
+        (!enemy.alive && enemy.telegraphVisible) ||
+        (enemy.telegraphVisible && enemy.phase !== 'windup') ||
+        (enemy.telegraphVisible && (
+          !enemy.telegraphPosition ||
+          Math.abs(enemy.telegraphPosition.x - enemy.spritePosition.x) > 1 ||
+          Math.abs(enemy.telegraphPosition.y - enemy.spritePosition.y) > 1
+        )),
+      ),
+    };
+  });
+  expect(result.count).toBeGreaterThan(0);
+  expect(result.invalid).toEqual([]);
+});
