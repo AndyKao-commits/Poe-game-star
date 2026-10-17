@@ -44,3 +44,23 @@ Art branch `feat/phase2-art-direction`; `public/assets/art-d/manifest.json` exis
 ## Merge gate observation (2026-10-17)
 
 - Engineering E attempted merging PR #19 with expected head `80a3f60`; GitHub rejected HTTP 405 because PR remains **Draft**. No merge occurred. Engineering E left a review comment requesting Ready for review plus final test evidence and target-death/respawn checks. Do not bypass draft status.
+
+## Integration checkpoint — 2026-10-17 15:12 UTC
+
+- PR #19 AI merged into integration at `22f937f`.
+- PR #21 skills merged into integration at `69de345`.
+- E fixed AI windup/death/respawn race in `5b0d941` and added regression test in `8236af3`; test has not yet been independently executed.
+- PR #20 inventory was marked Ready, but GitHub rejected the merge with HTTP 405 **merge conflicts**. This is a real conflict, not merely a Draft block. Do not retry a blind merge.
+- Integration conflict resolution must preserve A's skill caster state and touch input, C's equipment-derived stats and inventory gating, B's enemy roster, and D's HUD semantics.
+- Art D issue #18 updated with explicit 13-PNG upload request; manifest still reports binaries pending.
+- Production `main` remains untouched. Combined tests are pending.
+
+### C + A reconciliation invariants
+1. Recompute equipment stats from naked base, preserve current HP/MP and clamp to new maxima; update caster mana/maxMana from the newly derived stats without resetting skill cooldowns.
+2. On respawn, restore derived equipment maxima and reinitialize caster resources; preserve bag and gear.
+3. Modal open: clear pointer/skill presses, disable keyboard and touch gameplay inputs; modal close: no held-attack replay.
+4. Every kill ID yields XP/gold and at most one loot claim, including after respawn. Preserve roster spawn-index assignment.
+5. Do not discard A's Q/E/dodge handlers or B's attack telegraph state.
+
+### D reconciliation invariants
+Use a single inventory modal owner, one live skill status adapter, and preserve responsive safe-area styles. Do not switch Art D assets before all 13 PNGs are committed and verified.
