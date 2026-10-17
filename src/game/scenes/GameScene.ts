@@ -251,6 +251,7 @@ export class GameScene extends Phaser.Scene {
     if (plan.destroyAllEnemies) {
       for (const enemy of this.enemies) {
         enemy.destroy();
+        this.enemyKillIds.delete(enemy);
       }
       this.enemies = [];
     }
@@ -288,6 +289,8 @@ export class GameScene extends Phaser.Scene {
       if (!claimed) continue;
       this.rewardLedger = claimed.ledger;
       this.progression = claimed.progression.state;
+      // A claimed corpse no longer needs to be checked on every frame.
+      this.enemyKillIds.delete(enemy);
     }
   }
 
@@ -343,6 +346,7 @@ export class GameScene extends Phaser.Scene {
       enemy.destroy();
     }
     this.enemies = [];
+    this.enemyKillIds.clear();
     this.player?.destroy();
     this.disposables.disposeAll();
   }
