@@ -284,9 +284,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnEnemiesFromBlueprint(): void {
-    this.enemies = this.blueprint.enemySpawns.map(
-      (spawn) => new EnemyController(this, spawn, this.blueprint.map, this.feedback),
-    );
+    this.enemies = this.blueprint.enemySpawns.map((spawn) => {
+      const enemy = new EnemyController(this, spawn, this.blueprint.map, this.feedback);
+      this.enemyKillIds.set(enemy, `enemy-${++this.nextEnemyKillId}`);
+      return enemy;
+    });
   }
 
   getRestartCount(): number {
