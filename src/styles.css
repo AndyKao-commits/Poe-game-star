@@ -361,8 +361,39 @@ body,
   width: min(8vh, 48px);
   height: min(8vh, 48px);
   font-size: 12px;
+  --cd-ratio: 0;
+  overflow: hidden;
 }
 
+.touch-skill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, 0.55);
+  transform-origin: bottom center;
+  transform: scaleY(var(--cd-ratio, 0));
+  pointer-events: none;
+}
+
+.touch-skill.is-ready {
+  border-color: rgba(201, 162, 39, 0.75);
+}
+
+.touch-skill.is-active {
+  background: rgba(201, 162, 39, 0.35);
+}
+
+.touch-skill.is-cooldown {
+  opacity: 0.7;
+}
+
+.touch-skill.is-no-resource {
+  opacity: 0.45;
+  filter: grayscale(0.35);
+}
+
+.touch-skill:disabled,
 .touch-skill.is-locked {
   opacity: 0.35;
   filter: grayscale(0.6);
@@ -435,6 +466,7 @@ body,
 
 .touch-layer.is-disabled .touch-hit,
 .touch-layer.is-disabled .touch-attack,
+.touch-layer.is-disabled .touch-skill,
 .touch-layer.is-disabled .touch-settings {
   pointer-events: none;
 }

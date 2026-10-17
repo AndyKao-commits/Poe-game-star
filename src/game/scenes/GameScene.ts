@@ -182,6 +182,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.player.update(delta, this.enemies);
+    // Engineering A (skills runtime): sync skill cooldown/resource chrome.
+    // Shared GameScene touch — coordinate with integration owner before expanding.
+    this.touchControls?.setSkillUi(this.player.getSkillUiState());
     const suppressDamage = !canReceiveEncounterDamage(this.spawnGraceMs);
     for (const enemy of this.enemies) {
       enemy.update(delta, this.player, { suppressDamage });
