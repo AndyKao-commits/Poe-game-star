@@ -283,6 +283,16 @@ export class TouchControlsOverlay {
       btn.setAttribute('data-skill-state', state.dead ? 'dead' : blocked ? 'disabled' : remaining > 0 ? 'cooldown' : noResource ? String(reason) : 'ready');
       btn.setAttribute('data-skill-cooldown-seconds', remaining > 0 ? String(Math.ceil(remaining / 1000)) : '0');
       btn.setAttribute('data-skill-cooldown-progress', String(Math.max(0, Math.min(1, ratio))));
+      let countdown = btn.querySelector<HTMLElement>('[data-touch-cd]');
+      if (!countdown) {
+        countdown = document.createElement('span');
+        countdown.className = 'touch-cooldown-count';
+        countdown.setAttribute('data-touch-cd', '');
+        countdown.setAttribute('aria-hidden', 'true');
+        btn.appendChild(countdown);
+      }
+      countdown.textContent = remaining > 0 ? String(Math.ceil(remaining / 1000)) : '';
+      countdown.hidden = remaining <= 0;
     }
   }
 
