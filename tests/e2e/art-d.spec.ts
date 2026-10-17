@@ -23,7 +23,7 @@ test('Art D textures load and monster animations are registered', async ({ page 
 
   const assets = await page.evaluate(() => {
     const game = window.__ASHEN_GAME__!;
-    const textures = ['player', 'crawler', 'sentinel', 'tile-floor', 'tile-wall', 'tile-obstacle', 'tile-void', 'slash'];
+    const textures = ['player', 'crawler', 'sentinel', 'tile-floor', 'tile-wall', 'tile-obstacle', 'tile-void', 'slash', 'art-d-telegraph', 'art-d-hit', 'art-d-ui-attack', 'art-d-ui-skill', 'art-d-ui-potion'];
     const animationStates = ['idle', 'chase', 'hurt', 'windup', 'attack'];
     return {
       missingTextures: textures.filter((key) => !game.textures.exists(key)),
@@ -48,5 +48,10 @@ test('Art D textures load and monster animations are registered', async ({ page 
     { key: 'tile-obstacle', width: 64, height: 32 },
     { key: 'tile-void', width: 64, height: 32 },
     { key: 'slash', width: 48, height: 48 },
+    { key: 'art-d-telegraph', width: 48, height: 48 },
+    { key: 'art-d-hit', width: 48, height: 48 },
+    { key: 'art-d-ui-attack', width: 32, height: 32 },
+    { key: 'art-d-ui-skill', width: 32, height: 32 },
+    { key: 'art-d-ui-potion', width: 32, height: 32 },
   ]);
 });
