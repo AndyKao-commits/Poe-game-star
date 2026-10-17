@@ -21,6 +21,13 @@ export class BootScene extends Phaser.Scene {
       });
     }
     this.load.image('slash', '/assets/art-d/slash.png');
+    // Phase 2 visual assets: preload independently of gameplay wiring.
+    for (const effect of ['telegraph', 'hit'] as const) {
+      this.load.image(`art-d-${effect}`, `/assets/art-d/${effect}.png`);
+    }
+    for (const control of ['attack', 'skill', 'potion'] as const) {
+      this.load.image(`art-d-ui-${control}`, `/assets/art-d/ui-${control}.png`);
+    }
   }
 
   create(): void {
