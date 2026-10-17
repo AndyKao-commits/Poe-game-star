@@ -9,11 +9,17 @@ import {
 import { knockbackDelta } from '@core/combat/feedback';
 import { moveWithCollision, type TileMapData } from '@core/collision/grid';
 import { createEnemyStateMachine } from '@core/entities/stateMachine';
-import { chaseVelocity } from '@core/ai/chase';
+import { stepArchetypeCombat } from '@core/ai/archetypeDriver';
 import { EnemyAttackBrain } from '@core/ai/enemyAttack';
+import type { EnemyArchetypeConfig } from '@core/ai/archetypes';
 import type { Vec2 } from '@core/iso/coordinates';
 import { WorldEntity } from '../world/WorldEntity';
 import type { CombatFeedbackSystem } from '../systems/CombatFeedback';
+import {
+  archetypeForEncounter,
+  CORRUPTED_CRAWLER,
+  type EncounterEnemySpec,
+} from '../encounters/enemyRoster';
 import type Phaser from 'phaser';
 
 export interface PlayerCombatTarget {
@@ -25,11 +31,22 @@ export interface PlayerCombatTarget {
   ): { accepted: boolean; died: boolean; amount: number; isCrit: boolean };
 }
 
+export interface EnemyControllerOptions {
+  /** Encounter roster spec (Corrupted Crawler / Ruin Sentinel). */
+  encounter?: EncounterEnemySpec;
+  maxHp?: number;
+  /** Injectable RNG for cautious commit chance (tests). */
+  rng?: () => number;
+}
+
 export class EnemyController {
   readonly entity: WorldEntity;
   readonly stats: CombatStats;
-  readonly brain = new EnemyAttackBrain();
+  readonly brain: EnemyAttackBrain;
+  readonly archetype: EnemyArchetypeConfig;
+  readonly encounter: EncounterEnemySpec;
   private readonly sm = createEnemyStateMachine();
+  private readonly rng: () => number;
   private dead = false;
 
   constructor(
@@ -37,9 +54,17 @@ export class EnemyController {
     spawn: Vec2,
     private readonly map: TileMapData,
     private readonly feedback: CombatFeedbackSystem,
-    maxHp = 40,
+    options: EnemyControllerOptions | number = {},
   ) {
-    this.stats = createEnemyStats(maxHp, 8, 2);
+    // Backward-compatible: `new EnemyController(..., maxHp)` still works.
+    const opts: EnemyControllerOptions =
+      typeof options === 'number' ? { maxHp: options } : options;
+
+    this.encounter = opts.encounter ?? CORRUPTED_CRAWLER;
+    this.archetype = archetypeForEncounter(this.encounter);
+    this.rng = opts.rng ?? Math.random;
+    this.brain = new EnemyAttackBrain(this.archetype.attack);
+    this.stats = createEnemyStats(opts.maxHp ?? 40, 8, 2);
     this.entity = new WorldEntity(scene, 'enemy', spawn);
     this.entity.sprite.play('enemy-idle');
   }
@@ -56,33 +81,44 @@ export class EnemyController {
     return this.brain.state;
   }
 
+  get roleLabel(): string {
+    return this.encounter.label;
+  }
+
   update(
     deltaMs: number,
     player: PlayerCombatTarget,
     options: { suppressDamage?: boolean } = {},
   ): void {
-    if (this.dead) return;
+    // Dead enemies must never chase, telegraph, or deal damage.
+    if (this.dead || this.brain.isDead) return;
 
-    const tick = this.brain.update(deltaMs, this.entity.position, player.position);
-    this.syncAnim(tick.phase);
+    const step = stepArchetypeCombat(this.map, {
+      archetype: this.archetype,
+      brain: this.brain,
+      self: this.entity.position,
+      target: player.position,
+      deltaMs,
+      rng: this.rng,
+      targetAlive: player.alive,
+    });
 
-    if (tick.dealDamage && player.alive && !options.suppressDamage) {
+    this.entity.position = step.position;
+    this.syncAnim(step.tick.phase, step.intent.type);
+
+    if (
+      step.tick.dealDamage &&
+      this.alive &&
+      player.alive &&
+      !options.suppressDamage
+    ) {
       player.receiveAttack(this.stats.attack, this.entity.position);
     }
 
-    if (tick.canMove && player.alive) {
-      const chase = chaseVelocity(this.entity.position, player.position);
-      if (chase.x !== 0 || chase.y !== 0) {
-        const dt = deltaMs / 1000;
-        this.entity.position = moveWithCollision(this.map, this.entity.position, {
-          x: chase.x * dt,
-          y: chase.y * dt,
-        });
-      }
-    }
-
-    if (tick.telegraphing) {
-      this.entity.sprite.setTint(0xffcc44);
+    // Telegraph tint is driven only by the brain windup flag — the same path
+    // that later emits dealDamage — so warning and hit stay in sync.
+    if (step.tick.telegraphing) {
+      this.entity.sprite.setTint(this.encounter.telegraphTint);
     } else if (!this.dead && this.brain.state !== 'hurt') {
       this.entity.sprite.clearTint();
     }
@@ -127,6 +163,7 @@ export class EnemyController {
     this.dead = true;
     this.brain.forceDead();
     this.sm.force('dead');
+    this.entity.sprite.clearTint();
     this.entity.sprite.setTint(0x444444);
     this.scene.tweens.add({
       targets: this.entity.sprite,
@@ -136,7 +173,7 @@ export class EnemyController {
     });
   }
 
-  private syncAnim(phase: string): void {
+  private syncAnim(phase: string, intentType: string): void {
     const key =
       phase === 'windup'
         ? 'enemy-windup'
@@ -144,7 +181,7 @@ export class EnemyController {
           ? 'enemy-attack'
           : phase === 'hurt'
             ? 'enemy-hurt'
-            : phase === 'chase'
+            : phase === 'chase' || intentType === 'chase' || intentType === 'retreat'
               ? 'enemy-chase'
               : phase === 'recovery'
                 ? 'enemy-idle'

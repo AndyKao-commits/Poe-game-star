@@ -13,8 +13,10 @@ export {
   ENEMY_RECOVERY_MS,
   ENEMY_WINDUP_MS,
   EnemyAttackBrain,
+  isEnemyAttackSequencePhase,
   type EnemyAttackConfig,
   type EnemyAttackTickResult,
+  type EnemyAttackUpdateOptions,
   type EnemyCombatPhase,
 } from './enemyAttack';
 
@@ -30,3 +32,9 @@ export {
   type EnemyIntent,
   type EnemyIntentType,
 } from './archetypes';
+
+export {
+  stepArchetypeCombat,
+  type ArchetypeCombatStepInput,
+  type ArchetypeCombatStepResult,
+} from './archetypeDriver';
