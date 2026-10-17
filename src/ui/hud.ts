@@ -23,11 +23,17 @@ export class HudController {
   private deathOverlay!: HTMLElement;
   private restartBtn!: HTMLButtonElement;
   private onRestart: (() => void) | null = null;
+  private onInventory: (() => void) | null = null;
   private boundRestart: () => void;
+  private boundInventory: () => void;
+  private inventoryBtn!: HTMLButtonElement;
+  private lootToast!: HTMLElement;
+  private lootToastTimer: number | null = null;
 
   constructor(root: HTMLElement) {
     this.root = root;
     this.boundRestart = () => this.onRestart?.();
+    this.boundInventory = () => this.onInventory?.();
     this.mount();
   }
 
@@ -51,7 +57,12 @@ export class HudController {
       <div class="hud-panel hud-hints">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移動</div>
         <div>滑鼠左鍵 扇形攻擊（朝向游標）</div>
+        <div><kbd>I</kbd> / <kbd>B</kbd> 背包</div>
       </div>
+      <div class="hud-panel hud-actions">
+        <button type="button" class="hud-inv-btn" data-inventory>背包</button>
+      </div>
+      <div class="hud-loot-toast" data-loot-toast hidden></div>
       <div class="hud-panel hud-fps"><span data-fps>FPS --</span></div>
       <div class="hud-death" data-death hidden>
         <div class="hud-death-card">
@@ -70,11 +81,32 @@ export class HudController {
     this.xpFill = this.root.querySelector('[data-xp-fill]')!;
     this.deathOverlay = this.root.querySelector('[data-death]')!;
     this.restartBtn = this.root.querySelector('[data-restart]')!;
+    this.inventoryBtn = this.root.querySelector('[data-inventory]')!;
+    this.lootToast = this.root.querySelector('[data-loot-toast]')!;
     this.restartBtn.addEventListener('click', this.boundRestart);
+    this.inventoryBtn.addEventListener('click', this.boundInventory);
   }
 
   setRestartHandler(handler: (() => void) | null): void {
     this.onRestart = handler;
+  }
+
+  setInventoryHandler(handler: (() => void) | null): void {
+    this.onInventory = handler;
+  }
+
+  flashLoot(itemId: string, rarity: string): void {
+    this.lootToast.hidden = false;
+    this.lootToast.textContent = `掉落：${itemId} (${rarity})`;
+    this.lootToast.classList.add('is-visible');
+    if (this.lootToastTimer !== null) {
+      window.clearTimeout(this.lootToastTimer);
+    }
+    this.lootToastTimer = window.setTimeout(() => {
+      this.lootToast.classList.remove('is-visible');
+      this.lootToast.hidden = true;
+      this.lootToastTimer = null;
+    }, 2200);
   }
 
   update(snapshot: HudSnapshot): void {
@@ -97,7 +129,13 @@ export class HudController {
 
   destroy(): void {
     this.restartBtn.removeEventListener('click', this.boundRestart);
+    this.inventoryBtn.removeEventListener('click', this.boundInventory);
+    if (this.lootToastTimer !== null) {
+      window.clearTimeout(this.lootToastTimer);
+      this.lootToastTimer = null;
+    }
     this.onRestart = null;
+    this.onInventory = null;
     this.root.innerHTML = '';
   }
 }
