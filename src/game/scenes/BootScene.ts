@@ -6,11 +6,11 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image('tile-floor', '/assets/tile-floor.png');
-    this.load.image('tile-wall', '/assets/tile-wall.png');
-    this.load.image('tile-obstacle', '/assets/tile-obstacle.png');
-    this.load.image('tile-void', '/assets/tile-void.png');
-    this.load.spritesheet('player', '/assets/player.png', {
+    this.load.image('tile-floor', '/assets/art-d/tile-floor.png');
+    this.load.image('tile-wall', '/assets/art-d/tile-wall.png');
+    this.load.image('tile-obstacle', '/assets/art-d/tile-obstacle.png');
+    this.load.image('tile-void', '/assets/art-d/tile-void.png');
+    this.load.spritesheet('player', '/assets/art-d/player.png', {
       frameWidth: 32,
       frameHeight: 32,
     });
@@ -18,7 +18,7 @@ export class BootScene extends Phaser.Scene {
       frameWidth: 32,
       frameHeight: 32,
     });
-    this.load.image('slash', '/assets/slash.png');
+    this.load.image('slash', '/assets/art-d/slash.png');
   }
 
   create(): void {
