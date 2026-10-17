@@ -88,7 +88,7 @@ test('mobile skill controls expose live accessibility state', async ({ page }) =
     await expect(button).toBeVisible();
     await expect(button).toHaveAttribute('data-skill-state', /^(ready|cooldown|insufficient_mana|insufficient_stamina|disabled|dead)$/);
     await expect(button).toHaveAttribute('aria-label', /可用|冷卻|不足|無法使用|已死亡/);
-    await expect(button).toHaveAttribute('data-skill-cooldown-seconds', /^\\d+$/);
+    await expect(button).toHaveAttribute('data-skill-cooldown-seconds', /^[0-9]+$/);
     const progress = Number(await button.getAttribute('data-skill-cooldown-progress'));
     expect(progress).toBeGreaterThanOrEqual(0);
     expect(progress).toBeLessThanOrEqual(1);
