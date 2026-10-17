@@ -3,7 +3,7 @@ import { createProgression, xpToNextLevel, type ProgressionState } from '@core/p
 import { claimKillReward, createKillRewardLedger, type KillRewardLedger } from '@core/progression/killRewards';
 import { createSeededRng, rollLoot } from '@core/loot/lootTable';
 import { ENEMY_LOOT_TABLE } from '@core/loot/enemyLoot';
-import { claimKillLoot, createGearKit, createLootClaimLedger, equipFromInventory, unequipToInventory, type GearKit, type LootClaimLedger } from '@core/loadout/gearKit';
+import { claimKillLoot, grantLoot, createGearKit, createLootClaimLedger, equipFromInventory, unequipToInventory, type GearKit, type LootClaimLedger } from '@core/loadout/gearKit';
 import type { EquipmentSlot } from '@core/equipment/equipment';
 import type { Rarity } from '@core/loot/rarity';
 import { InventoryPanel } from '@ui/inventoryPanel';
@@ -391,6 +391,23 @@ export class GameScene extends Phaser.Scene {
       this.enemyKillIds.set(enemy, `enemy-${++this.nextEnemyKillId}`);
       return enemy;
     });
+  }
+
+  /** Deterministic E2E fixture injection; never used by normal loot rolls. */
+  grantLootForTests(itemId: string, rarity: Rarity): boolean {
+    const result = grantLoot(this.gearKit, { itemId, rarity });
+    if (!result.ok) return false;
+    this.gearKit = result.kit;
+    this.inventoryPanel?.render(this.gearKit);
+    return true;
+  }
+
+  getGearKitForTests(): GearKit {
+    return this.gearKit;
+  }
+
+  getInventoryOpenForTests(): boolean {
+    return this.inventoryOpen;
   }
 
   getLootRollCountForTests(): number {
