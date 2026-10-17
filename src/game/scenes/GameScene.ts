@@ -9,10 +9,15 @@ import {
   tickSpawnGrace,
 } from '@core/encounter/reset';
 import { HudController } from '@ui/hud';
+import { TouchControlsOverlay } from '@ui/touchControls';
+import { OrientationGate } from '@ui/orientationGate';
+import { SafariGestureGuard } from '@ui/safariGestureGuard';
+import { InputDebugHud } from '@ui/inputDebugHud';
 import { EnemyController } from '../entities/EnemyController';
 import { PlayerController } from '../entities/PlayerController';
 import { renderTileMap } from '../map/TileRenderer';
 import { CombatFeedbackSystem } from '../systems/CombatFeedback';
+import { InputController } from '../input/InputController';
 
 export class GameScene extends Phaser.Scene {
   private player!: PlayerController;
@@ -23,6 +28,14 @@ export class GameScene extends Phaser.Scene {
   private readonly disposables = new DisposableBag();
   private restartCount = 0;
   private spawnGraceMs = 0;
+  private playerInput!: InputController;
+  private touchControls: TouchControlsOverlay | null = null;
+  private orientationGate: OrientationGate | null = null;
+  private gestureGuard: SafariGestureGuard | null = null;
+  private inputDebugHud: InputDebugHud | null = null;
+  private touchWanted = false;
+  private lastDead: boolean | null = null;
+  private lastTouchVisible: boolean | null = null;
 
   constructor() {
     super('GameScene');
@@ -30,15 +43,21 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.disposables.reset();
+    this.lastDead = null;
+    this.lastTouchVisible = null;
     this.feedback = new CombatFeedbackSystem(this);
     this.blueprint = createRuinTestMap();
     renderTileMap(this, this.blueprint.map);
+
+    this.playerInput = new InputController(this);
+    this.disposables.add(() => this.playerInput.destroy());
 
     this.player = new PlayerController(
       this,
       this.blueprint.playerSpawn,
       this.blueprint.map,
       this.feedback,
+      this.playerInput,
     );
     this.spawnEnemiesFromBlueprint();
 
@@ -55,6 +74,8 @@ export class GameScene extends Phaser.Scene {
 
     const onResize = (): void => {
       this.cameras.main.setZoom(this.computeZoom());
+      this.touchControls?.layout();
+      this.orientationGate?.refresh();
     };
     this.scale.on('resize', onResize);
     this.disposables.add(() => {
@@ -71,8 +92,69 @@ export class GameScene extends Phaser.Scene {
       this.hud = null;
     });
 
+    const touchRoot = document.getElementById('touch-root');
+    if (!touchRoot) throw new Error('Missing #touch-root');
+    this.touchControls?.destroy();
+    this.touchControls = new TouchControlsOverlay(touchRoot, this.playerInput);
+    this.disposables.add(() => {
+      this.touchControls?.destroy();
+      this.touchControls = null;
+    });
+
+    // Guard the whole immersive shell so blank map / HUD / pass-through taps
+    // cannot double-tap-zoom — not only #game-root or the attack button.
+    const appRoot = document.getElementById('app') ?? document.body;
+    this.gestureGuard?.destroy();
+    this.gestureGuard = new SafariGestureGuard(appRoot);
+    this.disposables.add(() => {
+      this.gestureGuard?.destroy();
+      this.gestureGuard = null;
+    });
+
+    this.inputDebugHud?.destroy();
+    this.inputDebugHud = null;
+    if (InputDebugHud.isRequested()) {
+      const host = document.getElementById('hud-root') ?? document.body;
+      this.inputDebugHud = new InputDebugHud(host, () => {
+        const touch = this.touchControls?.getDebugState();
+        const sample = this.playerInput.sample();
+        const pos = this.player.position;
+        return {
+          pointerId: touch?.movePointerId ?? null,
+          touchId: touch?.moveTouchId ?? null,
+          stickX: touch?.stickX ?? 0,
+          stickY: touch?.stickY ?? 0,
+          moveX: sample.moveX,
+          moveY: sample.moveY,
+          moving: sample.moving,
+          attackHeld: sample.attackHeld,
+          playerX: pos.x,
+          playerY: pos.y,
+        };
+      });
+      this.disposables.add(() => {
+        this.inputDebugHud?.destroy();
+        this.inputDebugHud = null;
+      });
+    }
+
+    const orientRoot = document.getElementById('orient-root');
+    if (!orientRoot) throw new Error('Missing #orient-root');
+    this.orientationGate?.destroy();
+    this.orientationGate = new OrientationGate(orientRoot, {
+      onOrientationChange: (_orientation, showTouch) => {
+        this.touchWanted = showTouch;
+        this.syncControlAvailability();
+      },
+    });
+    this.disposables.add(() => {
+      this.orientationGate?.destroy();
+      this.orientationGate = null;
+    });
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardown());
+    this.syncControlAvailability();
   }
 
   update(_time: number, rawDelta: number): void {
@@ -82,15 +164,20 @@ export class GameScene extends Phaser.Scene {
     delta = this.feedback.update(delta);
     this.spawnGraceMs = tickSpawnGrace(this.spawnGraceMs, delta);
 
+    const dead = this.player.lifecycle.isDead;
+    this.applyDeathControlState(dead);
+
+    if (!dead) {
+      this.touchControls?.update(delta);
+    }
+
     this.player.update(delta, this.enemies);
     const suppressDamage = !canReceiveEncounterDamage(this.spawnGraceMs);
     for (const enemy of this.enemies) {
       enemy.update(delta, this.player, { suppressDamage });
     }
 
-    if (this.player.lifecycle.consumeDeathEvent()) {
-      // one-shot; HUD reacts via dead flag
-    }
+    this.player.lifecycle.consumeDeathEvent();
 
     this.hud.update({
       hp: this.player.stats.hp,
@@ -98,8 +185,36 @@ export class GameScene extends Phaser.Scene {
       mp: this.player.stats.mp,
       maxMp: this.player.stats.maxMp,
       fps: this.game.loop.actualFps,
-      dead: this.player.lifecycle.isDead,
+      dead,
     });
+    this.inputDebugHud?.update();
+  }
+
+  /** Only mutates DOM when dead/alive edge changes. */
+  private applyDeathControlState(dead: boolean): void {
+    if (this.lastDead === dead) return;
+    this.lastDead = dead;
+    this.playerInput.setEnabled(!dead);
+    if (dead) {
+      // Hide immediately and clear all pointer state
+      this.setTouchVisible(false);
+      this.touchControls?.setEnabled(false);
+    } else {
+      this.touchControls?.setEnabled(true);
+      this.syncControlAvailability();
+    }
+  }
+
+  private syncControlAvailability(): void {
+    const show = this.touchWanted && !this.player?.lifecycle.isDead;
+    this.setTouchVisible(show);
+    this.touchControls?.layout();
+  }
+
+  private setTouchVisible(show: boolean): void {
+    if (this.lastTouchVisible === show) return;
+    this.lastTouchVisible = show;
+    this.touchControls?.setVisible(show);
   }
 
   private handleRestart(): void {
@@ -128,6 +243,10 @@ export class GameScene extends Phaser.Scene {
     this.player.respawn();
     this.spawnEnemiesFromBlueprint();
     this.spawnGraceMs = plan.graceMs;
+    this.playerInput.clearTouch();
+    // Force re-evaluate visibility after respawn (clears lastDead cache)
+    this.lastDead = null;
+    this.applyDeathControlState(false);
 
     this.cameras.main.startFollow(this.player.entity.sprite, true, 0.12, 0.12);
     this.hud?.update({
@@ -146,7 +265,6 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  /** Exposed for tests / diagnostics. */
   getRestartCount(): number {
     return this.restartCount;
   }
@@ -159,12 +277,26 @@ export class GameScene extends Phaser.Scene {
     return this.spawnGraceMs;
   }
 
-  /** Test hook — do not use in gameplay code. */
   getPlayerForTests(): PlayerController {
     return this.player;
   }
 
-  /** Test hook to drive restart without clicking HUD. */
+  getInputForTests(): InputController {
+    return this.playerInput;
+  }
+
+  getOrientationGateForTests(): OrientationGate | null {
+    return this.orientationGate;
+  }
+
+  getTouchControlsForTests(): TouchControlsOverlay | null {
+    return this.touchControls;
+  }
+
+  getGestureGuardForTests(): SafariGestureGuard | null {
+    return this.gestureGuard;
+  }
+
   restartForTests(): void {
     this.handleRestart();
   }

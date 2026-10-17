@@ -18,15 +18,12 @@ import { moveWithCollision, type TileMapData } from '@core/collision/grid';
 import { createPlayerStateMachine } from '@core/entities/stateMachine';
 import { PlayerLifecycle } from '@core/entities/playerLifecycle';
 import { RESPAWN_GRACE_MS } from '@core/encounter/reset';
-import { screenToWorld, worldToScreen, type Vec2 } from '@core/iso/coordinates';
-import {
-  facingFromAngle,
-  facingFromVector,
-  movementFromInput,
-  type Facing,
-} from '@core/movement/direction';
+import { resolveAutoAimAngle } from '@core/input/autoAim';
+import { worldToScreen, type Vec2 } from '@core/iso/coordinates';
+import { facingFromAngle, facingFromVector, type Facing } from '@core/movement/direction';
 import { WorldEntity } from '../world/WorldEntity';
 import type { CombatFeedbackSystem } from '../systems/CombatFeedback';
+import type { InputController } from '../input/InputController';
 
 const MOVE_SPEED = 3.2;
 
@@ -50,12 +47,6 @@ export class PlayerController {
   private facing: Facing = 'se';
   private pendingTargets: Attackable[] = [];
   private readonly spawn: Vec2;
-  private readonly cursors: {
-    up: Phaser.Input.Keyboard.Key;
-    down: Phaser.Input.Keyboard.Key;
-    left: Phaser.Input.Keyboard.Key;
-    right: Phaser.Input.Keyboard.Key;
-  };
   private deathVisualPlayed = false;
 
   constructor(
@@ -63,6 +54,7 @@ export class PlayerController {
     spawn: Vec2,
     private readonly map: TileMapData,
     private readonly feedback: CombatFeedbackSystem,
+    private readonly input: InputController,
     attackConfig?: Partial<AttackTimelineConfig>,
   ) {
     this.spawn = { ...spawn };
@@ -73,13 +65,6 @@ export class PlayerController {
       actionMs: attackConfig?.actionMs ?? 320,
     });
     this.entity = new WorldEntity(scene, 'player', spawn);
-    const keyboard = scene.input.keyboard!;
-    this.cursors = {
-      up: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-      down: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-      left: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
-      right: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-    };
     this.playAnim('idle');
   }
 
@@ -93,6 +78,10 @@ export class PlayerController {
 
   get animState(): string {
     return this.sm.state;
+  }
+
+  get currentFacing(): Facing {
+    return this.facing;
   }
 
   update(deltaMs: number, enemies: Attackable[]): void {
@@ -113,29 +102,26 @@ export class PlayerController {
       this.pendingTargets = [];
     }
 
-    if (this.lifecycle.canAttack) {
-      const pointer = this.scene.input.activePointer;
-      if (pointer.leftButtonDown()) {
-        this.tryAttack(enemies);
-      }
+    const sample = this.input.sample();
+
+    if (this.lifecycle.canAttack && sample.attackHeld) {
+      this.tryAttack(enemies, sample.touchActive);
     }
 
     if (this.lifecycle.canMove && !this.attackTimeline.moveLocked) {
-      this.updateMovement(deltaMs);
+      this.updateMovement(deltaMs, sample.moveX, sample.moveY, sample.moving);
     }
 
     this.entity.syncTransform();
   }
 
-  private updateMovement(deltaMs: number): void {
-    const input = {
-      up: this.cursors.up.isDown,
-      down: this.cursors.down.isDown,
-      left: this.cursors.left.isDown,
-      right: this.cursors.right.isDown,
-    };
-    const move = movementFromInput(input);
-    if (!move.moving) {
+  private updateMovement(
+    deltaMs: number,
+    moveX: number,
+    moveY: number,
+    moving: boolean,
+  ): void {
+    if (!moving) {
       if (!this.attackTimeline.isActive) {
         this.sm.tryTransition('idle');
         this.playAnim('idle');
@@ -144,23 +130,23 @@ export class PlayerController {
     }
 
     this.sm.tryTransition('run');
-    this.facing = facingFromVector(move.x, move.y);
+    this.facing = facingFromVector(moveX, moveY);
     const dt = deltaMs / 1000;
     this.entity.position = moveWithCollision(this.map, this.entity.position, {
-      x: move.x * MOVE_SPEED * dt,
-      y: move.y * MOVE_SPEED * dt,
+      x: moveX * MOVE_SPEED * dt,
+      y: moveY * MOVE_SPEED * dt,
     });
     if (!this.attackTimeline.isActive) {
       this.playAnim('run');
     }
   }
 
-  private tryAttack(enemies: Attackable[]): void {
+  private tryAttack(enemies: Attackable[], touchActive: boolean): void {
     if (!this.lifecycle.canAttack) return;
     if (this.attackTimeline.isActive) return;
     if (!this.cooldown.ready) return;
 
-    const aim = this.aimAngleWorld();
+    const aim = this.resolveAim(enemies, touchActive);
     if (!this.attackTimeline.tryBegin(aim)) return;
     this.cooldown.tryStart();
 
@@ -169,6 +155,20 @@ export class PlayerController {
     this.pendingTargets = enemies.filter((e) => e.alive);
     this.playAnim('attack');
     this.spawnSlash(aim);
+  }
+
+  private resolveAim(enemies: Attackable[], touchActive: boolean): number {
+    if (touchActive) {
+      return resolveAutoAimAngle(this.entity.position, this.facing, enemies);
+    }
+    const mouseWorld = this.input.sampleMouseWorld();
+    if (mouseWorld) {
+      return Math.atan2(
+        mouseWorld.y - this.entity.position.y,
+        mouseWorld.x - this.entity.position.x,
+      );
+    }
+    return resolveAutoAimAngle(this.entity.position, this.facing, enemies);
   }
 
   private resolveAttackHits(): void {
@@ -193,10 +193,6 @@ export class PlayerController {
     }
   }
 
-  /**
-   * Apply incoming damage. Respects i-frames and death gate.
-   * `amount` is already defense-resolved by the attacker brain.
-   */
   takeDamage(
     amount: number,
     meta?: { attackerPos?: Vec2 },
@@ -219,12 +215,12 @@ export class PlayerController {
     if (died) {
       this.sm.force('dead');
       this.attackTimeline.reset();
+      this.input.clearTouch();
       this.ensureDeathVisual();
     }
     return { accepted: true, died };
   }
 
-  /** Used by enemy brains that pass attack power — shared GDD damage entry. */
   receiveAttack(
     attackerAttack: number,
     attackerPos: Vec2,
@@ -261,9 +257,9 @@ export class PlayerController {
     this.entity.sprite.setVisible(true);
     this.entity.sprite.clearTint();
     this.entity.sprite.setAngle(0);
-    // Grace i-frames so leftover enemy strike frames cannot land on frame 0
     this.iframes.clear();
     this.iframes.trigger(RESPAWN_GRACE_MS);
+    this.input.clearTouch();
     this.playAnim('idle');
     this.entity.syncTransform();
   }
@@ -279,21 +275,6 @@ export class PlayerController {
       angle: 90,
       duration: 450,
     });
-  }
-
-  private aimAngleWorld(): number {
-    const cam = this.scene.cameras.main;
-    const pointer = this.scene.input.activePointer;
-    const screen = {
-      x: pointer.worldX,
-      y: pointer.worldY,
-    };
-    if (!Number.isFinite(screen.x) || !Number.isFinite(screen.y)) {
-      screen.x = pointer.x / cam.zoom + cam.scrollX;
-      screen.y = pointer.y / cam.zoom + cam.scrollY;
-    }
-    const world = screenToWorld(screen);
-    return Math.atan2(world.y - this.entity.position.y, world.x - this.entity.position.x);
   }
 
   private spawnSlash(aimAngle: number): void {

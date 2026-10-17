@@ -2,7 +2,12 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <title>Ashen Reliquary — Phase 1</title>
     <link rel="icon" type="image/png" href="/assets/tile-floor.png" />
     <link rel="stylesheet" href="/src/styles.css" />
@@ -11,6 +16,8 @@
     <div id="app">
       <div id="game-root"></div>
       <div id="hud-root" aria-live="polite"></div>
+      <div id="touch-root"></div>
+      <div id="orient-root"></div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
