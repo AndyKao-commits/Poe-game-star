@@ -241,6 +241,8 @@ export class TouchControlsOverlay {
     }
     this.enabled = enabled;
     this.layer.classList.toggle('is-disabled', !enabled);
+    // Refresh live presentation immediately when a modal disables touch controls.
+    if (this.lastSkillUi) this.setSkillUi(this.lastSkillUi);
     if (!enabled) {
       this.resetAllPointers();
     }
