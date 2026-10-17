@@ -49,6 +49,7 @@ export class EnemyController {
   private readonly rng: () => number;
   private dead = false;
   private readonly animationPrefix: 'crawler' | 'sentinel';
+  private telegraphFx: Phaser.GameObjects.Image | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -120,8 +121,10 @@ export class EnemyController {
     // Telegraph tint is driven only by the brain windup flag — the same path
     // that later emits dealDamage — so warning and hit stay in sync.
     if (step.tick.telegraphing) {
+      this.showTelegraph();
       this.entity.sprite.setTint(this.encounter.telegraphTint);
     } else if (!this.dead && this.brain.state !== 'hurt') {
+      this.hideTelegraph();
       this.entity.sprite.clearTint();
     }
 
@@ -144,6 +147,7 @@ export class EnemyController {
     this.brain.forceHurt(220);
     this.sm.force('hurt');
     this.feedback.flash(this.entity.sprite, 0xff6666);
+    this.showHitFx();
 
     if (meta?.attackerPos && this.feedback.knockbackEnabled) {
       const kb = knockbackDelta(
@@ -162,6 +166,7 @@ export class EnemyController {
   }
 
   private die(): void {
+    this.hideTelegraph();
     this.dead = true;
     this.brain.forceDead();
     this.sm.force('dead');
@@ -197,7 +202,28 @@ export class EnemyController {
     }
   }
 
+  private showTelegraph(): void {
+    if (!this.scene.textures.exists('art-d-telegraph')) return;
+    if (!this.telegraphFx) {
+      this.telegraphFx = this.scene.add.image(0, 0, 'art-d-telegraph').setAlpha(0.8);
+    }
+    this.telegraphFx.setPosition(this.entity.sprite.x, this.entity.sprite.y).setDepth(this.entity.sprite.depth + 1).setVisible(true);
+  }
+
+  private hideTelegraph(): void {
+    this.telegraphFx?.setVisible(false);
+  }
+
+  private showHitFx(): void {
+    if (!this.scene.textures.exists('art-d-hit')) return;
+    const fx = this.scene.add.image(this.entity.sprite.x, this.entity.sprite.y, 'art-d-hit');
+    fx.setDepth(this.entity.sprite.depth + 2);
+    this.scene.tweens.add({ targets: fx, alpha: 0, duration: 180, onComplete: () => fx.destroy() });
+  }
+
   destroy(): void {
+    this.telegraphFx?.destroy();
+    this.telegraphFx = null;
     this.entity.destroy();
   }
 }
