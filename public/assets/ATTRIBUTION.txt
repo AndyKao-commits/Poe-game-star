@@ -1,0 +1,10 @@
+Ashen Reliquary placeholder assets
+Generated procedurally by scripts/generate-placeholders.mjs
+Original pixel placeholders — free to replace with licensed art.
+Not derived from concept illustrations or third-party sprite sheets.
+
+SPRITE SPEC (replaceable)
+player.png  32x32 cells, 8 cols (e,se,s,sw,w,nw,n,ne) x 6 rows
+            rows 0-1 idle, 2-3 run, 4-5 attack (windup, hit)
+enemy.png   32x32 cells, 4 cols x 5 rows
+            row0 idle, 1 chase, 2 hurt, 3 windup, 4 attack
