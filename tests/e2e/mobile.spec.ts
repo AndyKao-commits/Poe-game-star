@@ -565,6 +565,12 @@ test.describe('desktop WASD regression', () => {
   test('WASD still moves the player', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+    await page.waitForFunction(() => {
+      const scene = window.__ASHEN_GAME__?.scene?.getScene?.('GameScene') as
+        | { getPlayerForTests?: () => unknown }
+        | undefined;
+      return Boolean(scene?.getPlayerForTests?.());
+    });
 
     const before = await readPlayerPos(page);
     await page.locator('#game-root canvas').click();
