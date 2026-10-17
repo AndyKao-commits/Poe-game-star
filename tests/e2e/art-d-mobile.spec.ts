@@ -31,7 +31,7 @@ test.describe('Art D landscape action button layout', () => {
       expect(box.x + box.width, `${selector} right`).toBeLessThanOrEqual(844);
       expect(box.y + box.height, `${selector} bottom`).toBeLessThanOrEqual(390);
       if (selector !== '[data-dodge]') {
-        await expect(button).toHaveCSS('background-image', /assets\\/art-d\\/ui-(attack|skill)\\.png/);
+        await expect(button).toHaveCSS('background-image', new RegExp('assets/art-d/ui-(attack|skill)\\.png'));
       }
     }
   });
