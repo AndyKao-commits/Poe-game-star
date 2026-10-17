@@ -1,8 +1,8 @@
 {
   "version": "D-v1-prototype",
-  "status": "binary PNGs pending GitHub upload",
+  "status": "13 prototype PNGs present in GitHub; runtime QA pending",
   "license": "Original procedural artwork created for Ashen Reliquary",
-  "note": "Manifest alone does not mean PNGs are present. Binary asset package is available in conversation; do not integrate until files exist in this directory.",
+  "note": "All 13 declared PNG files are present in this directory. Presence does not establish image dimensions, visual approval, or runtime QA; retain staged integration until verified.",
   "player": {
     "file": "player.png",
     "size": [
