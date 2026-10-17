@@ -67,3 +67,26 @@ test.describe('Art D landscape action button layout', () => {
     }
   });
 });
+
+test('mobile skill controls expose live accessibility state', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+  await page.waitForFunction(() => {
+    const scene = window.__ASHEN_GAME__?.scene?.getScene?.('GameScene') as
+      | { getOrientationGateForTests?: () => { setCoarsePointerForTests: (value: boolean) => void } | null }
+      | undefined;
+    return Boolean(scene?.getOrientationGateForTests);
+  });
+  await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getOrientationGateForTests: () => { setCoarsePointerForTests: (value: boolean) => void } | null;
+    };
+    scene.getOrientationGateForTests()?.setCoarsePointerForTests(true);
+  });
+  for (const selector of ['[data-skill-q]', '[data-skill-e]', '[data-dodge]']) {
+    const button = page.locator(selector);
+    await expect(button).toBeVisible();
+    await expect(button).toHaveAttribute('data-skill-state', /^(ready|cooldown|insufficient_mana|insufficient_stamina|disabled|dead)$/);
+    await expect(button).toHaveAttribute('aria-label', /可用|冷卻|不足|無法使用|已死亡/);
+  }
+});
