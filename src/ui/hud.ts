@@ -1,3 +1,5 @@
+import { allSkillUiSnapshots, applySkillButtonDom } from './skillStatus';
+import type { SkillCasterState } from '@core/skills';
 export interface HudSnapshot {
   hp: number;
   maxHp: number;
@@ -9,6 +11,7 @@ export interface HudSnapshot {
   xp?: number;
   xpToNext?: number;
   gold?: number;
+  skills?: SkillCasterState | null;
 }
 
 export class HudController {
@@ -27,6 +30,7 @@ export class HudController {
   private boundRestart: () => void;
   private boundInventory: () => void;
   private inventoryBtn!: HTMLButtonElement;
+  private skillButtons = new Map<string, HTMLElement>();
   private lootToast!: HTMLElement;
   private lootToastTimer: number | null = null;
 
@@ -53,6 +57,11 @@ export class HudController {
         </div>
         <div class="hud-bar-row"><span data-progression-text>Lv 1 · 0/85 XP · 0 G</span></div>
         <div class="hud-bar-track"><div class="hud-bar-fill mp" data-xp-fill></div></div>
+      </div>
+      <div class="hud-panel hud-skills" aria-label="技能狀態">
+        <div class="hud-skill" data-hud-skill="q"><span>Q</span><span data-skill-cd></span></div>
+        <div class="hud-skill" data-hud-skill="e"><span>E</span><span data-skill-cd></span></div>
+        <div class="hud-skill" data-hud-skill="dodge"><span>閃</span><span data-skill-cd></span></div>
       </div>
       <div class="hud-panel hud-hints">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移動</div>
@@ -83,6 +92,10 @@ export class HudController {
     this.restartBtn = this.root.querySelector('[data-restart]')!;
     this.inventoryBtn = this.root.querySelector('[data-inventory]')!;
     this.lootToast = this.root.querySelector('[data-loot-toast]')!;
+    for (const el of this.root.querySelectorAll<HTMLElement>('[data-hud-skill]')) {
+      const id = el.getAttribute('data-hud-skill');
+      if (id) this.skillButtons.set(id, el);
+    }
     this.restartBtn.addEventListener('click', this.boundRestart);
     this.inventoryBtn.addEventListener('click', this.boundInventory);
   }
@@ -109,7 +122,15 @@ export class HudController {
     }, 2200);
   }
 
+  updateSkills(caster: SkillCasterState | null): void {
+    for (const snap of allSkillUiSnapshots(caster)) {
+      const el = this.skillButtons.get(snap.id);
+      if (el) applySkillButtonDom(el, snap);
+    }
+  }
+
   update(snapshot: HudSnapshot): void {
+    this.updateSkills(snapshot.skills ?? null);
     const hpRatio = snapshot.maxHp > 0 ? snapshot.hp / snapshot.maxHp : 0;
     const mpRatio = snapshot.maxMp > 0 ? snapshot.mp / snapshot.maxMp : 0;
     this.hpFill.style.transform = `scaleX(${Math.max(0, Math.min(1, hpRatio))})`;
@@ -136,6 +157,7 @@ export class HudController {
     }
     this.onRestart = null;
     this.onInventory = null;
+    this.skillButtons.clear();
     this.root.innerHTML = '';
   }
 }
