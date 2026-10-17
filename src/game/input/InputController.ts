@@ -25,6 +25,8 @@ export class InputController {
     active: false,
   };
   private enabled = true;
+  /** Require release of held keys after a modal/input gate closes. */
+  private awaitSkillRelease = false;
   /** Deduped edge presses from touch / synthetic sources until the next sample(). */
   private pendingSkillPresses: SkillId[] = [];
   /** Previous-frame key downs for reliable edge detection (JustDown can miss short taps). */
@@ -65,6 +67,7 @@ export class InputController {
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
     if (!enabled) {
+      this.awaitSkillRelease = true;
       this.clearTouch();
       this.pendingSkillPresses = [];
       this.prevSkillDown = { q: false, e: false, dodge: false };
@@ -166,6 +169,12 @@ export class InputController {
     const qDown = this.skillKeys.q.isDown;
     const eDown = this.skillKeys.e.isDown;
     const dodgeDown = this.skillKeys.dodge.isDown || this.skillKeys.dodgeAlt.isDown;
+
+    if (this.awaitSkillRelease) {
+      this.prevSkillDown = { q: qDown, e: eDown, dodge: dodgeDown };
+      if (!qDown && !eDown && !dodgeDown) this.awaitSkillRelease = false;
+      return [];
+    }
 
     if (qDown && !this.prevSkillDown.q && !presses.includes('q')) presses.push('q');
     if (eDown && !this.prevSkillDown.e && !presses.includes('e')) presses.push('e');
