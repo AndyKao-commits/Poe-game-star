@@ -208,6 +208,16 @@ export class EnemyController {
     }
   }
 
+  /** Read-only visual state for browser regression tests. */
+  getVisualFxForTests(): { telegraphVisible: boolean; telegraphPosition: { x: number; y: number } | null } {
+    return {
+      telegraphVisible: Boolean(this.telegraphFx?.active && this.telegraphFx.visible),
+      telegraphPosition: this.telegraphFx?.active
+        ? { x: this.telegraphFx.x, y: this.telegraphFx.y }
+        : null,
+    };
+  }
+
   private showTelegraph(): void {
     if (!this.scene.textures.exists('art-d-telegraph')) return;
     if (!this.telegraphFx) {
