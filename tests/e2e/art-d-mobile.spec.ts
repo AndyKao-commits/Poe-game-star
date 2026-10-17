@@ -92,5 +92,14 @@ test('mobile skill controls expose live accessibility state', async ({ page }) =
     const progress = Number(await button.getAttribute('data-skill-cooldown-progress'));
     expect(progress).toBeGreaterThanOrEqual(0);
     expect(progress).toBeLessThanOrEqual(1);
+    const seconds = Number(await button.getAttribute('data-skill-cooldown-seconds'));
+    const counter = button.locator('[data-touch-cd]');
+    await expect(counter).toHaveCount(1);
+    if (seconds === 0) {
+      await expect(counter).toBeHidden();
+    } else {
+      await expect(counter).toBeVisible();
+      await expect(counter).toHaveText(/^[0-9]+$/);
+    }
   }
 });
