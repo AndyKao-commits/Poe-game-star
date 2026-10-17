@@ -147,6 +147,22 @@ body,
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
+  z-index: 12;
+}
+
+.input-debug-hud {
+  position: fixed;
+  left: calc(12px + var(--safe-left));
+  bottom: calc(12px + var(--safe-bottom));
+  z-index: 50;
+  margin: 0;
+  padding: 8px 10px;
+  font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #d6f5c8;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(214, 245, 200, 0.35);
+  pointer-events: none;
+  white-space: pre;
 }
 
 .hud-death {
@@ -361,34 +377,40 @@ body,
   pointer-events: none;
 }
 
-.touch-mode {
+/* Independent of .touch-visual opacity — always recoverable in hidden mode */
+.touch-settings {
   position: absolute;
-  top: calc(10px + var(--safe-top));
-  right: calc(10px + var(--safe-right));
+  top: calc(44px + var(--safe-top));
+  right: calc(12px + var(--safe-right));
+  z-index: 30;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.touch-mode {
   font-size: 11px;
   color: var(--muted);
   pointer-events: auto;
   display: flex;
   gap: 6px;
   align-items: center;
-  background: rgba(12, 14, 20, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(12, 14, 20, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   padding: 4px 8px;
-  z-index: 10;
 }
 
 .touch-mode select {
-  background: rgba(12, 14, 20, 0.9);
+  background: rgba(12, 14, 20, 0.95);
   color: var(--ink);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   font: inherit;
   pointer-events: auto;
-  z-index: 11;
+  touch-action: manipulation;
 }
 
 .touch-layer.is-disabled .touch-hit,
 .touch-layer.is-disabled .touch-attack,
-.touch-layer.is-disabled .touch-mode {
+.touch-layer.is-disabled .touch-settings {
   pointer-events: none;
 }
 

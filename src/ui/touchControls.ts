@@ -14,9 +14,25 @@ import type { InputController } from '../game/input/InputController';
 
 const JOYSTICK_MAX_RADIUS_VH = 0.11;
 
+export interface TouchControlsDebugState {
+  movePointerId: number | null;
+  moveTouchId: number | null;
+  stickX: number;
+  stickY: number;
+  moveX: number;
+  moveY: number;
+  moving: boolean;
+  attackHeld: boolean;
+  mode: ControlVisibilityMode;
+}
+
 /**
  * DOM overlay for landscape ARPG touch controls.
- * Hit zones sit under interactive chrome (attack button, mode select).
+ *
+ * Hit zones use both Pointer Events and Touch Events: iOS Safari frequently
+ * fails to deliver window-level pointermove after setPointerCapture, while
+ * touchmove remains reliable. Settings chrome lives outside the fade/hide
+ * visual layer so "完全隱藏" never removes the recovery control.
  */
 export class TouchControlsOverlay {
   private readonly root: HTMLElement;
@@ -27,13 +43,18 @@ export class TouchControlsOverlay {
   private readonly stickKnob: HTMLElement;
   private readonly attackBtn: HTMLButtonElement;
   private readonly attackZone: HTMLElement;
+  private readonly settings: HTMLElement;
   private readonly modeSelect: HTMLSelectElement;
   private readonly hint: HTMLElement;
 
   private movePointerId: number | null = null;
+  private moveTouchId: number | null = null;
   private attackPointerId: number | null = null;
+  private attackTouchId: number | null = null;
   private originX = 0;
   private originY = 0;
+  private stickX = 0;
+  private stickY = 0;
   private moveX = 0;
   private moveY = 0;
   private moving = false;
@@ -51,6 +72,9 @@ export class TouchControlsOverlay {
   private readonly onPointerDown: (e: Event) => void;
   private readonly onPointerMove: (e: Event) => void;
   private readonly onPointerUp: (e: Event) => void;
+  private readonly onTouchStart: (e: Event) => void;
+  private readonly onTouchMove: (e: Event) => void;
+  private readonly onTouchEnd: (e: Event) => void;
   private readonly onBlur: () => void;
   private readonly onVisibility: () => void;
   private readonly onModeChange: () => void;
@@ -60,7 +84,7 @@ export class TouchControlsOverlay {
     private readonly input: InputController,
   ) {
     this.root = root;
-    // Hit zones first (z-index lower); visual chrome later so buttons/select win hit-tests.
+    // Hit zones first; visual chrome next; settings last so they always win hit-tests.
     this.root.innerHTML = `
       <div class="touch-layer" data-touch-layer>
         <div class="touch-hit move-zone" data-move-zone></div>
@@ -77,6 +101,8 @@ export class TouchControlsOverlay {
             <button type="button" class="touch-skill is-locked" data-dodge disabled aria-disabled="true">閃</button>
             <button type="button" class="touch-attack" data-attack aria-label="普通攻擊">攻</button>
           </div>
+        </div>
+        <div class="touch-settings" data-touch-settings>
           <label class="touch-mode" data-touch-mode>
             顯示
             <select data-mode>
@@ -96,12 +122,16 @@ export class TouchControlsOverlay {
     this.stickKnob = this.root.querySelector('[data-stick-knob]')!;
     this.attackBtn = this.root.querySelector('[data-attack]')!;
     this.attackZone = this.root.querySelector('[data-attack-zone]')!;
+    this.settings = this.root.querySelector('[data-touch-settings]')!;
     this.modeSelect = this.root.querySelector('[data-mode]')!;
     this.hint = this.root.querySelector('[data-touch-hint]')!;
 
     this.onPointerDown = (e) => this.handlePointerDown(e as PointerEvent);
     this.onPointerMove = (e) => this.handlePointerMove(e as PointerEvent);
     this.onPointerUp = (e) => this.handlePointerUp(e as PointerEvent);
+    this.onTouchStart = (e) => this.handleTouchStart(e as TouchEvent);
+    this.onTouchMove = (e) => this.handleTouchMove(e as TouchEvent);
+    this.onTouchEnd = (e) => this.handleTouchEnd(e as TouchEvent);
     this.onBlur = () => this.resetAllPointers();
     this.onVisibility = () => {
       if (document.hidden) this.resetAllPointers();
@@ -111,12 +141,22 @@ export class TouchControlsOverlay {
       this.applyOpacity(true);
     };
 
+    const touchOpts: AddEventListenerOptions = { passive: false, capture: false };
+
     this.moveZone.addEventListener('pointerdown', this.onPointerDown);
     this.attackZone.addEventListener('pointerdown', this.onPointerDown);
     this.attackBtn.addEventListener('pointerdown', this.onPointerDown);
+    this.moveZone.addEventListener('touchstart', this.onTouchStart, touchOpts);
+    this.attackZone.addEventListener('touchstart', this.onTouchStart, touchOpts);
+    this.attackBtn.addEventListener('touchstart', this.onTouchStart, touchOpts);
+
+    // Window-level move/up: pointer capture is unreliable on iOS Safari.
     window.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
     window.addEventListener('pointercancel', this.onPointerUp);
+    window.addEventListener('touchmove', this.onTouchMove, touchOpts);
+    window.addEventListener('touchend', this.onTouchEnd, touchOpts);
+    window.addEventListener('touchcancel', this.onTouchEnd, touchOpts);
     window.addEventListener('blur', this.onBlur);
     document.addEventListener('visibilitychange', this.onVisibility);
     this.modeSelect.addEventListener('change', this.onModeChange);
@@ -132,6 +172,20 @@ export class TouchControlsOverlay {
 
   get currentMode(): ControlVisibilityMode {
     return this.mode;
+  }
+
+  getDebugState(): TouchControlsDebugState {
+    return {
+      movePointerId: this.movePointerId,
+      moveTouchId: this.moveTouchId,
+      stickX: this.stickX,
+      stickY: this.stickY,
+      moveX: this.moveX,
+      moveY: this.moveY,
+      moving: this.moving,
+      attackHeld: this.attackHeld,
+      mode: this.mode,
+    };
   }
 
   setVisible(visible: boolean): void {
@@ -166,7 +220,7 @@ export class TouchControlsOverlay {
   /** Advance idle fade clock; call from the game loop. */
   update(deltaMs: number): void {
     if (this.disposed || !this.visible) return;
-    this.interacting = this.movePointerId !== null || this.attackPointerId !== null;
+    this.interacting = this.hasMoveContact() || this.hasAttackContact();
     this.idleMs = advanceIdleMs(this.idleMs, deltaMs, this.interacting);
     this.applyOpacity(false);
     if (this.hintShown && this.idleMs > CONTROL_IDLE_DELAY_MS) {
@@ -179,54 +233,62 @@ export class TouchControlsOverlay {
     if (this.disposed) return;
     this.disposed = true;
     this.resetAllPointers();
+    const touchOpts: AddEventListenerOptions = { passive: false, capture: false };
     this.moveZone.removeEventListener('pointerdown', this.onPointerDown);
     this.attackZone.removeEventListener('pointerdown', this.onPointerDown);
     this.attackBtn.removeEventListener('pointerdown', this.onPointerDown);
+    this.moveZone.removeEventListener('touchstart', this.onTouchStart, touchOpts);
+    this.attackZone.removeEventListener('touchstart', this.onTouchStart, touchOpts);
+    this.attackBtn.removeEventListener('touchstart', this.onTouchStart, touchOpts);
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('pointercancel', this.onPointerUp);
+    window.removeEventListener('touchmove', this.onTouchMove, touchOpts);
+    window.removeEventListener('touchend', this.onTouchEnd, touchOpts);
+    window.removeEventListener('touchcancel', this.onTouchEnd, touchOpts);
     window.removeEventListener('blur', this.onBlur);
     document.removeEventListener('visibilitychange', this.onVisibility);
     this.modeSelect.removeEventListener('change', this.onModeChange);
     this.root.innerHTML = '';
   }
 
+  private hasMoveContact(): boolean {
+    return this.movePointerId !== null || this.moveTouchId !== null;
+  }
+
+  private hasAttackContact(): boolean {
+    return this.attackPointerId !== null || this.attackTouchId !== null;
+  }
+
   private handlePointerDown(e: PointerEvent): void {
     if (!this.enabled || !this.visible) return;
     const target = e.target as HTMLElement;
-    // Never steal events from the visibility mode control
-    if (target.closest('[data-touch-mode]') || target.closest('select')) return;
+    if (target.closest('[data-touch-settings]') || target.closest('[data-touch-mode]') || target.closest('select')) {
+      return;
+    }
 
     const inMove = Boolean(target.closest('[data-move-zone]'));
     const inAttack = Boolean(
       target.closest('[data-attack-zone]') || target.closest('[data-attack]'),
     );
 
-    if (inMove && this.movePointerId === null) {
+    // On real iOS, touchstart usually wins first; ignore duplicate pointerdown.
+    if (inMove && !this.hasMoveContact()) {
       e.preventDefault();
       this.movePointerId = e.pointerId;
-      this.originX = e.clientX;
-      this.originY = e.clientY;
-      this.stickBase.hidden = false;
-      this.stickBase.style.left = `${e.clientX}px`;
-      this.stickBase.style.top = `${e.clientY}px`;
-      this.stickKnob.style.transform = 'translate(-50%, -50%)';
+      this.beginMove(e.clientX, e.clientY);
       try {
         this.moveZone.setPointerCapture(e.pointerId);
       } catch {
-        /* ignore */
+        /* iOS Safari often rejects capture; touchmove fallback covers this. */
       }
-      this.markInteract();
-      this.updateMoveVector(0, 0);
-      this.pushSample();
       return;
     }
 
-    if (inAttack && this.attackPointerId === null) {
+    if (inAttack && !this.hasAttackContact()) {
       e.preventDefault();
       this.attackPointerId = e.pointerId;
-      this.attackHeld = true;
-      this.attackBtn.classList.add('is-active');
+      this.beginAttack();
       try {
         this.attackBtn.setPointerCapture(e.pointerId);
       } catch {
@@ -236,21 +298,13 @@ export class TouchControlsOverlay {
           /* ignore */
         }
       }
-      this.markInteract();
-      this.pushSample();
     }
   }
 
   private handlePointerMove(e: PointerEvent): void {
     if (e.pointerId !== this.movePointerId) return;
     e.preventDefault();
-    const dx = e.clientX - this.originX;
-    const dy = e.clientY - this.originY;
-    const clamped = clampJoystickOffset(dx, dy, this.maxRadiusPx);
-    this.stickKnob.style.transform = `translate(calc(-50% + ${clamped.x}px), calc(-50% + ${clamped.y}px))`;
-    this.updateMoveVector(clamped.x, clamped.y);
-    this.markInteract();
-    this.pushSample();
+    this.applyMoveFromClient(e.clientX, e.clientY);
   }
 
   private handlePointerUp(e: PointerEvent): void {
@@ -262,6 +316,189 @@ export class TouchControlsOverlay {
       this.clearAttack();
       this.pushSample();
     }
+  }
+
+  private handleTouchStart(e: TouchEvent): void {
+    if (!this.enabled || !this.visible) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-touch-settings]') || target.closest('[data-touch-mode]') || target.closest('select')) {
+      return;
+    }
+
+    const inMove = Boolean(target.closest('[data-move-zone]'));
+    const inAttack = Boolean(
+      target.closest('[data-attack-zone]') || target.closest('[data-attack]'),
+    );
+
+    for (let i = 0; i < e.changedTouches.length; i += 1) {
+      const touch = this.touchAt(e.changedTouches, i);
+      if (!touch) continue;
+
+      if (inMove && !this.hasMoveContact()) {
+        e.preventDefault();
+        this.moveTouchId = touch.identifier;
+        // Drop any stale pointer twin from the same finger.
+        this.movePointerId = null;
+        this.beginMove(touch.clientX, touch.clientY);
+        continue;
+      }
+
+      if (inAttack && !this.hasAttackContact()) {
+        e.preventDefault();
+        this.attackTouchId = touch.identifier;
+        this.attackPointerId = null;
+        this.beginAttack();
+      }
+    }
+  }
+
+  private handleTouchMove(e: TouchEvent): void {
+    if (!this.hasMoveContact()) return;
+    const touch = this.findTrackedTouch(e);
+    if (!touch) return;
+    e.preventDefault();
+    this.applyMoveFromClient(touch.clientX, touch.clientY);
+  }
+
+  private handleTouchEnd(e: TouchEvent): void {
+    let changed = false;
+    for (let i = 0; i < e.changedTouches.length; i += 1) {
+      const touch = this.touchAt(e.changedTouches, i);
+      if (!touch) continue;
+
+      if (this.moveTouchId !== null && touch.identifier === this.moveTouchId) {
+        this.clearMove();
+        changed = true;
+      } else if (
+        this.movePointerId !== null &&
+        this.moveTouchId === null &&
+        this.isLikelyMoveTouch(touch)
+      ) {
+        // Pointer-started move on iOS: lift arrives as touchend without matching touch id.
+        this.clearMove();
+        changed = true;
+      }
+
+      if (this.attackTouchId !== null && touch.identifier === this.attackTouchId) {
+        this.clearAttack();
+        changed = true;
+      } else if (
+        this.attackPointerId !== null &&
+        this.attackTouchId === null &&
+        this.pointInAttackZone(touch.clientX, touch.clientY)
+      ) {
+        this.clearAttack();
+        changed = true;
+      }
+    }
+
+    // Safety: if move was pointer-started and no remaining fingers are near origin, stop.
+    if (
+      this.hasMoveContact() &&
+      this.moveTouchId === null &&
+      !this.anyTouchNearOrigin(e.touches)
+    ) {
+      this.clearMove();
+      changed = true;
+    }
+
+    if (changed) this.pushSample();
+  }
+
+  private findTrackedTouch(e: TouchEvent): Touch | null {
+    const list = e.touches.length > 0 ? e.touches : e.changedTouches;
+    if (this.moveTouchId !== null) {
+      for (let i = 0; i < list.length; i += 1) {
+        const t = this.touchAt(list, i);
+        if (t && t.identifier === this.moveTouchId) return t;
+      }
+      for (let i = 0; i < e.changedTouches.length; i += 1) {
+        const t = this.touchAt(e.changedTouches, i);
+        if (t && t.identifier === this.moveTouchId) return t;
+      }
+      return null;
+    }
+    // Pointer-started move: follow the touch nearest the stick origin (iOS fallback).
+    if (this.movePointerId !== null) {
+      let best: Touch | null = null;
+      let bestDist = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < list.length; i += 1) {
+        const t = this.touchAt(list, i);
+        if (!t) continue;
+        if (this.attackTouchId !== null && t.identifier === this.attackTouchId) continue;
+        const dist = Math.hypot(t.clientX - this.originX, t.clientY - this.originY);
+        if (dist < bestDist) {
+          best = t;
+          bestDist = dist;
+        }
+      }
+      if (best) {
+        // Promote to touch tracking so subsequent events are stable.
+        this.moveTouchId = best.identifier;
+        this.movePointerId = null;
+        return best;
+      }
+    }
+    return null;
+  }
+
+  /** Support real TouchList.item and array-like test doubles. */
+  private touchAt(list: TouchList, index: number): Touch | null {
+    if (typeof list.item === 'function') {
+      return list.item(index);
+    }
+    return (list as unknown as Array<Touch | undefined>)[index] ?? null;
+  }
+
+  private isLikelyMoveTouch(touch: Touch): boolean {
+    return Math.hypot(touch.clientX - this.originX, touch.clientY - this.originY) < this.maxRadiusPx * 3;
+  }
+
+  private anyTouchNearOrigin(touches: TouchList): boolean {
+    for (let i = 0; i < touches.length; i += 1) {
+      const t = this.touchAt(touches, i);
+      if (!t) continue;
+      if (this.isLikelyMoveTouch(t)) return true;
+    }
+    return false;
+  }
+
+  private pointInAttackZone(x: number, y: number): boolean {
+    const rect = this.attackZone.getBoundingClientRect();
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+  }
+
+  private beginMove(clientX: number, clientY: number): void {
+    this.originX = clientX;
+    this.originY = clientY;
+    this.stickX = 0;
+    this.stickY = 0;
+    this.stickBase.hidden = false;
+    this.stickBase.style.left = `${clientX}px`;
+    this.stickBase.style.top = `${clientY}px`;
+    this.stickKnob.style.transform = 'translate(-50%, -50%)';
+    this.markInteract();
+    this.updateMoveVector(0, 0);
+    this.pushSample();
+  }
+
+  private beginAttack(): void {
+    this.attackHeld = true;
+    this.attackBtn.classList.add('is-active');
+    this.markInteract();
+    this.pushSample();
+  }
+
+  private applyMoveFromClient(clientX: number, clientY: number): void {
+    const dx = clientX - this.originX;
+    const dy = clientY - this.originY;
+    const clamped = clampJoystickOffset(dx, dy, this.maxRadiusPx);
+    this.stickX = clamped.x / this.maxRadiusPx;
+    this.stickY = clamped.y / this.maxRadiusPx;
+    this.stickKnob.style.transform = `translate(calc(-50% + ${clamped.x}px), calc(-50% + ${clamped.y}px))`;
+    this.updateMoveVector(clamped.x, clamped.y);
+    this.markInteract();
+    this.pushSample();
   }
 
   private updateMoveVector(dx: number, dy: number): void {
@@ -278,14 +515,18 @@ export class TouchControlsOverlay {
 
   private clearMove(): void {
     this.movePointerId = null;
+    this.moveTouchId = null;
     this.moveX = 0;
     this.moveY = 0;
     this.moving = false;
+    this.stickX = 0;
+    this.stickY = 0;
     this.stickBase.hidden = true;
   }
 
   private clearAttack(): void {
     this.attackPointerId = null;
+    this.attackTouchId = null;
     this.attackHeld = false;
     this.attackBtn.classList.remove('is-active');
   }
@@ -312,6 +553,7 @@ export class TouchControlsOverlay {
     });
     if (!immediate && opacity === this.lastOpacity) return;
     this.lastOpacity = opacity;
+    // Settings chrome is outside `.touch-visual` and stays fully visible.
     if (immediate) {
       this.visual.style.transition = 'none';
       this.visual.style.opacity = String(opacity);
@@ -320,6 +562,9 @@ export class TouchControlsOverlay {
     } else {
       this.visual.style.opacity = String(opacity);
     }
+    this.settings.hidden = false;
+    this.settings.style.opacity = '1';
+    this.settings.style.pointerEvents = this.enabled ? 'auto' : 'none';
   }
 
   private pushSample(): void {
@@ -328,7 +573,7 @@ export class TouchControlsOverlay {
       moveY: this.moveY,
       moving: this.moving,
       attackHeld: this.attackHeld,
-      active: this.movePointerId !== null || this.attackPointerId !== null,
+      active: this.hasMoveContact() || this.hasAttackContact(),
     });
   }
 }

@@ -11,6 +11,8 @@ import {
 import { HudController } from '@ui/hud';
 import { TouchControlsOverlay } from '@ui/touchControls';
 import { OrientationGate } from '@ui/orientationGate';
+import { SafariGestureGuard } from '@ui/safariGestureGuard';
+import { InputDebugHud } from '@ui/inputDebugHud';
 import { EnemyController } from '../entities/EnemyController';
 import { PlayerController } from '../entities/PlayerController';
 import { renderTileMap } from '../map/TileRenderer';
@@ -29,6 +31,8 @@ export class GameScene extends Phaser.Scene {
   private playerInput!: InputController;
   private touchControls: TouchControlsOverlay | null = null;
   private orientationGate: OrientationGate | null = null;
+  private gestureGuard: SafariGestureGuard | null = null;
+  private inputDebugHud: InputDebugHud | null = null;
   private touchWanted = false;
   private lastDead: boolean | null = null;
   private lastTouchVisible: boolean | null = null;
@@ -97,6 +101,42 @@ export class GameScene extends Phaser.Scene {
       this.touchControls = null;
     });
 
+    const gameRoot = document.getElementById('game-root');
+    if (!gameRoot) throw new Error('Missing #game-root');
+    this.gestureGuard?.destroy();
+    this.gestureGuard = new SafariGestureGuard(gameRoot);
+    this.disposables.add(() => {
+      this.gestureGuard?.destroy();
+      this.gestureGuard = null;
+    });
+
+    this.inputDebugHud?.destroy();
+    this.inputDebugHud = null;
+    if (InputDebugHud.isRequested()) {
+      const host = document.getElementById('hud-root') ?? document.body;
+      this.inputDebugHud = new InputDebugHud(host, () => {
+        const touch = this.touchControls?.getDebugState();
+        const sample = this.playerInput.sample();
+        const pos = this.player.position;
+        return {
+          pointerId: touch?.movePointerId ?? null,
+          touchId: touch?.moveTouchId ?? null,
+          stickX: touch?.stickX ?? 0,
+          stickY: touch?.stickY ?? 0,
+          moveX: sample.moveX,
+          moveY: sample.moveY,
+          moving: sample.moving,
+          attackHeld: sample.attackHeld,
+          playerX: pos.x,
+          playerY: pos.y,
+        };
+      });
+      this.disposables.add(() => {
+        this.inputDebugHud?.destroy();
+        this.inputDebugHud = null;
+      });
+    }
+
     const orientRoot = document.getElementById('orient-root');
     if (!orientRoot) throw new Error('Missing #orient-root');
     this.orientationGate?.destroy();
@@ -146,6 +186,7 @@ export class GameScene extends Phaser.Scene {
       fps: this.game.loop.actualFps,
       dead,
     });
+    this.inputDebugHud?.update();
   }
 
   /** Only mutates DOM when dead/alive edge changes. */
