@@ -281,6 +281,8 @@ export class TouchControlsOverlay {
       const label = id === 'q' ? 'Heavy Strike' : id === 'e' ? 'Arc Burst' : '閃避';
       btn.setAttribute('aria-label', `${label}，${status}`);
       btn.setAttribute('data-skill-state', state.dead ? 'dead' : blocked ? 'disabled' : remaining > 0 ? 'cooldown' : noResource ? String(reason) : 'ready');
+      btn.setAttribute('data-skill-cooldown-seconds', remaining > 0 ? String(Math.ceil(remaining / 1000)) : '0');
+      btn.setAttribute('data-skill-cooldown-progress', String(Math.max(0, Math.min(1, ratio))));
     }
   }
 
