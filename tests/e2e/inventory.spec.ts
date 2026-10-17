@@ -355,3 +355,35 @@ test('equipped gear shows localized bonus labels and clears on unequip', async (
   await armor.locator('[data-unequip="armor"]').click();
   await expect(armor.locator('.inv-equip-bonus')).toHaveCount(0);
 });
+
+test('landscape inventory keeps close and equipment actions touch accessible', async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await waitForGame(page);
+  await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      grantLootForTests: (itemId: string, rarity: string) => boolean;
+    };
+    if (!scene.grantLootForTests('ruin_mail', 'common')) throw new Error('armor grant failed');
+  });
+  await page.locator('[data-inventory]').click();
+  const panel = page.locator('[data-inventory-panel]');
+  await expect(panel).toBeVisible();
+  const bounds = await panel.boundingBox();
+  expect(bounds).toBeTruthy();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.y).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(844);
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(390);
+  const close = page.locator('[data-inv-close]');
+  const equip = page.locator('[data-equip-id="ruin_mail"]');
+  await expect(close).toBeVisible();
+  await expect(equip).toBeVisible();
+  const closeBox = await close.boundingBox();
+  const equipBox = await equip.boundingBox();
+  expect(closeBox!.height).toBeGreaterThanOrEqual(36);
+  expect(equipBox!.height).toBeGreaterThanOrEqual(36);
+  await equip.click();
+  await expect(page.locator('[data-slot="armor"] .inv-equip-bonus')).toContainText('防禦 +2');
+  await close.click();
+  await expect(panel).toBeHidden();
+});
