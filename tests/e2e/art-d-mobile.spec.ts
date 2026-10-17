@@ -20,6 +20,17 @@ test.describe('Art D landscape action button layout', () => {
       scene.getOrientationGateForTests()?.setCoarsePointerForTests(true);
     });
 
+    // Movement zone and attack cluster must not collide on a landscape phone.
+    const moveZone = await page.locator('[data-move-zone]').boundingBox();
+    const actions = await page.locator('[data-actions]').boundingBox();
+    expect(moveZone).not.toBeNull();
+    expect(actions).not.toBeNull();
+    if (moveZone && actions) {
+      const overlapWidth = Math.max(0, Math.min(moveZone.x + moveZone.width, actions.x + actions.width) - Math.max(moveZone.x, actions.x));
+      const overlapHeight = Math.max(0, Math.min(moveZone.y + moveZone.height, actions.y + actions.height) - Math.max(moveZone.y, actions.y));
+      expect(overlapWidth * overlapHeight, 'movement and action zones must not overlap').toBe(0);
+    }
+
     for (const selector of ['[data-attack]', '[data-skill-q]', '[data-skill-e]', '[data-dodge]']) {
       const button = page.locator(selector);
       await expect(button).toBeVisible();
