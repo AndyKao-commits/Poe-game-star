@@ -15,6 +15,16 @@ export interface InventoryPanelHandlers {
   onClose: () => void;
 }
 
+const BONUS_LABELS: Record<string, string> = {
+  attack: '攻擊',
+  defense: '防禦',
+  maxHp: '生命上限',
+  maxMp: '魔力上限',
+  hp: '生命',
+  mp: '魔力',
+  speed: '移動速度',
+};
+
 const SLOTS: readonly EquipmentSlot[] = ['weapon', 'armor', 'accessory'];
 const SLOT_LABEL: Record<EquipmentSlot, string> = {
   weapon: '武器',
@@ -91,7 +101,7 @@ export class InventoryPanel {
       const bonuses = item
         ? Object.entries(item.bonuses)
             .filter(([, v]) => v !== undefined && v !== 0)
-            .map(([k, v]) => `${k}+${v}`)
+            .map(([k, v]) => `${BONUS_LABELS[k] ?? k} +${v}`)
             .join(' ')
         : '';
       return `
