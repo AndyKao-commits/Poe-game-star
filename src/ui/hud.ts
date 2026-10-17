@@ -5,6 +5,10 @@ export interface HudSnapshot {
   maxMp: number;
   fps: number;
   dead?: boolean;
+  level?: number;
+  xp?: number;
+  xpToNext?: number;
+  gold?: number;
 }
 
 export class HudController {
@@ -14,6 +18,8 @@ export class HudController {
   private hpText!: HTMLElement;
   private mpText!: HTMLElement;
   private fpsText!: HTMLElement;
+  private progressionText!: HTMLElement;
+  private xpFill!: HTMLElement;
   private deathOverlay!: HTMLElement;
   private restartBtn!: HTMLButtonElement;
   private onRestart: (() => void) | null = null;
@@ -58,6 +64,8 @@ export class HudController {
     this.hpText = this.root.querySelector('[data-hp-text]')!;
     this.mpText = this.root.querySelector('[data-mp-text]')!;
     this.fpsText = this.root.querySelector('[data-fps]')!;
+    this.progressionText = this.root.querySelector('[data-progression-text]')!;
+    this.xpFill = this.root.querySelector('[data-xp-fill]')!;
     this.deathOverlay = this.root.querySelector('[data-death]')!;
     this.restartBtn = this.root.querySelector('[data-restart]')!;
     this.restartBtn.addEventListener('click', this.boundRestart);
@@ -75,6 +83,10 @@ export class HudController {
     this.hpText.textContent = `${Math.ceil(snapshot.hp)}/${snapshot.maxHp}`;
     this.mpText.textContent = `${Math.ceil(snapshot.mp)}/${snapshot.maxMp}`;
     this.fpsText.textContent = `FPS ${Math.round(snapshot.fps)}`;
+    const nextXp = snapshot.xpToNext ?? 85;
+    const xp = snapshot.xp ?? 0;
+    this.progressionText.textContent = `Lv ${snapshot.level ?? 1} · ${xp}/${nextXp} XP · ${snapshot.gold ?? 0} G`;
+    this.xpFill.style.transform = `scaleX(${nextXp > 0 ? Math.max(0, Math.min(1, xp / nextXp)) : 0})`;
 
     const showDeath = !!snapshot.dead;
     this.deathOverlay.hidden = !showDeath;
