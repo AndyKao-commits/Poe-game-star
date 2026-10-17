@@ -298,3 +298,20 @@ test('inventory toggles mobile skill availability without stale disabled state',
   await expect(q).toHaveAttribute('data-skill-state', 'ready');
   await expect(q).toBeEnabled();
 });
+
+test('HUD attack and defense follow equipped gear in real time', async ({ page }) => {
+  await waitForGame(page);
+  const stats = page.locator('[data-combat-stats]');
+  await expect(stats).toHaveText('ATK 12 · DEF 3');
+  await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      grantLootForTests: (itemId: string, rarity: string) => boolean;
+    };
+    scene.grantLootForTests('ashen_blade', 'uncommon');
+  });
+  await page.locator('[data-inventory]').click();
+  await page.locator('[data-equip-id="ashen_blade"]').click();
+  await expect(stats).toHaveText('ATK 17 · DEF 3');
+  await page.locator('[data-inv-close]').click();
+  await expect(stats).toHaveText('ATK 17 · DEF 3');
+});
