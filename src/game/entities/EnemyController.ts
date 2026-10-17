@@ -123,12 +123,16 @@ export class EnemyController {
     if (step.tick.telegraphing) {
       this.showTelegraph();
       this.entity.sprite.setTint(this.encounter.telegraphTint);
-    } else if (!this.dead && this.brain.state !== 'hurt') {
+    } else {
       this.hideTelegraph();
-      this.entity.sprite.clearTint();
+      if (!this.dead && this.brain.state !== 'hurt') this.entity.sprite.clearTint();
     }
 
     this.entity.syncTransform();
+    if (this.telegraphFx?.visible) {
+      this.telegraphFx.setPosition(this.entity.sprite.x, this.entity.sprite.y);
+      this.telegraphFx.setDepth(this.entity.sprite.depth + 1);
+    }
   }
 
   takeDamage(
@@ -147,6 +151,8 @@ export class EnemyController {
     this.brain.forceHurt(220);
     this.sm.force('hurt');
     this.feedback.flash(this.entity.sprite, 0xff6666);
+    this.hideTelegraph();
+    this.entity.syncTransform();
     this.showHitFx();
 
     if (meta?.attackerPos && this.feedback.knockbackEnabled) {
