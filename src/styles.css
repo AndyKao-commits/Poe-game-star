@@ -749,3 +749,43 @@ body,
 
 #inventory-root { position:absolute; inset:0; z-index:45; pointer-events:none; }
 #inventory-root[hidden] { display:none; }
+
+/* Phase 2 D: read-only skill status strip; never steals touch input. */
+.hud-skills {
+  position: absolute;
+  left: calc(12px + var(--safe-left));
+  top: calc(128px + var(--safe-top));
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  pointer-events: none;
+  z-index: 11;
+}
+.hud-skill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  min-width: 35px;
+  min-height: 35px;
+  border: 1px solid var(--border);
+  background: rgba(10, 12, 16, 0.8);
+  color: var(--ink);
+  font: 11px/1.2 var(--hud-font);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none !important;
+}
+.hud-skill.is-ready { border-color: #7eae8c; }
+.hud-skill.is-cooldown { border-color: #d5a64a; }
+.hud-skill.is-insufficient-mana,
+.hud-skill.is-insufficient-stamina,
+.hud-skill.is-dead,
+.hud-skill.is-disabled { opacity: 0.55; }
+.hud-skill [data-skill-cd] { color: #d5a64a; font-size: 10px; }
+@media (orientation: landscape) and (max-height: 480px) {
+  .hud-skills { top: calc(110px + var(--safe-top)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-bar-fill, .hud-loot-toast, .hud-death { transition: none; }
+}
