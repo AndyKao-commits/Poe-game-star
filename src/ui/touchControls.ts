@@ -272,6 +272,15 @@ export class TouchControlsOverlay {
       btn.disabled = blocked;
       btn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
       btn.classList.toggle('is-ready', state.canCast[id] && !blocked);
+      // Match desktop HUD accessibility without blocking resource/cooldown feedback.
+      const status = state.dead ? '角色已死亡'
+        : blocked ? '暫時無法使用'
+        : remaining > 0 ? `冷卻 ${Math.ceil(remaining / 1000)} 秒`
+        : noResource ? (reason === 'insufficient_mana' ? '魔力不足' : '耐力不足')
+        : '可用';
+      const label = id === 'q' ? 'Heavy Strike' : id === 'e' ? 'Arc Burst' : '閃避';
+      btn.setAttribute('aria-label', `${label}，${status}`);
+      btn.setAttribute('data-skill-state', state.dead ? 'dead' : blocked ? 'disabled' : remaining > 0 ? 'cooldown' : noResource ? String(reason) : 'ready');
     }
   }
 
