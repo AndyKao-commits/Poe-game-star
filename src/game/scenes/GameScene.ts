@@ -418,6 +418,22 @@ export class GameScene extends Phaser.Scene {
     return this.restartCount;
   }
 
+  /** Read-only enemy render states for browser Art D regression checks. */
+  getEnemyVisualsForTests(): Array<{
+    alive: boolean;
+    phase: string;
+    telegraphVisible: boolean;
+    telegraphPosition: { x: number; y: number } | null;
+    spritePosition: { x: number; y: number };
+  }> {
+    return this.enemies.map((enemy) => ({
+      alive: enemy.alive,
+      phase: enemy.combatPhase,
+      ...enemy.getVisualFxForTests(),
+      spritePosition: { x: enemy.entity.sprite.x, y: enemy.entity.sprite.y },
+    }));
+  }
+
   getEnemyCountForTests(): number {
     return this.enemies.length;
   }
