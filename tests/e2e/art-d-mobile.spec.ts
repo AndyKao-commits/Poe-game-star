@@ -30,6 +30,16 @@ test.describe('Art D landscape action button layout', () => {
       expect(box.y, `${selector} top`).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width, `${selector} right`).toBeLessThanOrEqual(844);
       expect(box.y + box.height, `${selector} bottom`).toBeLessThanOrEqual(390);
+      // Detect visual button collisions independently of center hit testing.
+      for (const previous of ['[data-attack]', '[data-skill-q]', '[data-skill-e]', '[data-dodge]']) {
+        if (previous === selector) break;
+        const other = await page.locator(previous).boundingBox();
+        expect(other).not.toBeNull();
+        if (!other) continue;
+        const overlapWidth = Math.max(0, Math.min(box.x + box.width, other.x + other.width) - Math.max(box.x, other.x));
+        const overlapHeight = Math.max(0, Math.min(box.y + box.height, other.y + other.height) - Math.max(box.y, other.y));
+        expect(overlapWidth * overlapHeight, `${selector} must not overlap ${previous}`).toBe(0);
+      }
       const hitTarget = await button.evaluate((element) => {
         const bounds = element.getBoundingClientRect();
         const x = bounds.left + bounds.width / 2;
