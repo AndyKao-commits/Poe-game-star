@@ -25,7 +25,7 @@ export interface ArchetypeCombatStepInput {
   rng?: () => number;
   /**
    * When false, skip opening new attacks (e.g. target dead).
-   * Ongoing windup/strike still resolves so telegraph stays honest.
+   * Cancel pending windup/strike when the target dies; do not telegraph a corpse.
    */
   targetAlive?: boolean;
 }
@@ -47,6 +47,11 @@ export function stepArchetypeCombat(
   input: ArchetypeCombatStepInput,
 ): ArchetypeCombatStepResult {
   const targetAlive = input.targetAlive !== false;
+  // Cancel an in-flight strike immediately on target death. Otherwise a stale
+  // windup could resolve on the first frame after a rapid player respawn.
+  if (!targetAlive && input.brain.inAttackSequence) {
+    input.brain.reset();
+  }
   const locked =
     input.brain.inAttackSequence ||
     input.brain.state === 'hurt' ||
