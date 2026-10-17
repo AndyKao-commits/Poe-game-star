@@ -48,6 +48,17 @@ export class BootScene extends Phaser.Scene {
         frameRate: 8,
         repeat: -1,
       });
+      // Attack: windup → strike (hit frame synced in AttackTimeline)
+      this.anims.create({
+        key: `player-attack-${facing}`,
+        frames: [
+          { key: 'player', frame: col + 4 * 8 },
+          { key: 'player', frame: col + 5 * 8 },
+          { key: 'player', frame: col + 5 * 8 },
+        ],
+        frameRate: 10,
+        repeat: 0,
+      });
     });
   }
 
@@ -68,6 +79,18 @@ export class BootScene extends Phaser.Scene {
       key: 'enemy-hurt',
       frames: this.anims.generateFrameNumbers('enemy', { start: 8, end: 11 }),
       frameRate: 10,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: 'enemy-windup',
+      frames: this.anims.generateFrameNumbers('enemy', { start: 12, end: 15 }),
+      frameRate: 8,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: 'enemy-attack',
+      frames: this.anims.generateFrameNumbers('enemy', { start: 16, end: 19 }),
+      frameRate: 12,
       repeat: 0,
     });
   }

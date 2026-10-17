@@ -9,6 +9,9 @@ export interface TileMapData {
   tiles: TileKind[];
 }
 
+/** Max travel per sub-step as a fraction of collision radius (prevents tunneling). */
+export const MAX_STEP_RADIUS_FRACTION = 0.5;
+
 export function createTileMap(width: number, height: number, fill: TileKind = 'floor'): TileMapData {
   return {
     width,
@@ -42,11 +45,8 @@ export function isWorldBlocked(map: TileMapData, world: Vec2, radius = 0.28): bo
   return samples.some((p) => isBlocking(getTile(map, Math.floor(p.x), Math.floor(p.y))));
 }
 
-/**
- * Axis-separated slide move against the tile grid.
- * Returns the resolved world position.
- */
-export function moveWithCollision(
+/** Single axis-separated slide step (no sub-division). */
+export function slideStep(
   map: TileMapData,
   from: Vec2,
   delta: Vec2,
@@ -68,13 +68,38 @@ export function moveWithCollision(
   return { x, y };
 }
 
+/**
+ * Axis-separated slide move against the tile grid with sub-stepping.
+ * Large deltas are split so each step travels at most
+ * `radius * MAX_STEP_RADIUS_FRACTION`, preventing wall tunneling.
+ */
+export function moveWithCollision(
+  map: TileMapData,
+  from: Vec2,
+  delta: Vec2,
+  radius = 0.28,
+): Vec2 {
+  const maxStep = Math.max(1e-4, radius * MAX_STEP_RADIUS_FRACTION);
+  const distance = Math.hypot(delta.x, delta.y);
+  if (distance <= maxStep) {
+    return slideStep(map, from, delta, radius);
+  }
+
+  const steps = Math.ceil(distance / maxStep);
+  const stepDelta = { x: delta.x / steps, y: delta.y / steps };
+  let pos = { ...from };
+  for (let i = 0; i < steps; i++) {
+    pos = slideStep(map, pos, stepDelta, radius);
+  }
+  return pos;
+}
+
 export function mapPixelBounds(map: TileMapData): {
   minX: number;
   minY: number;
   maxX: number;
   maxY: number;
 } {
-  // Corners in world tile space → screen via worldToScreen
   const corners = [
     { x: 0, y: 0 },
     { x: map.width, y: 0 },

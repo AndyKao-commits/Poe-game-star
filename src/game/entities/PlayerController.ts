@@ -4,13 +4,18 @@ import {
   AttackCooldown,
   filterTargetsInCone,
 } from '@core/combat/attackCone';
+import { AttackTimeline, type AttackTimelineConfig } from '@core/combat/attackTimeline';
 import {
   applyDamage,
   createPlayerStats,
+  rollDamage,
   type CombatStats,
 } from '@core/combat/damage';
+import { knockbackDelta } from '@core/combat/feedback';
+import { Invulnerability, PLAYER_IFRAME_MS } from '@core/combat/invulnerability';
 import { moveWithCollision, type TileMapData } from '@core/collision/grid';
 import { createPlayerStateMachine } from '@core/entities/stateMachine';
+import { PlayerLifecycle } from '@core/entities/playerLifecycle';
 import { screenToWorld, worldToScreen, type Vec2 } from '@core/iso/coordinates';
 import {
   facingFromAngle,
@@ -19,35 +24,52 @@ import {
   type Facing,
 } from '@core/movement/direction';
 import { WorldEntity } from '../world/WorldEntity';
+import type { CombatFeedbackSystem } from '../systems/CombatFeedback';
 
 const MOVE_SPEED = 3.2;
 
 export interface Attackable {
   alive: boolean;
   position: Vec2;
-  takeDamage(attackerAttack: number): void;
+  takeDamage(
+    attackerAttack: number,
+    meta?: { attackerPos: Vec2 },
+  ): { amount: number; isCrit: boolean; killed: boolean } | void;
 }
 
 export class PlayerController {
   readonly entity: WorldEntity;
-  readonly stats: CombatStats;
+  stats: CombatStats;
   readonly cooldown = new AttackCooldown(ATTACK_COOLDOWN_MS);
+  readonly lifecycle = new PlayerLifecycle();
+  readonly iframes = new Invulnerability(PLAYER_IFRAME_MS);
+  readonly attackTimeline: AttackTimeline;
   private readonly sm = createPlayerStateMachine();
   private facing: Facing = 'se';
-  private attackLockMs = 0;
+  private pendingTargets: Attackable[] = [];
+  private readonly spawn: Vec2;
   private readonly cursors: {
     up: Phaser.Input.Keyboard.Key;
     down: Phaser.Input.Keyboard.Key;
     left: Phaser.Input.Keyboard.Key;
     right: Phaser.Input.Keyboard.Key;
   };
+  private deathVisualPlayed = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
     spawn: Vec2,
     private readonly map: TileMapData,
+    private readonly feedback: CombatFeedbackSystem,
+    attackConfig?: Partial<AttackTimelineConfig>,
   ) {
+    this.spawn = { ...spawn };
     this.stats = createPlayerStats();
+    this.attackTimeline = new AttackTimeline({
+      moveLockMs: attackConfig?.moveLockMs ?? 280,
+      hitFrameMs: attackConfig?.hitFrameMs ?? 120,
+      actionMs: attackConfig?.actionMs ?? 320,
+    });
     this.entity = new WorldEntity(scene, 'player', spawn);
     const keyboard = scene.input.keyboard!;
     this.cursors = {
@@ -64,24 +86,39 @@ export class PlayerController {
   }
 
   get alive(): boolean {
-    return this.stats.hp > 0;
+    return !this.lifecycle.isDead && this.stats.hp > 0;
+  }
+
+  get animState(): string {
+    return this.sm.state;
   }
 
   update(deltaMs: number, enemies: Attackable[]): void {
+    this.iframes.update(deltaMs);
     this.cooldown.update(deltaMs);
-    if (this.attackLockMs > 0) {
-      this.attackLockMs = Math.max(0, this.attackLockMs - deltaMs);
-      if (this.attackLockMs === 0 && this.sm.state === 'attack') {
-        this.sm.tryTransition('idle');
+
+    if (this.lifecycle.isDead) {
+      this.ensureDeathVisual();
+      this.entity.syncTransform();
+      return;
+    }
+
+    const attackEvent = this.attackTimeline.update(deltaMs);
+    if (attackEvent === 'hit') {
+      this.resolveAttackHits();
+    } else if (attackEvent === 'finished') {
+      this.sm.tryTransition('idle');
+      this.pendingTargets = [];
+    }
+
+    if (this.lifecycle.canAttack) {
+      const pointer = this.scene.input.activePointer;
+      if (pointer.leftButtonDown()) {
+        this.tryAttack(enemies);
       }
     }
 
-    const pointer = this.scene.input.activePointer;
-    if (pointer.leftButtonDown()) {
-      this.tryAttack(enemies);
-    }
-
-    if (this.sm.state !== 'attack') {
+    if (this.lifecycle.canMove && !this.attackTimeline.moveLocked) {
       this.updateMovement(deltaMs);
     }
 
@@ -97,45 +134,143 @@ export class PlayerController {
     };
     const move = movementFromInput(input);
     if (!move.moving) {
-      this.sm.tryTransition('idle');
-      this.playAnim('idle');
+      if (!this.attackTimeline.isActive) {
+        this.sm.tryTransition('idle');
+        this.playAnim('idle');
+      }
       return;
     }
 
     this.sm.tryTransition('run');
     this.facing = facingFromVector(move.x, move.y);
     const dt = deltaMs / 1000;
-    const next = moveWithCollision(this.map, this.entity.position, {
+    this.entity.position = moveWithCollision(this.map, this.entity.position, {
       x: move.x * MOVE_SPEED * dt,
       y: move.y * MOVE_SPEED * dt,
     });
-    this.entity.position = next;
-    this.playAnim('run');
-  }
-
-  private tryAttack(enemies: Attackable[]): void {
-    if (!this.cooldown.tryStart()) return;
-
-    const aim = this.aimAngleWorld();
-    this.facing = facingFromAngle(aim);
-    this.sm.force('attack');
-    this.attackLockMs = 220;
-    this.playAnim('idle');
-    this.spawnSlash(aim);
-
-    const hits = filterTargetsInCone(
-      this.entity.position,
-      aim,
-      enemies.filter((e) => e.alive),
-    );
-    for (const target of hits) {
-      target.takeDamage(this.stats.attack);
+    if (!this.attackTimeline.isActive) {
+      this.playAnim('run');
     }
   }
 
-  takeDamage(amount: number): void {
+  private tryAttack(enemies: Attackable[]): void {
+    if (!this.lifecycle.canAttack) return;
+    if (this.attackTimeline.isActive) return;
+    if (!this.cooldown.ready) return;
+
+    const aim = this.aimAngleWorld();
+    if (!this.attackTimeline.tryBegin(aim)) return;
+    this.cooldown.tryStart();
+
+    this.facing = facingFromAngle(aim);
+    this.sm.force('attack');
+    this.pendingTargets = enemies.filter((e) => e.alive);
+    this.playAnim('attack');
+    this.spawnSlash(aim);
+  }
+
+  private resolveAttackHits(): void {
+    const aim = this.attackTimeline.currentAimAngle;
+    const hits = filterTargetsInCone(
+      this.entity.position,
+      aim,
+      this.pendingTargets.filter((e) => e.alive),
+    );
+    for (const target of hits) {
+      const result = target.takeDamage(this.stats.attack, {
+        attackerPos: this.entity.position,
+      });
+      if (result && this.feedback.enabled) {
+        this.feedback.floatDamage({
+          amount: result.amount,
+          isCrit: result.isCrit,
+          world: { ...target.position },
+        });
+        this.feedback.requestHitPause();
+      }
+    }
+  }
+
+  /**
+   * Apply incoming damage. Respects i-frames and death gate.
+   * `amount` is already defense-resolved by the attacker brain.
+   */
+  takeDamage(
+    amount: number,
+    meta?: { attackerPos?: Vec2 },
+  ): { accepted: boolean; died: boolean } {
+    if (this.lifecycle.isDead || this.iframes.active || amount <= 0) {
+      return { accepted: false, died: false };
+    }
+
     const next = applyDamage(this.stats, amount);
     this.stats.hp = next.hp;
+    this.iframes.trigger();
+    this.feedback.flash(this.entity.sprite, 0xff8888);
+
+    if (meta?.attackerPos && this.feedback.knockbackEnabled) {
+      const kb = knockbackDelta(meta.attackerPos, this.entity.position, this.feedback.knockbackDistance);
+      this.entity.position = moveWithCollision(this.map, this.entity.position, kb);
+    }
+
+    const died = this.lifecycle.tryDie(this.stats);
+    if (died) {
+      this.sm.force('dead');
+      this.attackTimeline.reset();
+      this.ensureDeathVisual();
+    }
+    return { accepted: true, died };
+  }
+
+  /** Used by enemy brains that pass attack power instead of flat damage. */
+  receiveAttack(
+    attackerAttack: number,
+    attackerPos: Vec2,
+  ): { accepted: boolean; died: boolean; amount: number; isCrit: boolean } {
+    if (this.lifecycle.isDead || this.iframes.active) {
+      return { accepted: false, died: false, amount: 0, isCrit: false };
+    }
+    const roll = rollDamage(attackerAttack, this.stats.defense);
+    const result = this.takeDamage(roll.amount, { attackerPos });
+    if (result.accepted) {
+      this.feedback.floatDamage({
+        amount: roll.amount,
+        isCrit: roll.isCrit,
+        world: { ...this.entity.position },
+      });
+    }
+    return { ...result, amount: roll.amount, isCrit: roll.isCrit };
+  }
+
+  respawn(): void {
+    const restored = this.lifecycle.respawn(this.spawn);
+    this.stats = restored.stats;
+    this.entity.position = restored.position;
+    this.cooldown.reset();
+    this.attackTimeline.reset();
+    this.iframes.clear();
+    this.pendingTargets = [];
+    this.deathVisualPlayed = false;
+    this.sm.force('idle');
+    this.entity.sprite.setAlpha(1);
+    this.entity.sprite.setVisible(true);
+    this.entity.sprite.clearTint();
+    this.entity.sprite.setAngle(0);
+    this.playAnim('idle');
+    this.entity.syncTransform();
+  }
+
+  private ensureDeathVisual(): void {
+    if (this.deathVisualPlayed) return;
+    this.deathVisualPlayed = true;
+    this.entity.sprite.stop();
+    this.entity.sprite.setTint(0x555555);
+    this.scene.tweens.add({
+      targets: this.entity.sprite,
+      alpha: 0.35,
+      angle: 90,
+      duration: 450,
+    });
   }
 
   private aimAngleWorld(): number {
@@ -174,10 +309,14 @@ export class PlayerController {
     });
   }
 
-  private playAnim(kind: 'idle' | 'run'): void {
+  private playAnim(kind: 'idle' | 'run' | 'attack'): void {
     const key = `player-${kind}-${this.facing}`;
     if (this.entity.sprite.anims.currentAnim?.key !== key) {
       this.entity.sprite.play(key, true);
     }
+  }
+
+  destroy(): void {
+    this.entity.destroy();
   }
 }

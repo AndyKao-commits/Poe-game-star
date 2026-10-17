@@ -84,4 +84,8 @@ export class AttackCooldown {
       this.remainingMs = Math.max(0, this.remainingMs - deltaMs);
     }
   }
+
+  reset(): void {
+    this.remainingMs = 0;
+  }
 }

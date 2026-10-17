@@ -122,3 +122,60 @@ body,
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
+
+.hud-death {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  background: rgba(6, 8, 12, 0.72);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.hud-death.is-visible {
+  display: grid;
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.hud-death[hidden] {
+  display: none !important;
+}
+
+.hud-death-card {
+  text-align: center;
+  padding: 28px 36px;
+  background: rgba(12, 14, 20, 0.92);
+  border: 1px solid var(--border);
+  min-width: 240px;
+}
+
+.hud-death-title {
+  font-size: 28px;
+  letter-spacing: 0.08em;
+  color: var(--hp);
+  margin-bottom: 8px;
+}
+
+.hud-death-copy {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.hud-restart {
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+  background: rgba(201, 162, 39, 0.15);
+  color: var(--ink);
+  padding: 8px 18px;
+  font: inherit;
+  letter-spacing: 0.06em;
+}
+
+.hud-restart:hover {
+  background: rgba(201, 162, 39, 0.28);
+}

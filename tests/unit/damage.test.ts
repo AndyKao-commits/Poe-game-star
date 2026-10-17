@@ -4,6 +4,7 @@ import {
   computeDamage,
   createPlayerStats,
   isDead,
+  rollDamage,
 } from '../../src/core/combat/damage';
 
 describe('damage', () => {
@@ -24,5 +25,14 @@ describe('damage', () => {
     s = applyDamage(s, 999);
     expect(s.hp).toBe(0);
     expect(isDead(s)).toBe(true);
+  });
+
+  it('rolls crits with a deterministic rng', () => {
+    const crit = rollDamage(12, 5, { rng: () => 0 });
+    expect(crit.isCrit).toBe(true);
+    expect(crit.amount).toBeGreaterThan(7);
+    const normal = rollDamage(12, 5, { rng: () => 0.99 });
+    expect(normal.isCrit).toBe(false);
+    expect(normal.amount).toBe(7);
   });
 });

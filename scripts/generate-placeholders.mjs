@@ -118,10 +118,14 @@ function makeTile(kind) {
   return encodePng(w, h, rgba);
 }
 
+/**
+ * Player sheet layout (replaceable art spec):
+ * - Cell: 32×32, columns = 8 facings (e,se,s,sw,w,nw,n,ne)
+ * - Rows 0–1: idle | Rows 2–3: run | Rows 4–5: attack (windup, strike/hit)
+ */
 function makeCharacterSheet() {
-  // 8 facings × 4 frames (2 idle + 2 run), 32×32 cells
   const cols = 8;
-  const rows = 4;
+  const rows = 6;
   const cw = 32;
   const ch = 32;
   const w = cols * cw;
@@ -133,23 +137,33 @@ function makeCharacterSheet() {
   const trim = [190, 160, 70];
 
   for (let facing = 0; facing < 8; facing++) {
-    for (let frame = 0; frame < 4; frame++) {
+    for (let frame = 0; frame < rows; frame++) {
       const ox = facing * cw;
       const oy = frame * ch;
       const bob = frame % 2 === 1 ? 1 : 0;
       const lean = facing >= 4 ? -1 : 1;
-      // shadow
+      const attack = frame >= 4;
+      const strike = frame === 5;
       fillRect(rgba, w, ox + 10, oy + 26, 12, 4, 0, 0, 0, 90);
-      // cloak
       fillRect(rgba, w, ox + 11 + lean, oy + 12 + bob, 10, 12, cloak[0], cloak[1], cloak[2]);
-      // body
       fillRect(rgba, w, ox + 12, oy + 10 + bob, 8, 10, body[0], body[1], body[2]);
-      // head
       fillRect(rgba, w, ox + 13, oy + 5 + bob, 6, 6, 210, 190, 160);
-      // weapon glint
-      fillRect(rgba, w, ox + 20 + lean, oy + 14 + bob, 3, 8, trim[0], trim[1], trim[2]);
-      if (frame >= 2) {
-        // run stride leg
+      const weaponReach = attack ? (strike ? 7 : 4) : 0;
+      fillRect(
+        rgba,
+        w,
+        ox + 20 + lean + (strike ? lean : 0),
+        oy + 12 + bob,
+        3 + weaponReach,
+        8,
+        trim[0],
+        trim[1],
+        trim[2],
+      );
+      if (strike) {
+        fillRect(rgba, w, ox + 24 + lean * 2, oy + 10 + bob, 4, 4, 240, 220, 140, 200);
+      }
+      if (frame >= 2 && frame <= 3) {
         fillRect(rgba, w, ox + 12 + (frame === 2 ? -1 : 1), oy + 22 + bob, 3, 4, 70, 60, 50);
         fillRect(rgba, w, ox + 17 + (frame === 2 ? 1 : -1), oy + 22 + bob, 3, 4, 70, 60, 50);
       } else {
@@ -161,9 +175,14 @@ function makeCharacterSheet() {
   return encodePng(w, h, rgba);
 }
 
+/**
+ * Enemy sheet layout:
+ * - Cell 32×32, 4 columns (animation frames)
+ * - Row 0 idle | 1 chase | 2 hurt | 3 windup (telegraph) | 4 attack
+ */
 function makeEnemySheet() {
   const cols = 4;
-  const rows = 3; // idle, chase, hurt
+  const rows = 5;
   const cw = 32;
   const ch = 32;
   const w = cols * cw;
@@ -175,16 +194,21 @@ function makeEnemySheet() {
       const ox = col * cw;
       const oy = row * ch;
       const pulse = col % 2;
-      const hurt = row === 2;
-      const body = hurt ? [200, 80, 70] : [70, 90, 60];
+      let body = [70, 90, 60];
+      if (row === 2) body = [200, 80, 70];
+      if (row === 3) body = [180, 160, 40]; // windup telegraph
+      if (row === 4) body = [120, 40, 40]; // strike
       fillRect(rgba, w, ox + 9, oy + 24, 14, 5, 0, 0, 0, 100);
       fillRect(rgba, w, ox + 10, oy + 12 + pulse, 12, 12, body[0], body[1], body[2]);
       fillRect(rgba, w, ox + 12, oy + 6 + pulse, 8, 8, 40, 50, 35);
       fillRect(rgba, w, ox + 13, oy + 8 + pulse, 2, 2, 220, 60, 40);
       fillRect(rgba, w, ox + 17, oy + 8 + pulse, 2, 2, 220, 60, 40);
-      if (row === 1) {
+      if (row === 1 || row === 4) {
         fillRect(rgba, w, ox + 8, oy + 16 + pulse, 4, 3, 90, 110, 70);
         fillRect(rgba, w, ox + 20, oy + 16 + pulse, 4, 3, 90, 110, 70);
+      }
+      if (row === 3) {
+        fillRect(rgba, w, ox + 8, oy + 4 + pulse, 16, 2, 240, 200, 60, 220);
       }
     }
   }
@@ -226,6 +250,12 @@ fs.writeFileSync(
 Generated procedurally by scripts/generate-placeholders.mjs
 Original pixel placeholders — free to replace with licensed art.
 Not derived from concept illustrations or third-party sprite sheets.
+
+SPRITE SPEC (replaceable)
+player.png  32x32 cells, 8 cols (e,se,s,sw,w,nw,n,ne) x 6 rows
+            rows 0-1 idle, 2-3 run, 4-5 attack (windup, hit)
+enemy.png   32x32 cells, 4 cols x 5 rows
+            row0 idle, 1 chase, 2 hurt, 3 windup, 4 attack
 `,
 );
 
