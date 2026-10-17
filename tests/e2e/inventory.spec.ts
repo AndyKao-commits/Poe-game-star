@@ -276,3 +276,25 @@ test('C gear bonuses stay in sync with A skill resources and D HUD', async ({ pa
   await expect(page.locator('[data-mp-text]')).toHaveText(`${equipped.mp - 12}/${equipped.skill.maxMana}`);
 });
 
+
+test('inventory toggles mobile skill availability without stale disabled state', async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await waitForGame(page);
+  await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getOrientationGateForTests: () => { setCoarsePointerForTests: (v: boolean) => void } | null;
+    };
+    scene.getOrientationGateForTests()?.setCoarsePointerForTests(true);
+  });
+  const q = page.locator('[data-skill-q]');
+  await expect(q).toBeVisible();
+  await expect(q).toHaveAttribute('data-skill-state', 'ready');
+  await page.locator('[data-inventory]').click();
+  await expect(page.locator('[data-inventory-panel]')).toBeVisible();
+  await expect(q).toHaveAttribute('data-skill-state', 'disabled');
+  await expect(q).toBeDisabled();
+  await page.locator('[data-inv-close]').click();
+  await expect(page.locator('[data-inventory-panel]')).toBeHidden();
+  await expect(q).toHaveAttribute('data-skill-state', 'ready');
+  await expect(q).toBeEnabled();
+});
