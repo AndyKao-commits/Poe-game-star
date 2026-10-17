@@ -20,6 +20,40 @@ const expected = [
   ...['ui-attack', 'ui-skill', 'ui-potion'].map((n) => [n + '.png', 32, 32]),
 ];
 let errors = 0;
+// Validate the handoff manifest as well as the PNG headers. Otherwise a stale
+// manifest could silently disagree with the assets the runtime actually loads.
+const declared = [
+  [manifest.player?.file, manifest.player?.size],
+  ...(manifest.enemies?.files ?? []).map((file) => [file, manifest.enemies?.size]),
+  ...(manifest.tiles?.files ?? []).map((file) => [file, manifest.tiles?.size]),
+  ...(manifest.effects ?? []).map(({ file, size }) => [file, size]),
+  ...(manifest.ui ?? []).map(({ file, size }) => [file, size]),
+];
+const expectedDimensions = new Map(expected.map(([file, width, height]) => [file, `${width}x${height}`]));
+const declaredNames = new Set();
+for (const [file, size] of declared) {
+  const actualSize = Array.isArray(size) ? size.join('x') : 'missing';
+  if (!expectedDimensions.has(file) || declaredNames.has(file) || actualSize !== expectedDimensions.get(file)) {
+    console.error('INVALID MANIFEST ENTRY', { file, size });
+    errors++;
+  }
+  declaredNames.add(file);
+}
+for (const file of expectedDimensions.keys()) {
+  if (!declaredNames.has(file)) {
+    console.error('MISSING MANIFEST ENTRY', file);
+    errors++;
+  }
+}
+if (declared.length !== expected.length) {
+  console.error('INVALID MANIFEST COUNT', declared.length, 'expected', expected.length);
+  errors++;
+}
+if (manifest.player?.frame?.join('x') !== '32x32' || manifest.player?.columns?.length !== 8 || manifest.player?.rows?.length !== 6 ||
+    manifest.enemies?.frame?.join('x') !== '32x32' || manifest.enemies?.rows?.length !== 5) {
+  console.error('INVALID MANIFEST ATLAS GRID');
+  errors++;
+}
 for (const [file, width, height, cellW, cellH] of expected) {
   const path = join(root, file);
   if (!existsSync(path)) {
