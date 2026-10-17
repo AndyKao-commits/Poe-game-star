@@ -822,3 +822,30 @@ body,
 .touch-skill .touch-cooldown-count[hidden] {
   display: none;
 }
+
+/* Compact landscape inventory: fixed header, scrollable contents, usable touch targets. */
+@media (orientation: landscape) and (max-height: 480px) {
+  .inv-panel {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .inv-header {
+    position: sticky;
+    top: -10px;
+    z-index: 2;
+    background: rgba(12, 14, 20, 0.98);
+    padding: 6px 0;
+  }
+  .inv-btn {
+    min-height: 36px;
+    min-width: 52px;
+  }
+  .inv-equip-row,
+  .inv-bag-row {
+    min-height: 44px;
+  }
+  .inv-footer {
+    flex-wrap: wrap;
+  }
+}
