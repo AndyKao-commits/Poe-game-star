@@ -789,3 +789,19 @@ body,
 @media (prefers-reduced-motion: reduce) {
   .hud-bar-fill, .hud-loot-toast, .hud-death { transition: none; }
 }
+
+/* Art D action icon overlay: decorative only, preserving original hit zones. */
+.touch-attack,
+.touch-skill[data-skill-q],
+.touch-skill[data-skill-e] {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 65% 65%;
+}
+.touch-attack {
+  background-image: url('/assets/art-d/ui-attack.png');
+}
+.touch-skill[data-skill-q],
+.touch-skill[data-skill-e] {
+  background-image: url('/assets/art-d/ui-skill.png');
+}
