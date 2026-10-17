@@ -56,6 +56,35 @@ test('inventory modal blocks attack input and restores after close', async ({ pa
   expect(afterClose.enabled).toBe(true);
 });
 
+test('held desktop mouse attack requires release after inventory closes', async ({ page }) => {
+  await waitForGame(page);
+  const canvas = page.locator('#game-root canvas');
+  const bounds = await canvas.boundingBox();
+  expect(bounds).toBeTruthy();
+  const x = bounds!.x + bounds!.width / 2;
+  const y = bounds!.y + bounds!.height / 2;
+
+  await page.locator('[data-inventory]').click();
+  await expect(page.locator('[data-inventory-panel]')).toBeVisible();
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.locator('[data-inv-close]').dispatchEvent('click');
+  await expect(page.locator('[data-inventory-panel]')).toBeHidden();
+
+  const attackHeld = async () => page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getInputForTests: () => { sample: () => { attackHeld: boolean } };
+    };
+    return scene.getInputForTests().sample().attackHeld;
+  });
+  expect(await attackHeld()).toBe(false);
+  await page.mouse.up();
+  expect(await attackHeld()).toBe(false);
+  await page.mouse.down();
+  expect(await attackHeld()).toBe(true);
+  await page.mouse.up();
+});
+
 test('equip updates combat stats and survives death respawn', async ({ page }) => {
   await waitForGame(page);
 
