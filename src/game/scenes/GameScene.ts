@@ -224,13 +224,17 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.player.update(delta, this.enemies);
-    // Engineering A (skills runtime): sync skill cooldown/resource chrome.
-    // Shared GameScene touch — coordinate with integration owner before expanding.
-    this.touchControls?.setSkillUi(this.player.getSkillUiState());
     const suppressDamage = !canReceiveEncounterDamage(this.spawnGraceMs);
     for (const enemy of this.enemies) {
       enemy.update(delta, this.player, { suppressDamage });
     }
+
+    // An enemy may kill the player during this frame. Re-read lifecycle state
+    // after enemy updates so inventory, controls, skill chrome and HUD agree.
+    const deadAfterCombat = this.player.lifecycle.isDead;
+    if (deadAfterCombat && this.inventoryOpen) this.setInventoryOpen(false);
+    this.applyDeathControlState(deadAfterCombat);
+    this.touchControls?.setSkillUi(this.player.getSkillUiState());
 
     this.collectEnemyKillRewards();
     this.player.lifecycle.consumeDeathEvent();
@@ -241,7 +245,7 @@ export class GameScene extends Phaser.Scene {
       mp: this.player.stats.mp,
       maxMp: this.player.stats.maxMp,
       fps: this.game.loop.actualFps,
-      dead,
+      dead: deadAfterCombat,
       level: this.progression.level,
       xp: this.progression.xp,
       xpToNext: xpToNextLevel(this.progression.level),
