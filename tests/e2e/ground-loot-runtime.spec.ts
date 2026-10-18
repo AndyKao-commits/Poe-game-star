@@ -85,3 +85,79 @@ test('nearby pickup control updates immediately when a drop spawns and is collec
     collected: { hidden: true, disabled: true },
   });
 });
+
+test('full inventory skips a blocked nearby item to collect a farther stackable drop', async ({ page }) => {
+  await ready(page);
+  const result = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      gearKit: {
+        inventory: { capacity: number; slots: Array<{ itemId: string; rarity: 'common'; quantity: number }> };
+      };
+      getPlayerForTests: () => { position: { x: number; y: number } };
+      spawnGroundLoot: (id: string, loot: { itemId: string; rarity: 'common' }, pos: { x: number; y: number }) => void;
+      pickupNearestGroundLoot: () => void;
+      getGroundLootForTests: () => { drops: Array<{ id: string }> };
+      groundLootMarkers: Map<string, { active: boolean }>;
+    };
+    const pos = scene.getPlayerForTests().position;
+    scene.gearKit = {
+      ...scene.gearKit,
+      inventory: { capacity: 1, slots: [{ itemId: 'scrap', rarity: 'common', quantity: 1 }] },
+    };
+    scene.spawnGroundLoot('blocked-nearest', { itemId: 'ashen_blade', rarity: 'common' }, { ...pos });
+    scene.spawnGroundLoot('stackable-farther', { itemId: 'scrap', rarity: 'common' }, { x: pos.x + 0.5, y: pos.y });
+    scene.pickupNearestGroundLoot();
+    return {
+      groundIds: scene.getGroundLootForTests().drops.map((drop) => drop.id),
+      bag: scene.gearKit.inventory.slots,
+      blockedMarkerActive: scene.groundLootMarkers.get('blocked-nearest')?.active,
+      collectedMarkerGone: !scene.groundLootMarkers.has('stackable-farther'),
+    };
+  });
+  expect(result).toEqual({
+    groundIds: ['blocked-nearest'],
+    bag: [{ itemId: 'scrap', rarity: 'common', quantity: 2 }],
+    blockedMarkerActive: true,
+    collectedMarkerGone: true,
+  });
+});
+
+test('encounter restart clears all ground drop data and markers without erasing collected inventory', async ({ page }) => {
+  await ready(page);
+  const result = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      getPlayerForTests: () => {
+        position: { x: number; y: number };
+        stats: { hp: number };
+        iframes: { clear: () => void };
+        takeDamage: (damage: number) => void;
+      };
+      spawnGroundLoot: (id: string, loot: { itemId: string; rarity: 'common' }, pos: { x: number; y: number }) => void;
+      getGroundLootForTests: () => { drops: unknown[] };
+      groundLootMarkers: Map<string, { active: boolean }>;
+      restartForTests: () => void;
+    };
+    const player = scene.getPlayerForTests();
+    scene.spawnGroundLoot('reset-one', { itemId: 'scrap', rarity: 'common' }, player.position);
+    scene.spawnGroundLoot('reset-two', { itemId: 'ashen_blade', rarity: 'common' }, player.position);
+    const markers = [...scene.groundLootMarkers.values()];
+    player.iframes.clear();
+    player.stats.hp = 1;
+    player.takeDamage(999);
+    scene.restartForTests();
+    return {
+      before: markers.length,
+      after: scene.getGroundLootForTests().drops.length,
+      activeMarkers: markers.filter((marker) => marker.active).length,
+      sceneMarkers: scene.groundLootMarkers.size,
+      pickupHidden: (document.querySelector('[data-pickup]') as HTMLButtonElement).hidden,
+    };
+  });
+  expect(result).toEqual({
+    before: 2,
+    after: 0,
+    activeMarkers: 0,
+    sceneMarkers: 0,
+    pickupHidden: true,
+  });
+});
