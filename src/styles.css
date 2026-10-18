@@ -790,6 +790,13 @@ body,
   .hud-bar-fill, .hud-loot-toast, .hud-death { transition: none; }
 }
 
+/* Mobile uses the touch skill cluster; do not duplicate desktop status chrome. */
+@media (pointer: coarse) {
+  .hud-skills {
+    display: none;
+  }
+}
+
 /* Art D action icon overlay: decorative only, preserving original hit zones. */
 .touch-attack,
 .touch-skill[data-skill-q],
