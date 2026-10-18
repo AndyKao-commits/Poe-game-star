@@ -433,7 +433,8 @@ body,
 /* Independent of .touch-visual opacity — always recoverable in hidden mode */
 .touch-settings {
   position: absolute;
-  top: calc(44px + var(--safe-top));
+  /* Below the inventory HUD action: prevent overlapping mobile hit targets. */
+  top: calc(72px + var(--safe-top));
   right: calc(12px + var(--safe-right));
   z-index: 30;
   pointer-events: auto;
