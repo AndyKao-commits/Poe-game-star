@@ -157,6 +157,64 @@ test('damage during inventory updates HUD and death closes the modal', async ({ 
   await expect(page.locator('[data-hp-text]')).toHaveText('100/100');
 });
 
+test('enemy lethal hit closes inventory and updates HUD in the same frame', async ({ page }) => {
+  await waitForGame(page);
+  await page.locator('[data-inventory]').click();
+  await expect(page.locator('[data-inventory-panel]')).toBeVisible();
+
+  const result = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      enemies: Array<{ update: (...args: unknown[]) => void }>;
+      update: (time: number, delta: number) => void;
+      getPlayerForTests: () => {
+        stats: { hp: number };
+        iframes: { clear: () => void };
+        takeDamage: (amount: number) => void;
+        lifecycle: { isDead: boolean };
+      };
+      getInventoryOpenForTests: () => boolean;
+      getInputForTests: () => { isEnabled: boolean };
+    };
+    const enemy = scene.enemies[0];
+    if (!enemy) throw new Error('Expected an enemy for lethal-hit regression');
+    const original = enemy.update;
+    const player = scene.getPlayerForTests();
+    player.iframes.clear();
+    player.stats.hp = 1;
+    let injected = false;
+    enemy.update = (...args: unknown[]) => {
+      if (!injected) {
+        injected = true;
+        player.takeDamage(999);
+      }
+      // Do not advance AI during this deterministic regression frame.
+      void args;
+    };
+    try {
+      scene.update(0, 16);
+      return {
+        injected,
+        dead: player.lifecycle.isDead,
+        open: scene.getInventoryOpenForTests(),
+        enabled: scene.getInputForTests().isEnabled,
+        deathVisible: document.querySelector('[data-death]')?.getBoundingClientRect().height !== 0,
+        inventoryHidden: (document.querySelector('[data-inventory-panel]') as HTMLElement | null)?.offsetParent === null,
+      };
+    } finally {
+      enemy.update = original;
+    }
+  });
+
+  expect(result).toEqual({
+    injected: true,
+    dead: true,
+    open: false,
+    enabled: false,
+    deathVisible: true,
+    inventoryHidden: true,
+  });
+});
+
 test('held desktop mouse attack requires release after inventory closes', async ({ page }) => {
   await waitForGame(page);
   const canvas = page.locator('#game-root canvas');
