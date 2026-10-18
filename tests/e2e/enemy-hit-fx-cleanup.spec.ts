@@ -37,3 +37,32 @@ test('enemy destruction cleans active Art D hit effects after tween cancellation
   expect(result.remaining).toBe(0);
   expect(result.allDestroyed).toBe(true);
 });
+
+test('normal Art D hit effect completes and leaves no active sprites', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+  await page.waitForFunction(() => {
+    const scene = window.__ASHEN_GAME__?.scene?.getScene?.('GameScene') as
+      | { getEnemyCountForTests?: () => number }
+      | undefined;
+    return (scene?.getEnemyCountForTests?.() ?? 0) > 0;
+  });
+  const created = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      enemies: Array<{
+        takeDamage: (damage: number) => unknown;
+        hitEffects: Set<{ active: boolean }>;
+      }>;
+    };
+    const enemy = scene.enemies[0];
+    enemy.takeDamage(1);
+    return [...enemy.hitEffects].length;
+  });
+  expect(created).toBeGreaterThan(0);
+  await page.waitForFunction(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      enemies: Array<{ hitEffects: Set<unknown> }>;
+    };
+    return scene.enemies[0]?.hitEffects.size === 0;
+  }, null, { timeout: 5_000 });
+});
