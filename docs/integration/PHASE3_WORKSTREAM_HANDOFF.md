@@ -38,3 +38,21 @@ Release policy: **do not merge main or deploy until full CI, Art D visual approv
 - This handoff is a concrete integration proposal committed for review, **not an externally delivered assignment or instruction to other agents**.
 - Branch edits should be owned by their respective workstreams; E will validate changes and cherry-pick only reviewed patches.
 - Physical iPhone Safari QA and visual acceptance cannot be replaced with browser automation.
+
+## E integration implementation update — 2026-10-18
+
+Commits on the integration branch following the initial pure contract:
+- `46f89fa`: rejected full-bag drops now enter a bounded ground-loot state, render a temporary Phaser marker at the enemy's death location, and can be collected by the nearby player's `F` key.
+- `f29a52b`, `fedc10a`: D HUD gained a touch-friendly pickup action routed through the same atomic transaction; gameplay checks inventory and death gates.
+- `ff3cf88`: browser tests cover in-world marker creation, pickup exactly once, and full-bag preservation.
+
+The original statement that world sprites or controls are entirely unwired is now **superseded** by this section. This is a first playable vertical slice, not a final art-approved pickup system.
+
+### Remaining owner requests (not yet assigned externally)
+- C: evaluate stacked inventory edge cases, overflow handling, and whether persistent ground items are desired beyond encounter restart.
+- D: replace always-visible pickup button with contextual proximity indicator; perform mobile layout tests for the new HUD action.
+- B: review enemy corpse position and kill-claim identity under concurrent deaths and resets.
+- Art D: propose low-resolution sprite for ground pickup marker; visually sign off existing regenerated Sentinel and Hit and all other 13 prototype sheets.
+- E: watch latest CI for above commits; resolve failures before further integration.
+
+**CI #211 (39103731608) was still running when this update was drafted.** No merge to main or deploy is authorized.
