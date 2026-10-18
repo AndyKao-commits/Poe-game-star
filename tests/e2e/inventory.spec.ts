@@ -601,3 +601,50 @@ test('landscape inventory keeps close and equipment actions touch accessible', a
   await close.click();
   await expect(panel).toBeHidden();
 });
+
+test('C equipment changes preserve A skill cooldown and MP authority', async ({ page }) => {
+  await waitForGame(page);
+  await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      grantLootForTests: (itemId: string, rarity: 'uncommon') => boolean;
+      getPlayerForTests: () => {
+        caster: { cooldowns: { q: number } };
+        stats: { mp: number };
+      };
+    };
+    if (!scene.grantLootForTests('ashen_blade', 'uncommon')) throw new Error('weapon grant failed');
+    scene.getPlayerForTests().caster.cooldowns.q = 60_000;
+  });
+
+  await page.locator('[data-inventory]').click();
+  await page.locator('[data-equip-id="ashen_blade"]').click();
+  const equipped = await page.evaluate(() => {
+    const player = (window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      getPlayerForTests: () => {
+        stats: { mp: number; maxMp: number };
+        getCasterState: () => { cooldowns: { q: number }; resources: { mana: number; maxMana: number } };
+      };
+    }).getPlayerForTests();
+    return { stats: player.stats, caster: player.getCasterState() };
+  });
+  expect(equipped.caster.cooldowns.q).toBeGreaterThan(50_000);
+  expect(equipped.caster.resources.mana).toBe(equipped.stats.mp);
+  expect(equipped.caster.resources.maxMana).toBe(equipped.stats.maxMp);
+
+  await page.locator('[data-unequip="weapon"]').click();
+  const unequipped = await page.evaluate(() => {
+    const player = (window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      getPlayerForTests: () => {
+        stats: { mp: number; maxMp: number };
+        getCasterState: () => { cooldowns: { q: number }; resources: { mana: number; maxMana: number } };
+      };
+    }).getPlayerForTests();
+    return { stats: player.stats, caster: player.getCasterState() };
+  });
+  expect(unequipped.caster.cooldowns.q).toBeGreaterThan(50_000);
+  expect(unequipped.caster.resources.mana).toBe(unequipped.stats.mp);
+  expect(unequipped.caster.resources.maxMana).toBe(unequipped.stats.maxMp);
+
+  await page.locator('[data-inv-close]').click();
+  await expect(page.locator('[data-hud-skill="q"]')).toHaveAttribute('data-skill-state', 'cooldown');
+});
