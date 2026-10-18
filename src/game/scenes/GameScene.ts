@@ -120,6 +120,9 @@ export class GameScene extends Phaser.Scene {
     this.hud = new HudController(hudRoot);
     this.hud.setRestartHandler(() => this.handleRestart());
     this.hud.setInventoryHandler(() => this.setInventoryOpen(!this.inventoryOpen));
+    this.hud.setPickupHandler(() => {
+      if (!this.inventoryOpen && !this.player.lifecycle.isDead) this.pickupNearestGroundLoot();
+    });
     this.disposables.add(() => {
       this.hud?.destroy();
       this.hud = null;
