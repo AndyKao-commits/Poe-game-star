@@ -56,6 +56,55 @@ test('Art D textures load and monster animations are registered', async ({ page 
   ]);
 });
 
+test('replacement Sentinel atlas and hit effect have visible decoded pixels', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+  await page.waitForFunction(() => {
+    const game = window.__ASHEN_GAME__;
+    return Boolean(game?.textures.exists('sentinel') && game.textures.exists('art-d-hit'));
+  });
+
+  const coverage = await page.evaluate(() => {
+    const game = window.__ASHEN_GAME__!;
+    const inspect = (key: string, cellSize: number) => {
+      const image = game.textures.get(key).getSourceImage() as HTMLImageElement;
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('Canvas 2D context unavailable');
+      context.drawImage(image, 0, 0);
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      const columns = canvas.width / cellSize;
+      const rows = canvas.height / cellSize;
+      const occupied: number[] = [];
+      let opaque = 0;
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < columns; col++) {
+          let visible = 0;
+          for (let y = row * cellSize; y < (row + 1) * cellSize; y++) {
+            for (let x = col * cellSize; x < (col + 1) * cellSize; x++) {
+              if (pixels[(y * canvas.width + x) * 4 + 3] > 0) {
+                visible++;
+                opaque++;
+              }
+            }
+          }
+          occupied.push(visible);
+        }
+      }
+      return { opaque, occupied };
+    };
+    return { sentinel: inspect('sentinel', 32), hit: inspect('art-d-hit', 48) };
+  });
+
+  expect(coverage.sentinel.occupied).toHaveLength(20);
+  expect(coverage.sentinel.occupied.every((pixels) => pixels > 0)).toBe(true);
+  expect(coverage.sentinel.opaque).toBeGreaterThan(200);
+  expect(coverage.hit.occupied).toHaveLength(1);
+  expect(coverage.hit.opaque).toBeGreaterThan(100);
+});
+
 test('enemy telegraph render state is consistent with combat phase', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
