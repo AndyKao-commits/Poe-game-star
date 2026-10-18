@@ -3,6 +3,35 @@ import { test, expect } from '@playwright/test';
 test.describe('Art D landscape action button layout', () => {
   test.use({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true });
 
+  test('portrait-to-landscape transition restores touch actions and inventory access', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+    await page.waitForFunction(() => Boolean(window.__ASHEN_GAME__?.scene?.getScene?.('GameScene')));
+    await page.evaluate(() => {
+      const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+        getOrientationGateForTests: () => { setCoarsePointerForTests: (value: boolean) => void } | null;
+      };
+      scene.getOrientationGateForTests()?.setCoarsePointerForTests(true);
+    });
+
+    await expect(page.locator('[data-actions]')).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('[data-orient]')).toBeVisible();
+    await expect.poll(async () => page.evaluate(() => Boolean(
+      (document.getElementById('touch-root') as HTMLElement | null)?.hidden,
+    ))).toBe(true);
+
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect(page.locator('[data-orient]')).toBeHidden();
+    await expect(page.locator('[data-actions]')).toBeVisible();
+    await expect(page.locator('[data-move-zone]')).toBeVisible();
+    await page.locator('[data-inventory]').click();
+    await expect(page.locator('[data-inventory-panel]')).toBeVisible();
+    await page.locator('[data-inv-close]').click();
+    await expect(page.locator('[data-inventory-panel]')).toBeHidden();
+    await expect(page.locator('[data-actions]')).toBeVisible();
+  });
+
   test('action buttons fit within the viewport and display the delivered icons', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
