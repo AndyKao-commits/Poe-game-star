@@ -418,6 +418,9 @@ export class GameScene extends Phaser.Scene {
       if (loot.granted) {
         this.hud?.flashLoot(loot.granted.itemId, loot.granted.rarity);
         this.inventoryPanel?.render(this.gearKit);
+      } else if (loot.bagFull) {
+        // A valid drop was rolled but capacity blocked it: never imply pickup succeeded.
+        this.hud?.flashNotice('背包已滿，掉落物未取得');
       }
 
       // A claimed corpse no longer needs to be checked on every frame.
