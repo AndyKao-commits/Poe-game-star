@@ -916,3 +916,33 @@ body,
     text-align: center;
   }
 }
+
+/* Phase 3 visual acceptance: a two-resource HUD, not a desktop dashboard on top of combat. */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  .hud-stats {
+    width: min(176px, 28vw);
+    border: 0;
+    border-radius: 8px;
+    padding: 6px 8px;
+    background: rgba(10, 12, 16, 0.35);
+  }
+  .hud-stats .hud-bar-row:has([data-combat-stats]),
+  .hud-stats .hud-bar-row:has([data-progression-text]),
+  .hud-stats > .hud-bar-track {
+    display: none;
+  }
+  .hud-stats .hud-bar-row {
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    font-size: 10px;
+    margin: 0 0 3px;
+  }
+  .hud-stats .hud-bar-row:last-of-type { margin-bottom: 0; }
+  .hud-stats .hud-bar-track { height: 6px; border-radius: 4px; }
+  .hud-actions {
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    backdrop-filter: none;
+  }
+  .touch-settings .touch-mode { border-radius: 8px; }
+}
