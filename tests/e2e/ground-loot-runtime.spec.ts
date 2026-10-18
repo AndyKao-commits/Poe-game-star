@@ -62,3 +62,26 @@ test('ground pickup never removes the world item while C inventory is full', asy
   expect(result).toEqual({ count: 1, markerActive: true, bagSlots: 0 });
   await expect(page.locator('[data-loot-toast]')).toContainText('物品仍留在地面');
 });
+
+test('nearby pickup control updates immediately when a drop spawns and is collected', async ({ page }) => {
+  await ready(page);
+  const state = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      getPlayerForTests: () => { position: { x: number; y: number } };
+      spawnGroundLoot: (id: string, loot: { itemId: string; rarity: 'common' }, pos: { x: number; y: number }) => void;
+      pickupNearestGroundLoot: () => void;
+    };
+    const pickup = document.querySelector('[data-pickup]') as HTMLButtonElement;
+    const before = { hidden: pickup.hidden, disabled: pickup.disabled };
+    scene.spawnGroundLoot('immediate-drop', { itemId: 'scrap', rarity: 'common' }, scene.getPlayerForTests().position);
+    const spawned = { hidden: pickup.hidden, disabled: pickup.disabled };
+    scene.pickupNearestGroundLoot();
+    const collected = { hidden: pickup.hidden, disabled: pickup.disabled };
+    return { before, spawned, collected };
+  });
+  expect(state).toEqual({
+    before: { hidden: true, disabled: true },
+    spawned: { hidden: false, disabled: false },
+    collected: { hidden: true, disabled: true },
+  });
+});
