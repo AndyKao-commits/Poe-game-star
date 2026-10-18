@@ -56,3 +56,21 @@ At `b5637500af69d626bbfd42e57b72c77928b118a3`, Phase 2 integration QA run
 `39093418187` concluded **success**, including TypeScript, unit tests,
 production build, Chromium/WebKit E2E and Art D asset contract.
 This proves the tested revision, not subsequent changes or manual art/mobile QA.
+
+## Engineering acceptance update — 2026-10-18
+
+This update supersedes the older baseline CI evidence for currently integrated changes; it does **not** grant production approval.
+
+- CI `39099705284` (#171), commit `85aa5d2`: **success** for TypeScript, unit tests, build, Chromium/WebKit E2E, and Art D asset contract.
+- C inventory: equip/unequip failures now display localized feedback; regression tests cover failed equip, gear-derived attack/defense/HP, death/restart, and 844×390 inventory accessibility.
+- A/D skills: HUD and mobile touch skills refresh on respawn; coarse-pointer layout hides the duplicate desktop skill strip. Automated mobile-state regressions passed in CI #171.
+- B/D combat: enemy hit FX are tracked and destroyed when encounter reset cancels tweens. The canceled-tween regression passed in CI #171.
+- Mobile layout: Chromium and WebKit initially detected overlapping inventory/settings hit targets in CI #169. CSS corrected the conflict; the unchanged overlap assertion passed in CI #171.
+- Follow-up on the current branch: a **new** regression for the normal (non-canceled) hit FX tween is awaiting its own CI result. Do not cite CI #171 as proof of that later addition.
+
+### Still blocking release
+- [ ] Visual review of **all 13 prototype PNGs**, including actual sprite frames, alpha edges and animation consistency.
+- [ ] Explicit Art D approval for regenerated `sentinel.png` and `hit.png`.
+- [ ] Physical iPhone Safari landscape touch, safe-area and sustained performance evaluation.
+- [ ] Complete CI success on **the latest** integration commit.
+- [ ] Separate authorization and complete acceptance before any `main` merge or production deployment.
