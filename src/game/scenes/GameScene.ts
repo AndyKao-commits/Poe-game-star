@@ -356,6 +356,8 @@ export class GameScene extends Phaser.Scene {
     // Force re-evaluate visibility after respawn (clears lastDead cache)
     this.lastDead = null;
     this.applyDeathControlState(false);
+    // Restore touch skill chrome immediately rather than waiting for the next frame.
+    this.touchControls?.setSkillUi(this.player.getSkillUiState());
 
     this.cameras.main.startFollow(this.player.entity.sprite, true, 0.12, 0.12);
     this.hud?.update({
