@@ -36,7 +36,7 @@ export class HudController {
   private boundPickup: () => void;
   private inventoryBtn!: HTMLButtonElement;
   private pickupBtn!: HTMLButtonElement;
-  private pickupAvailable = false;
+  private pickupAvailable = true;
   private skillButtons = new Map<string, HTMLElement>();
   private lootToast!: HTMLElement;
   private lootToastTimer: number | null = null;
@@ -79,7 +79,7 @@ export class HudController {
       </div>
       <div class="hud-panel hud-actions">
         <button type="button" class="hud-inv-btn" data-inventory>背包</button>
-        <button type="button" class="hud-inv-btn" data-pickup aria-label="拾取附近物品" hidden>拾取</button>
+        <button type="button" class="hud-inv-btn" data-pickup aria-label="拾取附近物品">拾取</button>
       </div>
       <div class="hud-loot-toast" data-loot-toast role="status" aria-live="polite" hidden></div>
       <div class="hud-panel hud-fps"><span data-fps>FPS --</span></div>
