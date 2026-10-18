@@ -38,6 +38,49 @@ test.describe('Art D landscape action button layout', () => {
     }
   });
 
+  test('repeated orientation changes keep Art D textures and touch controls functional', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto('/');
+    await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+    await page.waitForFunction(() => {
+      const scene = window.__ASHEN_GAME__?.scene?.getScene?.('GameScene') as
+        | { getOrientationGateForTests?: () => unknown }
+        | undefined;
+      return Boolean(scene?.getOrientationGateForTests);
+    });
+    await page.evaluate(() => {
+      const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+        getOrientationGateForTests: () => { setCoarsePointerForTests: (v: boolean) => void } | null;
+      };
+      scene.getOrientationGateForTests()?.setCoarsePointerForTests(true);
+    });
+
+    for (let cycle = 0; cycle < 3; cycle++) {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(page.locator('[data-orient]')).toBeVisible();
+      await expect.poll(async () => page.evaluate(() =>
+        Boolean((document.getElementById('touch-root') as HTMLElement | null)?.hidden),
+      )).toBe(true);
+
+      await page.setViewportSize({ width: 844, height: 390 });
+      await expect(page.locator('[data-orient]')).toBeHidden();
+      await expect(page.locator('[data-actions]')).toBeVisible();
+      await expect(page.locator('[data-move-zone]')).toBeVisible();
+      const state = await page.evaluate(() => {
+        const game = window.__ASHEN_GAME__!;
+        return {
+          missingTextures: ['sentinel', 'art-d-hit', 'art-d-ui-attack', 'art-d-ui-skill']
+            .filter((key) => !game.textures.exists(key)),
+          canvasCount: document.querySelectorAll('#game-root canvas').length,
+        };
+      });
+      expect(state.missingTextures).toEqual([]);
+      expect(state.canvasCount).toBe(1);
+    }
+    expect(errors).toEqual([]);
+  });
+
   test('action buttons fit within the viewport and display the delivered icons', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
