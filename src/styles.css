@@ -857,3 +857,62 @@ body,
     flex-wrap: wrap;
   }
 }
+
+/* Phase 3 mobile battlefield-first HUD: keep vitals but stop chrome filling the viewport. */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  .hud-stats {
+    top: calc(6px + var(--safe-top));
+    left: calc(6px + var(--safe-left));
+    min-width: 0;
+    width: min(174px, 25vw);
+    padding: 5px 7px;
+    background: rgba(12, 14, 20, 0.58);
+    backdrop-filter: none;
+  }
+  .hud-title,
+  .hud-fps,
+  .touch-hint {
+    display: none;
+  }
+  .hud-bar-row {
+    grid-template-columns: 19px minmax(0, 1fr) auto;
+    gap: 4px;
+    margin-bottom: 2px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .hud-bar-track { height: 4px; }
+  .hud-stats [data-combat-stats],
+  .hud-stats [data-progression-text] {
+    font-size: 9px;
+  }
+  .hud-stats .hud-bar-row:has([data-combat-stats]),
+  .hud-stats .hud-bar-row:has([data-progression-text]) {
+    margin-bottom: 1px;
+  }
+  .hud-actions {
+    top: calc(6px + var(--safe-top));
+    right: calc(6px + var(--safe-right));
+    padding: 3px;
+    background: rgba(12, 14, 20, 0.5);
+    backdrop-filter: none;
+  }
+  .hud-inv-btn {
+    padding: 5px 7px;
+    font-size: 11px;
+    min-height: 30px;
+  }
+  .touch-settings {
+    top: calc(47px + var(--safe-top));
+    right: calc(6px + var(--safe-right));
+  }
+  .touch-mode {
+    padding: 3px 5px;
+    background: rgba(12, 14, 20, 0.52);
+  }
+  .hud-loot-toast {
+    top: calc(12% + var(--safe-top));
+    max-width: 48vw;
+    text-align: center;
+  }
+}
