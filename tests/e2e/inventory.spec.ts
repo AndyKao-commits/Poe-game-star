@@ -241,6 +241,32 @@ test('failed equip reports feedback without changing inventory or combat stats',
   await expect(page.locator('[data-inv-status]')).toContainText('找不到');
 });
 
+test('respawn synchronizes HUD skill state in the restart click', async ({ page }) => {
+  await waitForGame(page);
+  const state = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getPlayerForTests: () => {
+        stats: { hp: number };
+        iframes: { clear: () => void };
+        takeDamage: (amount: number) => void;
+      };
+      update: (time: number, delta: number) => void;
+    };
+    const player = scene.getPlayerForTests();
+    player.iframes.clear();
+    player.stats.hp = 1;
+    player.takeDamage(999);
+    scene.update(0, 16);
+    const before = document.querySelector('[data-hud-skill="q"]')?.getAttribute('data-skill-state');
+    (document.querySelector('[data-restart]') as HTMLButtonElement).click();
+    const after = document.querySelector('[data-hud-skill="q"]')?.getAttribute('data-skill-state');
+    return { before, after };
+  });
+  expect(state.before).toBe('dead');
+  expect(state.after).toBe('ready');
+  await expect(page.locator('[data-death]')).toBeHidden();
+});
+
 test('held desktop mouse attack requires release after inventory closes', async ({ page }) => {
   await waitForGame(page);
   const canvas = page.locator('#game-root canvas');
