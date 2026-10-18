@@ -30,9 +30,12 @@ export class HudController {
   private restartBtn!: HTMLButtonElement;
   private onRestart: (() => void) | null = null;
   private onInventory: (() => void) | null = null;
+  private onPickup: (() => void) | null = null;
   private boundRestart: () => void;
   private boundInventory: () => void;
+  private boundPickup: () => void;
   private inventoryBtn!: HTMLButtonElement;
+  private pickupBtn!: HTMLButtonElement;
   private skillButtons = new Map<string, HTMLElement>();
   private lootToast!: HTMLElement;
   private lootToastTimer: number | null = null;
@@ -41,6 +44,7 @@ export class HudController {
     this.root = root;
     this.boundRestart = () => this.onRestart?.();
     this.boundInventory = () => this.onInventory?.();
+    this.boundPickup = () => this.onPickup?.();
     this.mount();
   }
 
@@ -74,6 +78,7 @@ export class HudController {
       </div>
       <div class="hud-panel hud-actions">
         <button type="button" class="hud-inv-btn" data-inventory>背包</button>
+        <button type="button" class="hud-inv-btn" data-pickup aria-label="拾取附近物品">拾取</button>
       </div>
       <div class="hud-loot-toast" data-loot-toast role="status" aria-live="polite" hidden></div>
       <div class="hud-panel hud-fps"><span data-fps>FPS --</span></div>
@@ -96,6 +101,7 @@ export class HudController {
     this.deathOverlay = this.root.querySelector('[data-death]')!;
     this.restartBtn = this.root.querySelector('[data-restart]')!;
     this.inventoryBtn = this.root.querySelector('[data-inventory]')!;
+    this.pickupBtn = this.root.querySelector('[data-pickup]')!;
     this.lootToast = this.root.querySelector('[data-loot-toast]')!;
     for (const el of this.root.querySelectorAll<HTMLElement>('[data-hud-skill]')) {
       const id = el.getAttribute('data-hud-skill');
@@ -103,6 +109,7 @@ export class HudController {
     }
     this.restartBtn.addEventListener('click', this.boundRestart);
     this.inventoryBtn.addEventListener('click', this.boundInventory);
+    this.pickupBtn.addEventListener('click', this.boundPickup);
   }
 
   setRestartHandler(handler: (() => void) | null): void {
@@ -111,6 +118,10 @@ export class HudController {
 
   setInventoryHandler(handler: (() => void) | null): void {
     this.onInventory = handler;
+  }
+
+  setPickupHandler(handler: (() => void) | null): void {
+    this.onPickup = handler;
   }
 
   flashLoot(itemId: string, rarity: string): void {
@@ -162,12 +173,14 @@ export class HudController {
   destroy(): void {
     this.restartBtn.removeEventListener('click', this.boundRestart);
     this.inventoryBtn.removeEventListener('click', this.boundInventory);
+    this.pickupBtn.removeEventListener('click', this.boundPickup);
     if (this.lootToastTimer !== null) {
       window.clearTimeout(this.lootToastTimer);
       this.lootToastTimer = null;
     }
     this.onRestart = null;
     this.onInventory = null;
+    this.onPickup = null;
     this.skillButtons.clear();
     this.root.innerHTML = '';
   }
