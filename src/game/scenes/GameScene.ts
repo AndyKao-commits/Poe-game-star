@@ -480,26 +480,37 @@ export class GameScene extends Phaser.Scene {
 
   /** C's immutable pickup transaction is the single source of truth for inventory changes. */
   private pickupNearestGroundLoot(): void {
-    const nearest = this.groundLoot.drops
+    // Prefer the closest collectible drop. A blocked weapon must not prevent a
+    // slightly farther stackable material from being picked up in a full bag.
+    const nearby = this.groundLoot.drops
       .map((drop) => ({ drop, range: distance(drop.position, this.player.position) }))
       .filter(({ range }) => range <= PICKUP_RADIUS_TILES)
-      .sort((a, b) => a.range - b.range)[0];
-    if (!nearest) {
+      .sort((a, b) => a.range - b.range);
+    if (nearby.length === 0) {
       this.hud?.flashNotice('附近沒有可拾取的物品');
       return;
     }
-    const picked = pickupGroundDrop(this.groundLoot, this.gearKit, nearest.drop.id, this.player.position);
-    if (!picked.ok) {
-      this.hud?.flashNotice(picked.reason === 'bag_full' ? '背包已滿，物品仍留在地面' : '無法拾取物品');
+    let bagBlocked = false;
+    for (const { drop } of nearby) {
+      const picked = pickupGroundDrop(this.groundLoot, this.gearKit, drop.id, this.player.position);
+      if (!picked.ok) {
+        if (picked.reason === 'bag_full') {
+          bagBlocked = true;
+          continue;
+        }
+        this.hud?.flashNotice('無法拾取物品');
+        return;
+      }
+      this.groundLoot = picked.state;
+      this.gearKit = picked.kit;
+      this.groundLootMarkers.get(drop.id)?.destroy();
+      this.groundLootMarkers.delete(drop.id);
+      this.syncPickupAvailability();
+      this.inventoryPanel?.render(this.gearKit);
+      this.hud?.flashLoot(drop.loot.itemId, drop.loot.rarity);
       return;
     }
-    this.groundLoot = picked.state;
-    this.gearKit = picked.kit;
-    this.groundLootMarkers.get(nearest.drop.id)?.destroy();
-    this.groundLootMarkers.delete(nearest.drop.id);
-    this.syncPickupAvailability();
-    this.inventoryPanel?.render(this.gearKit);
-    this.hud?.flashLoot(nearest.drop.loot.itemId, nearest.drop.loot.rarity);
+    this.hud?.flashNotice(bagBlocked ? '背包已滿，物品仍留在地面' : '無法拾取物品');
   }
 
   private clearGroundLoot(): void {
