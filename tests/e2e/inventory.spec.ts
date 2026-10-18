@@ -316,6 +316,8 @@ test('equip updates combat stats and survives death respawn', async ({ page }) =
   expect(equipped.weaponAttack).toBe(5);
   expect(equipped.attack).toBe(17);
   expect(equipped.bagSlots).toBe(0);
+  // Engineering D: HUD combat values must follow C's equipped loadout.
+  await expect(page.locator('[data-combat-stats]')).toContainText('ATK 17');
 
   await page.locator('[data-inv-close]').click();
 
@@ -362,6 +364,7 @@ test('equip updates combat stats and survives death respawn', async ({ page }) =
   expect(afterRespawn.hasWeapon).toBe(true);
   expect(afterRespawn.attack).toBe(17);
   expect(afterRespawn.hp).toBe(afterRespawn.maxHp);
+  await expect(page.locator('[data-combat-stats]')).toContainText('ATK 17');
 });
 
 test('inventory works in landscape mobile viewport', async ({ page }) => {
