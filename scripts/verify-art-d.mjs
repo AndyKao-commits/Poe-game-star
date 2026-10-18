@@ -44,6 +44,7 @@ const expected = [
   ...['ui-attack', 'ui-skill', 'ui-potion'].map((n) => [n + '.png', 32, 32]),
 ];
 let errors = 0;
+let verifiedPngs = 0;
 // Validate the handoff manifest as well as the PNG headers. Otherwise a stale
 // manifest could silently disagree with the assets the runtime actually loads.
 const declared = [
@@ -108,11 +109,12 @@ for (const [file, width, height, cellW, cellH] of expected) {
     console.error('INVALID', file, { width: w, height: h, colorType, dimensionsOk, alphaCapable, gridOk });
     errors++;
   } else {
+    verifiedPngs++;
     console.log('OK', file, w + 'x' + h, 'alpha-capable');
   }
 }
 if (/\b(?:upload|binary delivery)\s+pending\b|\bpending\s+(?:upload|binary delivery)\b/i.test(manifest.status ?? '')) {
   console.warn('Manifest still marks binary delivery as pending.');
 }
-console.log(expected.length - errors + '/' + expected.length + ' Art D PNG headers verified');
+console.log(verifiedPngs + '/' + expected.length + ' Art D PNG payloads verified');
 if (errors) process.exitCode = 1;
