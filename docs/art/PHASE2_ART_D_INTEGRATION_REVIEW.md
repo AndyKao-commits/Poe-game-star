@@ -74,3 +74,41 @@ This update supersedes the older baseline CI evidence for currently integrated c
 - [ ] Physical iPhone Safari landscape touch, safe-area and sustained performance evaluation.
 - [ ] Complete CI success on **the latest** integration commit.
 - [ ] Separate authorization and complete acceptance before any `main` merge or production deployment.
+
+## Phase 3 visual quality rejection and rework brief — 2026-10-18
+
+**Human review outcome: NOT APPROVED.** The project owner considers the current
+Art D visual quality below target. Automated PNG/frame-contract checks passed,
+but this is not visual approval. Treat all 13 staged images as provisional.
+
+### Rework priorities
+1. **Player (P0):** preserve the approved dark-fantasy exiled-warrior concept,
+   red cape and recognizable weapon direction; improve head/torso/weapon silhouette
+   and consistent anatomy across all eight facing columns and six animation rows.
+2. **Enemies (P0):** give the crawler a readable low and fast profile and the
+   sentinel a distinct broad armored profile; every enemy windup must have
+   clear silhouettes without relying solely on hue.
+3. **Terrain (P1):** refine value grouping and material separation between floor,
+   wall, obstacle and void without burying actors in low-contrast textures.
+4. **Combat effects (P1):** refine slash, telegraph and hit so their direction,
+   timing and threat hierarchy remain legible; no visually noisy full-screen FX.
+5. **UI icons (P1):** refine attack, skill, potion silhouettes at actual 32px
+   display scale with consistent contour weight and disabled/cooldown readability.
+
+### Mandatory technical compatibility
+- Player: 256x192 RGBA PNG, 8x6 grid of 32px frames, no spacing or padding.
+- Crawler/sentinel: 128x160 RGBA PNG each, 4x5 grid of 32px frames.
+- Floor/wall/obstacle/void: 64x32 RGBA isometric tile image each.
+- Slash/telegraph/hit: 48x48 RGBA PNG; attack/skill/potion: 32x32 RGBA PNG.
+- Preserve filenames, transparency, per-cell bounding boxes, facing order,
+  animation row order, bottom-center actor pivots and Phaser atlas assumptions.
+- Work on a dedicated Art D branch. Do **not** overwrite the integrated
+  runtime assets before visual comparisons and automated CI.
+- **Gate:** contact sheets showing every animation frame and 1x/2x in-game
+  comparisons, alpha/frame inspections, manual Art D acceptance, and
+  iPhone Safari landscape visual/performance acceptance.
+- If one asset is accepted, replace only that asset and re-run the full QA
+  suite; partial acceptance does not approve the remaining assets.
+
+Engineering QA #239 passed on commit `50694ef`, but that result does not
+clear this art-quality rejection or authorize a production deployment.
