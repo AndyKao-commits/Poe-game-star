@@ -466,6 +466,7 @@ export class GameScene extends Phaser.Scene {
     marker.setStrokeStyle(2, 0x3a2e19);
     marker.setDepth(depthFromFoot(position) + 2);
     this.groundLootMarkers.set(id, marker);
+    this.syncPickupAvailability();
     this.hud?.flashNotice('背包已滿，物品掉落地面（靠近按 F 拾取）');
   }
 
@@ -496,6 +497,7 @@ export class GameScene extends Phaser.Scene {
     this.gearKit = picked.kit;
     this.groundLootMarkers.get(nearest.drop.id)?.destroy();
     this.groundLootMarkers.delete(nearest.drop.id);
+    this.syncPickupAvailability();
     this.inventoryPanel?.render(this.gearKit);
     this.hud?.flashLoot(nearest.drop.loot.itemId, nearest.drop.loot.rarity);
   }
