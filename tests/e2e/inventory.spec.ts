@@ -105,6 +105,58 @@ test('inventory blocks player controls while enemy AI and HUD continue ticking',
   })).toBe(true);
 });
 
+test('damage during inventory updates HUD and death closes the modal', async ({ page }) => {
+  await waitForGame(page);
+  await page.locator('[data-inventory]').click();
+  await expect(page.locator('[data-inventory-panel]')).toBeVisible();
+
+  const health = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getPlayerForTests: () => {
+        stats: { hp: number; maxHp: number };
+        iframes: { clear: () => void };
+        takeDamage: (amount: number) => void;
+      };
+      getInventoryOpenForTests: () => boolean;
+    };
+    const player = scene.getPlayerForTests();
+    const before = player.stats.hp;
+    player.iframes.clear();
+    player.takeDamage(7);
+    return { before, after: player.stats.hp, open: scene.getInventoryOpenForTests() };
+  });
+  expect(health.after).toBeLessThan(health.before);
+  expect(health.open).toBe(true);
+  await expect(page.locator('[data-hp-text]')).toHaveText(health.after + '/' + health.before);
+
+  await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getPlayerForTests: () => {
+        stats: { hp: number };
+        iframes: { clear: () => void };
+        takeDamage: (amount: number) => void;
+      };
+    };
+    const player = scene.getPlayerForTests();
+    player.iframes.clear();
+    player.stats.hp = 1;
+    player.takeDamage(999);
+  });
+  await expect(page.locator('[data-death]')).toBeVisible();
+  await expect(page.locator('[data-inventory-panel]')).toBeHidden();
+  expect(await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getInventoryOpenForTests: () => boolean;
+      getInputForTests: () => { isEnabled: boolean };
+    };
+    return { open: scene.getInventoryOpenForTests(), enabled: scene.getInputForTests().isEnabled };
+  })).toEqual({ open: false, enabled: false });
+
+  await page.locator('[data-restart]').click();
+  await expect(page.locator('[data-death]')).toBeHidden();
+  await expect(page.locator('[data-hp-text]')).toHaveText('100/100');
+});
+
 test('held desktop mouse attack requires release after inventory closes', async ({ page }) => {
   await waitForGame(page);
   const canvas = page.locator('#game-root canvas');
