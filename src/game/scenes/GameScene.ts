@@ -223,6 +223,7 @@ export class GameScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardown());
     this.syncControlAvailability();
+    this.syncPickupAvailability();
   }
 
   update(_time: number, rawDelta: number): void {
@@ -254,6 +255,7 @@ export class GameScene extends Phaser.Scene {
     this.touchControls?.setSkillUi(this.player.getSkillUiState());
 
     this.collectEnemyKillRewards();
+    this.syncPickupAvailability();
     this.player.lifecycle.consumeDeathEvent();
 
     this.hud.update({
@@ -304,6 +306,7 @@ export class GameScene extends Phaser.Scene {
     this.playerInput.clearTouch();
     this.touchControls?.setEnabled(!open && !this.player.lifecycle.isDead);
     this.syncControlAvailability();
+    this.syncPickupAvailability();
   }
 
   private handleEquip(itemId: string, rarity: Rarity): void {
@@ -464,6 +467,14 @@ export class GameScene extends Phaser.Scene {
     marker.setDepth(depthFromFoot(position) + 2);
     this.groundLootMarkers.set(id, marker);
     this.hud?.flashNotice('背包已滿，物品掉落地面（靠近按 F 拾取）');
+  }
+
+  /** Keep mobile pickup visible only when an actionable drop is within range. */
+  private syncPickupAvailability(): void {
+    if (!this.hud || !this.player) return;
+    const available = !this.inventoryOpen && !this.player.lifecycle.isDead &&
+      this.groundLoot.drops.some((drop) => distance(drop.position, this.player.position) <= PICKUP_RADIUS_TILES);
+    this.hud.setPickupAvailable(available);
   }
 
   /** C's immutable pickup transaction is the single source of truth for inventory changes. */
