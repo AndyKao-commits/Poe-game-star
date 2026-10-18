@@ -33,10 +33,5 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
       - name: Browser E2E (Chromium + WebKit)
         run: npx playwright test --project=chromium --project=webkit
-      - name: Art D asset contract (when complete)
-        run: |
-          if [ -f public/assets/art-d/player.png ]; then
-            node scripts/verify-art-d.mjs
-          else
-            echo "Art D atlas pending; skipping asset verification until player atlas is delivered."
-          fi
+      - name: Art D asset contract
+        run: node scripts/verify-art-d.mjs
