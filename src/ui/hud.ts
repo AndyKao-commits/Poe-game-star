@@ -114,8 +114,13 @@ export class HudController {
   }
 
   flashLoot(itemId: string, rarity: string): void {
+    this.flashNotice(`掉落：${itemId} (${rarity})`);
+  }
+
+  /** Show combat/loot feedback without inventing an acquired item. */
+  flashNotice(message: string): void {
     this.lootToast.hidden = false;
-    this.lootToast.textContent = `掉落：${itemId} (${rarity})`;
+    this.lootToast.textContent = message;
     this.lootToast.classList.add('is-visible');
     if (this.lootToastTimer !== null) {
       window.clearTimeout(this.lootToastTimer);
