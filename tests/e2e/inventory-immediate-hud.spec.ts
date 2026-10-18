@@ -38,3 +38,61 @@ test('C gear actions refresh D HUD and A resource state before the next game fra
     unequipHp: '100/100',
   });
 });
+
+test('C mana accessory immediately updates A caster capacity and D MP HUD on equip and removal', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+  await page.waitForFunction(() => {
+    const scene = window.__ASHEN_GAME__?.scene?.getScene?.('GameScene') as
+      | { grantLootForTests?: (id: string, rarity: string) => boolean }
+      | undefined;
+    return typeof scene?.grantLootForTests === 'function';
+  });
+
+  const result = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      grantLootForTests: (id: string, rarity: 'rare') => boolean;
+      handleEquip: (id: string, rarity: 'rare') => void;
+      handleUnequip: (slot: 'accessory') => void;
+      getPlayerForTests: () => {
+        stats: { mp: number; maxMp: number };
+        getSkillUiState: () => { mana: number; maxMana: number };
+      };
+    };
+    const player = scene.getPlayerForTests();
+    const base = { mp: player.stats.mp, maxMp: player.stats.maxMp };
+    if (!scene.grantLootForTests('ember_charm', 'rare')) throw new Error('Charm grant failed');
+    scene.handleEquip('ember_charm', 'rare');
+    const equipped = {
+      mp: player.stats.mp,
+      maxMp: player.stats.maxMp,
+      skillMana: player.getSkillUiState().mana,
+      skillMaxMana: player.getSkillUiState().maxMana,
+      hud: document.querySelector('[data-mp-text]')?.textContent,
+    };
+    scene.handleUnequip('accessory');
+    const removed = {
+      mp: player.stats.mp,
+      maxMp: player.stats.maxMp,
+      skillMana: player.getSkillUiState().mana,
+      skillMaxMana: player.getSkillUiState().maxMana,
+      hud: document.querySelector('[data-mp-text]')?.textContent,
+    };
+    return { base, equipped, removed };
+  });
+
+  expect(result.equipped).toEqual({
+    mp: result.base.mp,
+    maxMp: result.base.maxMp + 15,
+    skillMana: result.base.mp,
+    skillMaxMana: result.base.maxMp + 15,
+    hud: `${result.base.mp}/${result.base.maxMp + 15}`,
+  });
+  expect(result.removed).toEqual({
+    mp: result.base.mp,
+    maxMp: result.base.maxMp,
+    skillMana: result.base.mp,
+    skillMaxMana: result.base.maxMp,
+    hud: `${result.base.mp}/${result.base.maxMp}`,
+  });
+});
