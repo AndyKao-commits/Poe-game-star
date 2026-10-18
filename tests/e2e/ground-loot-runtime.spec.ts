@@ -249,3 +249,84 @@ test('full bag preserves a nearby drop for a later successful UI pickup', async 
   });
   expect(collected).toEqual({ drops: 0, slots: [{ itemId: 'scrap', rarity: 'common', quantity: 1 }] });
 });
+
+test('overflow ground rewards remain queued, promote on pickup, and are all collectible', async ({ page }) => {
+  await ready(page);
+  const state = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      gearKit: { inventory: { capacity: number; slots: unknown[] } };
+      getPlayerForTests: () => { position: { x: number; y: number } };
+      spawnGroundLoot: (id: string, loot: { itemId: string; rarity: 'common' }, pos: { x: number; y: number }) => void;
+      pickupNearestGroundLoot: () => void;
+      getGroundLootForTests: () => { drops: Array<{ id: string }> };
+      getPendingGroundLootCountForTests: () => number;
+      groundLootMarkers: Map<string, { active: boolean }>;
+      getGearKitForTests: () => { inventory: { slots: Array<{ itemId: string; quantity: number }> } };
+    };
+    const position = scene.getPlayerForTests().position;
+    scene.gearKit = { ...scene.gearKit, inventory: { capacity: 1, slots: [] } };
+    for (let i = 0; i < 33; i++) {
+      scene.spawnGroundLoot('overflow-' + i, { itemId: 'scrap', rarity: 'common' }, position);
+    }
+    const initial = {
+      physical: scene.getGroundLootForTests().drops.length,
+      markers: scene.groundLootMarkers.size,
+      pending: scene.getPendingGroundLootCountForTests(),
+    };
+    scene.pickupNearestGroundLoot();
+    const promoted = {
+      physical: scene.getGroundLootForTests().drops.length,
+      markers: scene.groundLootMarkers.size,
+      pending: scene.getPendingGroundLootCountForTests(),
+      promotedIdVisible: scene.groundLootMarkers.has('overflow-32'),
+    };
+    for (let i = 0; i < 32; i++) scene.pickupNearestGroundLoot();
+    const final = {
+      physical: scene.getGroundLootForTests().drops.length,
+      markers: scene.groundLootMarkers.size,
+      pending: scene.getPendingGroundLootCountForTests(),
+      scrapQuantity: scene.getGearKitForTests().inventory.slots.find((item) => item.itemId === 'scrap')?.quantity,
+    };
+    return { initial, promoted, final };
+  });
+  expect(state).toEqual({
+    initial: { physical: 32, markers: 32, pending: 1 },
+    promoted: { physical: 32, markers: 32, pending: 0, promotedIdVisible: true },
+    final: { physical: 0, markers: 0, pending: 0, scrapQuantity: 33 },
+  });
+});
+
+test('encounter reset clears pending overflow as well as physical drops', async ({ page }) => {
+  await ready(page);
+  const result = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      getPlayerForTests: () => {
+        position: { x: number; y: number };
+        stats: { hp: number };
+        iframes: { clear: () => void };
+        takeDamage: (damage: number) => void;
+      };
+      spawnGroundLoot: (id: string, loot: { itemId: string; rarity: 'common' }, pos: { x: number; y: number }) => void;
+      getGroundLootForTests: () => { drops: unknown[] };
+      getPendingGroundLootCountForTests: () => number;
+      groundLootMarkers: Map<string, unknown>;
+      restartForTests: () => void;
+    };
+    const player = scene.getPlayerForTests();
+    for (let i = 0; i < 33; i++) {
+      scene.spawnGroundLoot('reset-overflow-' + i, { itemId: 'scrap', rarity: 'common' }, player.position);
+    }
+    const before = scene.getPendingGroundLootCountForTests();
+    player.iframes.clear();
+    player.stats.hp = 1;
+    player.takeDamage(999);
+    scene.restartForTests();
+    return {
+      before,
+      pending: scene.getPendingGroundLootCountForTests(),
+      physical: scene.getGroundLootForTests().drops.length,
+      markers: scene.groundLootMarkers.size,
+    };
+  });
+  expect(result).toEqual({ before: 1, pending: 0, physical: 0, markers: 0 });
+});
