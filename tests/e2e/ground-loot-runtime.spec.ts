@@ -161,3 +161,45 @@ test('encounter restart clears all ground drop data and markers without erasing 
     pickupHidden: true,
   });
 });
+
+test('C ground loot and D pickup visibility stay gated by range and inventory modal', async ({ page }) => {
+  await ready(page);
+  const states = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      getPlayerForTests: () => {
+        position: { x: number; y: number };
+        entity: { position: { x: number; y: number } };
+      };
+      spawnGroundLoot: (id: string, loot: { itemId: string; rarity: 'common' }, pos: { x: number; y: number }) => void;
+      syncPickupAvailability: () => void;
+      setInventoryOpen: (open: boolean) => void;
+      getGroundLootForTests: () => { drops: unknown[] };
+    };
+    const pickup = document.querySelector('[data-pickup]') as HTMLButtonElement;
+    const player = scene.getPlayerForTests();
+    const origin = { ...player.position };
+    const snapshot = () => ({ hidden: pickup.hidden, disabled: pickup.disabled });
+    scene.spawnGroundLoot('range-modal-drop', { itemId: 'scrap', rarity: 'common' }, origin);
+    const near = snapshot();
+    scene.setInventoryOpen(true);
+    const inventoryOpen = snapshot();
+    scene.setInventoryOpen(false);
+    const inventoryClosed = snapshot();
+    player.entity.position = { x: origin.x + 10, y: origin.y + 10 };
+    scene.syncPickupAvailability();
+    const far = snapshot();
+    player.entity.position = origin;
+    scene.syncPickupAvailability();
+    const returned = snapshot();
+    return { near, inventoryOpen, inventoryClosed, far, returned, remainingDrops: scene.getGroundLootForTests().drops.length };
+  });
+
+  expect(states).toEqual({
+    near: { hidden: false, disabled: false },
+    inventoryOpen: { hidden: true, disabled: true },
+    inventoryClosed: { hidden: false, disabled: false },
+    far: { hidden: true, disabled: true },
+    returned: { hidden: false, disabled: false },
+    remainingDrops: 1,
+  });
+});
