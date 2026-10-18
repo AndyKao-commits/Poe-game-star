@@ -56,6 +56,55 @@ test('inventory modal blocks attack input and restores after close', async ({ pa
   expect(afterClose.enabled).toBe(true);
 });
 
+test('inventory blocks player controls while enemy AI and HUD continue ticking', async ({ page }) => {
+  await waitForGame(page);
+  await page.locator('[data-inventory]').click();
+  await expect(page.locator('[data-inventory-panel]')).toBeVisible();
+
+  const observation = await page.evaluate(async () => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      enemies: Array<{ update: (...args: unknown[]) => void }>;
+      getInputForTests: () => { isEnabled: boolean };
+      getPlayerForTests: () => { stats: { hp: number; maxHp: number } };
+      getInventoryOpenForTests: () => boolean;
+    };
+    const enemy = scene.enemies[0];
+    if (!enemy) return { enemyPresent: false, ticks: 0, inputEnabled: true, open: false, hpText: '' };
+    const original = enemy.update;
+    let ticks = 0;
+    enemy.update = function (...args: unknown[]) {
+      ticks++;
+      return original.apply(this, args);
+    };
+    try {
+      await new Promise<void>((resolve) => setTimeout(resolve, 300));
+      return {
+        enemyPresent: true,
+        ticks,
+        inputEnabled: scene.getInputForTests().isEnabled,
+        open: scene.getInventoryOpenForTests(),
+        hpText: document.querySelector('[data-hp-text]')?.textContent ?? '',
+      };
+    } finally {
+      enemy.update = original;
+    }
+  });
+  expect(observation.enemyPresent).toBe(true);
+  expect(observation.ticks).toBeGreaterThan(0);
+  expect(observation.inputEnabled).toBe(false);
+  expect(observation.open).toBe(true);
+  expect(observation.hpText).toMatch(/^\\d+\\/\\d+$/);
+
+  await page.locator('[data-inv-close]').click();
+  await expect(page.locator('[data-inventory-panel]')).toBeHidden();
+  expect(await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
+      getInputForTests: () => { isEnabled: boolean };
+    };
+    return scene.getInputForTests().isEnabled;
+  })).toBe(true);
+});
+
 test('held desktop mouse attack requires release after inventory closes', async ({ page }) => {
   await waitForGame(page);
   const canvas = page.locator('#game-root canvas');
