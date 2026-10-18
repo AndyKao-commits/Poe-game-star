@@ -330,3 +330,52 @@ test('encounter reset clears pending overflow as well as physical drops', async 
   });
   expect(result).toEqual({ before: 1, pending: 0, physical: 0, markers: 0 });
 });
+
+test('multiple queued overflow rewards promote in FIFO order without losing inventory items', async ({ page }) => {
+  await ready(page);
+  const state = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      gearKit: { inventory: { capacity: number; slots: unknown[] } };
+      getPlayerForTests: () => { position: { x: number; y: number } };
+      spawnGroundLoot: (id: string, loot: { itemId: string; rarity: 'common' }, pos: { x: number; y: number }) => void;
+      pickupNearestGroundLoot: () => void;
+      getGroundLootForTests: () => { drops: Array<{ id: string }> };
+      getPendingGroundLootCountForTests: () => number;
+      groundLootMarkers: Map<string, { active: boolean }>;
+      getGearKitForTests: () => { inventory: { slots: Array<{ itemId: string; quantity: number }> } };
+    };
+    const position = scene.getPlayerForTests().position;
+    scene.gearKit = { ...scene.gearKit, inventory: { capacity: 1, slots: [] } };
+    for (let i = 0; i < 35; i++) {
+      scene.spawnGroundLoot('fifo-' + i, { itemId: 'scrap', rarity: 'common' }, position);
+    }
+    const snapshot = () => ({
+      physical: scene.getGroundLootForTests().drops.length,
+      markers: scene.groundLootMarkers.size,
+      pending: scene.getPendingGroundLootCountForTests(),
+      queuedVisible: [32, 33, 34].map((i) => scene.groundLootMarkers.has('fifo-' + i)),
+    });
+    const initial = snapshot();
+    scene.pickupNearestGroundLoot();
+    const afterFirst = snapshot();
+    scene.pickupNearestGroundLoot();
+    const afterSecond = snapshot();
+    scene.pickupNearestGroundLoot();
+    const afterThird = snapshot();
+    for (let i = 0; i < 32; i++) scene.pickupNearestGroundLoot();
+    const final = {
+      physical: scene.getGroundLootForTests().drops.length,
+      markers: scene.groundLootMarkers.size,
+      pending: scene.getPendingGroundLootCountForTests(),
+      scrapQuantity: scene.getGearKitForTests().inventory.slots.find((item) => item.itemId === 'scrap')?.quantity,
+    };
+    return { initial, afterFirst, afterSecond, afterThird, final };
+  });
+  expect(state).toEqual({
+    initial: { physical: 32, markers: 32, pending: 3, queuedVisible: [false, false, false] },
+    afterFirst: { physical: 32, markers: 32, pending: 2, queuedVisible: [true, false, false] },
+    afterSecond: { physical: 32, markers: 32, pending: 1, queuedVisible: [true, true, false] },
+    afterThird: { physical: 32, markers: 32, pending: 0, queuedVisible: [true, true, true] },
+    final: { physical: 0, markers: 0, pending: 0, scrapQuantity: 35 },
+  });
+});
