@@ -96,12 +96,12 @@ export class InventoryPanel {
       const meta = getEquippedMeta(kit, slot);
       const def = meta ? getItemDefinition(meta.itemId) : undefined;
       const label = item && meta && def
-        ? `${def.displayName} · ${meta.rarity}`
+        ? `${escapeHtml(def.displayName)} · ${escapeHtml(meta.rarity)}`
         : '（空）';
       const bonuses = item
         ? Object.entries(item.bonuses)
             .filter(([, v]) => v !== undefined && v !== 0)
-            .map(([k, v]) => `${BONUS_LABELS[k] ?? k} +${v}`)
+            .map(([k, v]) => `${escapeHtml(BONUS_LABELS[k] ?? k)} +${v}`)
             .join(' ')
         : '';
       return `
@@ -122,15 +122,15 @@ export class InventoryPanel {
         : kit.inventory.slots
             .map((slot) => {
               const def = getItemDefinition(slot.itemId);
-              const name = def?.displayName ?? slot.itemId;
+              const name = escapeHtml(def?.displayName ?? slot.itemId);
               const canEquip = isEquippable(slot.itemId, slot.rarity);
               return `
-                <div class="inv-bag-row rarity-${slot.rarity}" data-item-id="${slot.itemId}" data-rarity="${slot.rarity}">
+                <div class="inv-bag-row rarity-${slot.rarity}" data-item-id="${escapeHtml(slot.itemId)}" data-rarity="${escapeHtml(slot.rarity)}">
                   <div class="inv-bag-meta">
                     <span class="inv-item-name">${name}</span>
-                    <span class="inv-item-sub">${slot.rarity} · ×${slot.quantity}</span>
+                    <span class="inv-item-sub">${escapeHtml(slot.rarity)} · ×${slot.quantity}</span>
                   </div>
-                  <button type="button" class="inv-btn" data-equip-id="${slot.itemId}" data-equip-rarity="${slot.rarity}" ${canEquip ? '' : 'disabled'}>
+                  <button type="button" class="inv-btn" data-equip-id="${escapeHtml(slot.itemId)}" data-equip-rarity="${escapeHtml(slot.rarity)}" ${canEquip ? '' : 'disabled'}>
                     ${canEquip ? '裝備' : '—'}
                   </button>
                 </div>
@@ -157,7 +157,7 @@ export class InventoryPanel {
           <div class="inv-bag-list">${bagRows}</div>
         </section>
         <footer class="inv-footer">
-          <span class="inv-status" data-inv-status>${this.statusMessage}</span>
+          <span class="inv-status" data-inv-status role="status" aria-live="polite">${escapeHtml(this.statusMessage)}</span>
           <span class="inv-hint">I / B / Esc 關閉 · 開啟時無法攻擊</span>
         </footer>
       </div>
@@ -213,4 +213,14 @@ export class InventoryPanel {
     this.root.classList.remove('is-open', 'inventory-root');
     this.open = false;
   }
+}
+
+/** Escape interpolated inventory labels and attributes before assigning innerHTML. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
