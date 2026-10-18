@@ -75,7 +75,7 @@ export class HudController {
       <div class="hud-panel hud-hints">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移動</div>
         <div>滑鼠左鍵 扇形攻擊（朝向游標）</div>
-        <div><kbd>I</kbd> / <kbd>B</kbd> 背包</div>
+        <div><kbd>I</kbd> / <kbd>B</kbd> 背包 · <kbd>F</kbd> 拾取附近物品</div>
       </div>
       <div class="hud-panel hud-actions">
         <button type="button" class="hud-inv-btn" data-inventory>背包</button>
