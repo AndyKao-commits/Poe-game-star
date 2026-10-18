@@ -946,3 +946,147 @@ body,
   }
   .touch-settings .touch-mode { border-radius: 8px; }
 }
+
+/* Phase 3B: reference-led dark-fantasy ARPG HUD. Data remains bound to GameScene. */
+.hud-stats {
+  top: auto;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  min-width: 0;
+  height: 116px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+.hud-stats .hud-title { display: none; }
+.hud-vitals { position: absolute; inset: 0; pointer-events: none; }
+.hud-resource {
+  position: absolute;
+  bottom: calc(9px + var(--safe-bottom));
+  width: clamp(74px, 10vw, 124px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 5px ridge #75644e;
+  box-shadow: 0 0 0 3px #17141c, inset 0 5px 12px #140f17, 0 6px 15px #07080a;
+  overflow: hidden;
+}
+.hud-health { left: calc(15px + var(--safe-left)); background: radial-gradient(circle at 40% 35%, #d94b49, #6e141d 68%, #21070c); }
+.hud-mana { right: calc(15px + var(--safe-right)); background: radial-gradient(circle at 40% 35%, #579ce3, #193e92 68%, #091029); }
+.hud-resource .hud-bar-row { display: block; height: 100%; margin: 0; padding: 0; }
+.hud-resource .hud-resource-label { display: none; }
+.hud-resource .hud-bar-track {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  border: 0;
+  background: rgba(5, 6, 11, 0.64);
+  overflow: hidden;
+  transform: rotate(180deg);
+}
+.hud-resource .hud-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a1232d, #ed6968) !important;
+  opacity: 0.88;
+}
+.hud-mana .hud-bar-fill { background: linear-gradient(90deg, #163f9d, #5d9de7) !important; }
+.hud-resource [data-hp-text],
+.hud-resource [data-mp-text] {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  font: 600 clamp(10px, 1.3vw, 14px)/1 var(--hud-font);
+  color: #fff0df;
+  text-shadow: 0 2px 4px #08070d, 0 0 6px #08070d;
+  white-space: nowrap;
+}
+.hud-meta {
+  position: absolute;
+  left: 50%;
+  bottom: calc(8px + var(--safe-bottom));
+  transform: translateX(-50%);
+  width: min(43vw, 525px);
+  padding: 7px 15px;
+  background: linear-gradient(#25202a, #0a0a10);
+  border: 2px solid #65543e;
+  box-shadow: 0 2px 0 #161014, inset 0 1px 0 #99805a;
+}
+.hud-meta .hud-bar-row {
+  display: block;
+  margin: 0 0 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  text-align: center;
+}
+.hud-meta .hud-bar-row span { display: block; }
+.hud-meta .hud-xp-track { height: 7px; border-color: #5d4b32; }
+.hud-meta .hud-xp-track .hud-bar-fill { background: linear-gradient(90deg, #825520, #ffc565); }
+.hud-skills {
+  left: 50%;
+  top: auto;
+  bottom: calc(70px + var(--safe-bottom));
+  transform: translateX(-50%);
+  padding: 4px;
+  gap: 5px;
+  background: rgba(10, 9, 13, 0.82);
+  border: 2px solid #5a4a39;
+}
+.hud-skill {
+  min-width: 40px;
+  min-height: 40px;
+  background: linear-gradient(145deg, #2b2630, #0c0b12);
+  border: 2px ridge #766047;
+  border-radius: 3px;
+}
+.hud-hints { bottom: calc(131px + var(--safe-bottom)); opacity: 0.7; }
+.hud-actions { top: calc(10px + var(--safe-top)); right: calc(12px + var(--safe-right)); }
+.hud-fps { display: none; }
+
+/* On touch screens the orbs become a compact top-left resource cluster.
+   Existing combat controls stay on the bottom right and retain their hit zones. */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  .hud-stats {
+    inset: 0 auto auto 0;
+    width: min(190px, 31vw);
+    height: 64px;
+    background: transparent;
+    padding: 0;
+    border: 0;
+  }
+  .hud-stats .hud-vitals {
+    inset: calc(7px + var(--safe-top)) auto auto calc(7px + var(--safe-left));
+    display: flex;
+    gap: 7px;
+  }
+  .hud-stats .hud-resource {
+    position: relative;
+    inset: auto;
+    width: clamp(47px, 11vh, 62px);
+    height: clamp(47px, 11vh, 62px);
+    border-width: 3px;
+    box-shadow: 0 0 0 1px #161118, inset 0 2px 6px #110c11;
+  }
+  .hud-stats .hud-resource .hud-bar-row {
+    display: block;
+    margin: 0;
+    height: 100%;
+  }
+  .hud-stats .hud-resource .hud-bar-track { height: 100%; }
+  .hud-stats .hud-resource [data-hp-text],
+  .hud-stats .hud-resource [data-mp-text] {
+    font-size: 9px;
+    letter-spacing: -0.3px;
+  }
+  .hud-stats .hud-meta { display: none; }
+  .hud-skills, .hud-hints, .hud-title, .hud-fps { display: none; }
+  .hud-actions {
+    top: calc(6px + var(--safe-top));
+    right: calc(6px + var(--safe-right));
+  }
+}
