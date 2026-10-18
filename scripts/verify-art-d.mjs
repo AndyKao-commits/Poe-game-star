@@ -3,6 +3,30 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { inflateSync } from 'node:zlib';
+
+function verifyPngPayload(png) {
+  let offset = 8;
+  const compressed = [];
+  let seenEnd = false;
+  while (offset + 12 <= png.length) {
+    const length = png.readUInt32BE(offset);
+    const end = offset + 12 + length;
+    if (end > png.length) throw new Error('truncated PNG chunk');
+    const type = png.toString('ascii', offset + 4, offset + 8);
+    if (type === 'IDAT') compressed.push(png.subarray(offset + 8, offset + 8 + length));
+    offset = end;
+    if (type === 'IEND') {
+      seenEnd = true;
+      break;
+    }
+  }
+  if (!seenEnd || offset !== png.length || compressed.length === 0) {
+    throw new Error('missing IDAT/IEND or trailing PNG bytes');
+  }
+  const decoded = inflateSync(Buffer.concat(compressed));
+  if (decoded.length === 0) throw new Error('empty PNG pixel stream');
+}
 
 const root = process.argv[2] ?? 'public/assets/art-d';
 const manifestPath = join(root, 'manifest.json');
@@ -64,6 +88,13 @@ for (const [file, width, height, cellW, cellH] of expected) {
   const png = readFileSync(path);
   if (png.length < 33 || !png.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) || png.toString('ascii', 12, 16) !== 'IHDR') {
     console.error('INVALID PNG', file);
+    errors++;
+    continue;
+  }
+  try {
+    verifyPngPayload(png);
+  } catch (error) {
+    console.error('CORRUPT PNG PAYLOAD', file, String(error));
     errors++;
     continue;
   }
