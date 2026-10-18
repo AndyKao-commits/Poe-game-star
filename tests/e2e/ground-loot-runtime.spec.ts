@@ -203,3 +203,49 @@ test('C ground loot and D pickup visibility stay gated by range and inventory mo
     remainingDrops: 1,
   });
 });
+
+test('full bag preserves a nearby drop for a later successful UI pickup', async ({ page }) => {
+  await ready(page);
+  await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      gearKit: { inventory: { capacity: number; slots: unknown[] } };
+      getPlayerForTests: () => { position: { x: number; y: number } };
+      spawnGroundLoot: (id: string, loot: { itemId: string; rarity: 'common' }, pos: { x: number; y: number }) => void;
+    };
+    scene.gearKit = { ...scene.gearKit, inventory: { capacity: 0, slots: [] } };
+    scene.spawnGroundLoot('retry-after-space', { itemId: 'scrap', rarity: 'common' }, scene.getPlayerForTests().position);
+  });
+
+  const pickup = page.locator('[data-pickup]');
+  await expect(pickup).toBeVisible();
+  await pickup.click();
+  await expect(page.locator('[data-loot-toast]')).toContainText('物品仍留在地面');
+  await expect(pickup).toBeEnabled();
+
+  const blocked = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      getGroundLootForTests: () => { drops: unknown[] };
+      getGearKitForTests: () => { inventory: { slots: unknown[] } };
+    };
+    return { drops: scene.getGroundLootForTests().drops.length, slots: scene.getGearKitForTests().inventory.slots.length };
+  });
+  expect(blocked).toEqual({ drops: 1, slots: 0 });
+
+  await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      gearKit: { inventory: { capacity: number; slots: unknown[] } };
+    };
+    scene.gearKit = { ...scene.gearKit, inventory: { ...scene.gearKit.inventory, capacity: 1 } };
+  });
+
+  await pickup.click();
+  await expect(pickup).toBeHidden();
+  const collected = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      getGroundLootForTests: () => { drops: unknown[] };
+      getGearKitForTests: () => { inventory: { slots: Array<{ itemId: string; rarity: string; quantity: number }> } };
+    };
+    return { drops: scene.getGroundLootForTests().drops.length, slots: scene.getGearKitForTests().inventory.slots };
+  });
+  expect(collected).toEqual({ drops: 0, slots: [{ itemId: 'scrap', rarity: 'common', quantity: 1 }] });
+});
