@@ -294,6 +294,7 @@ export class GameScene extends Phaser.Scene {
     if (result.ok) {
       this.gearKit = result.kit;
       this.player.syncEquipment(this.gearKit.equipment);
+      this.refreshHudAfterGearChange();
     }
     const feedback = result.ok
       ? '裝備成功'
@@ -309,6 +310,7 @@ export class GameScene extends Phaser.Scene {
     if (result.ok) {
       this.gearKit = result.kit;
       this.player.syncEquipment(this.gearKit.equipment);
+      this.refreshHudAfterGearChange();
     }
     const feedback = result.ok
       ? '卸下裝備成功'
@@ -316,6 +318,26 @@ export class GameScene extends Phaser.Scene {
       : '無法卸下此裝備';
     this.inventoryPanel?.setStatus(feedback);
     this.inventoryPanel?.render(this.gearKit);
+  }
+
+  /** Refresh D HUD in the same UI action as C equipment mutations. */
+  private refreshHudAfterGearChange(): void {
+    this.hud?.update({
+      hp: this.player.stats.hp,
+      maxHp: this.player.stats.maxHp,
+      mp: this.player.stats.mp,
+      maxMp: this.player.stats.maxMp,
+      fps: this.game.loop.actualFps,
+      dead: this.player.lifecycle.isDead,
+      level: this.progression.level,
+      xp: this.progression.xp,
+      xpToNext: xpToNextLevel(this.progression.level),
+      gold: this.rewardLedger.gold,
+      attack: this.player.stats.attack,
+      defense: this.player.stats.defense,
+      skills: this.player.getCasterState(),
+    });
+    this.touchControls?.setSkillUi(this.player.getSkillUiState());
   }
 
   private setTouchVisible(show: boolean): void {
