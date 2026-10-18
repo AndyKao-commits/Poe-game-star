@@ -72,9 +72,9 @@ test('inventory blocks player controls while enemy AI and HUD continue ticking',
     if (!enemy) return { enemyPresent: false, ticks: 0, inputEnabled: true, open: false, hpText: '' };
     const original = enemy.update;
     let ticks = 0;
-    enemy.update = function (...args: unknown[]) {
+    enemy.update = (...args: unknown[]) => {
       ticks++;
-      return original.apply(this, args);
+      return original.apply(enemy, args);
     };
     try {
       await new Promise<void>((resolve) => setTimeout(resolve, 300));
