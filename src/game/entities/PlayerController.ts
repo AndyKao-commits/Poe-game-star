@@ -71,6 +71,8 @@ export class PlayerController {
   private pendingTargets: Attackable[] = [];
   private readonly spawn: Vec2;
   private deathVisualPlayed = false;
+  /** Transient slash sprites outlive their Tween if a restart cancels all tweens. */
+  private readonly slashEffects = new Set<Phaser.GameObjects.Image>();
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -438,6 +440,7 @@ export class PlayerController {
     this.cooldown.reset();
     this.attackTimeline.reset();
     this.pendingTargets = [];
+    this.clearSlashEffects();
     this.deathVisualPlayed = false;
     this.sm.force('idle');
     this.entity.sprite.setAlpha(1);
@@ -495,6 +498,7 @@ export class PlayerController {
     };
     const screen = worldToScreen(ahead);
     const slash = this.scene.add.image(screen.x, screen.y, 'slash');
+    this.slashEffects.add(slash);
     slash.setDepth(this.entity.sprite.depth + 1);
     slash.setAlpha(0.95);
     const screenDx = Math.cos(aimAngle) - Math.sin(aimAngle);
@@ -505,7 +509,10 @@ export class PlayerController {
       alpha: 0,
       scale: 1.25,
       duration: 180,
-      onComplete: () => slash.destroy(),
+      onComplete: () => {
+        this.slashEffects.delete(slash);
+        slash.destroy();
+      },
     });
   }
 
@@ -516,7 +523,16 @@ export class PlayerController {
     }
   }
 
+  private clearSlashEffects(): void {
+    for (const slash of this.slashEffects) {
+      this.scene.tweens.killTweensOf(slash);
+      slash.destroy();
+    }
+    this.slashEffects.clear();
+  }
+
   destroy(): void {
+    this.clearSlashEffects();
     this.entity.destroy();
   }
 }
