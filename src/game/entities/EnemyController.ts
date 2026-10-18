@@ -50,6 +50,8 @@ export class EnemyController {
   private dead = false;
   private readonly animationPrefix: 'crawler' | 'sentinel';
   private telegraphFx: Phaser.GameObjects.Image | null = null;
+  /** Transient hit sprites must be removed if an encounter reset cancels tweens. */
+  private readonly hitEffects = new Set<Phaser.GameObjects.Image>();
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -233,11 +235,25 @@ export class EnemyController {
   private showHitFx(): void {
     if (!this.scene.textures.exists('art-d-hit')) return;
     const fx = this.scene.add.image(this.entity.sprite.x, this.entity.sprite.y, 'art-d-hit');
+    this.hitEffects.add(fx);
     fx.setDepth(this.entity.sprite.depth + 2);
-    this.scene.tweens.add({ targets: fx, alpha: 0, duration: 180, onComplete: () => fx.destroy() });
+    this.scene.tweens.add({
+      targets: fx,
+      alpha: 0,
+      duration: 180,
+      onComplete: () => {
+        this.hitEffects.delete(fx);
+        fx.destroy();
+      },
+    });
   }
 
   destroy(): void {
+    for (const fx of this.hitEffects) {
+      this.scene.tweens.killTweensOf(fx);
+      fx.destroy();
+    }
+    this.hitEffects.clear();
     this.telegraphFx?.destroy();
     this.telegraphFx = null;
     this.entity.destroy();
