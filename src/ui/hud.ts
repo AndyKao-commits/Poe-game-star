@@ -75,7 +75,7 @@ export class HudController {
       <div class="hud-panel hud-actions">
         <button type="button" class="hud-inv-btn" data-inventory>背包</button>
       </div>
-      <div class="hud-loot-toast" data-loot-toast hidden></div>
+      <div class="hud-loot-toast" data-loot-toast role="status" aria-live="polite" hidden></div>
       <div class="hud-panel hud-fps"><span data-fps>FPS --</span></div>
       <div class="hud-death" data-death hidden>
         <div class="hud-death-card">
