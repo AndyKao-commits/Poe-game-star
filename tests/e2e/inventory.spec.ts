@@ -215,6 +215,32 @@ test('enemy lethal hit closes inventory and updates HUD in the same frame', asyn
   });
 });
 
+test('failed equip reports feedback without changing inventory or combat stats', async ({ page }) => {
+  await waitForGame(page);
+  await page.locator('[data-inventory]').click();
+  await expect(page.locator('[data-inventory-panel]')).toBeVisible();
+
+  const before = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as unknown as {
+      handleEquip: (itemId: string, rarity: 'uncommon') => void;
+      getGearKitForTests: () => { inventory: { slots: unknown[] } };
+      getPlayerForTests: () => { stats: { attack: number } };
+    };
+    const attack = scene.getPlayerForTests().stats.attack;
+    const slots = JSON.stringify(scene.getGearKitForTests().inventory.slots);
+    scene.handleEquip('ashen_blade', 'uncommon');
+    return {
+      attack,
+      slots,
+      attackAfter: scene.getPlayerForTests().stats.attack,
+      slotsAfter: JSON.stringify(scene.getGearKitForTests().inventory.slots),
+    };
+  });
+  expect(before.attackAfter).toBe(before.attack);
+  expect(before.slotsAfter).toBe(before.slots);
+  await expect(page.locator('[data-inv-status]')).toContainText('找不到');
+});
+
 test('held desktop mouse attack requires release after inventory closes', async ({ page }) => {
   await waitForGame(page);
   const canvas = page.locator('#game-root canvas');
