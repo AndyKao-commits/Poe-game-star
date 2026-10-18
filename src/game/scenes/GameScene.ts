@@ -39,6 +39,9 @@ export class GameScene extends Phaser.Scene {
   private gearKit: GearKit = createGearKit();
   private lootLedger: LootClaimLedger = createLootClaimLedger();
   private groundLoot: GroundLootState = createGroundLootState();
+  // Keep overflow rewards in memory while physical markers stay capped at 32.
+  // This encounter has a finite enemy roster; reset clears uncollected rewards.
+  private pendingGroundLoot: Array<{ id: string; loot: { itemId: string; rarity: Rarity }; position: { x: number; y: number } }> = [];
   private readonly groundLootMarkers = new Map<string, Phaser.GameObjects.Arc>();
   private inventoryPanel: InventoryPanel | null = null;
   private inventoryOpen = false;
@@ -454,10 +457,18 @@ export class GameScene extends Phaser.Scene {
     id: string,
     loot: { itemId: string; rarity: Rarity },
     position: { x: number; y: number },
+    showNotice = true,
   ): void {
     const placed = placeGroundDrop(this.groundLoot, { id, loot, position });
     if (!placed.ok) {
-      this.hud?.flashNotice('地面掉落數量已達上限，無法保留新物品');
+      if (placed.reason === 'full') {
+        if (!this.pendingGroundLoot.some((entry) => entry.id === id)) {
+          this.pendingGroundLoot.push({ id, loot: { ...loot }, position: { ...position } });
+        }
+        if (showNotice) this.hud?.flashNotice('地面掉落已滿，戰利品暫存；拾取後將補上');
+      } else if (showNotice) {
+        this.hud?.flashNotice('無法產生地面掉落物');
+      }
       return;
     }
     this.groundLoot = placed.state;
@@ -467,7 +478,14 @@ export class GameScene extends Phaser.Scene {
     marker.setDepth(depthFromFoot(position) + 2);
     this.groundLootMarkers.set(id, marker);
     this.syncPickupAvailability();
-    this.hud?.flashNotice('背包已滿，物品掉落地面（靠近按 F 拾取）');
+    if (showNotice) this.hud?.flashNotice('背包已滿，物品掉落地面（靠近按 F 拾取）');
+  }
+
+  /** Promote queued loot into a free physical marker slot after a pickup. */
+  private promotePendingGroundLoot(): void {
+    if (this.pendingGroundLoot.length === 0) return;
+    const next = this.pendingGroundLoot.shift()!;
+    this.spawnGroundLoot(next.id, next.loot, next.position, false);
   }
 
   /** Keep mobile pickup visible only when an actionable drop is within range. */
@@ -505,6 +523,7 @@ export class GameScene extends Phaser.Scene {
       this.gearKit = picked.kit;
       this.groundLootMarkers.get(drop.id)?.destroy();
       this.groundLootMarkers.delete(drop.id);
+      this.promotePendingGroundLoot();
       this.syncPickupAvailability();
       this.inventoryPanel?.render(this.gearKit);
       this.hud?.flashLoot(drop.loot.itemId, drop.loot.rarity);
@@ -517,6 +536,12 @@ export class GameScene extends Phaser.Scene {
     for (const marker of this.groundLootMarkers.values()) marker.destroy();
     this.groundLootMarkers.clear();
     this.groundLoot = createGroundLootState();
+    this.pendingGroundLoot = [];
+  }
+
+  /** Read-only pending count for overflow regression checks. */
+  getPendingGroundLootCountForTests(): number {
+    return this.pendingGroundLoot.length;
   }
 
   /** Read-only integration inspection; does not create or collect loot. */
