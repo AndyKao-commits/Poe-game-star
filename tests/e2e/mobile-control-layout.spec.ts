@@ -63,3 +63,16 @@ test('mobile landscape separates C inventory, movement, and A skill controls', a
     inventoryOutsideViewport: false,
   });
 });
+
+test('mobile landscape HUD displays only essential HP and MP over the battlefield', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#game-root canvas')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('[data-hp-text]')).toBeVisible();
+  await expect(page.locator('[data-mp-text]')).toBeVisible();
+  await expect(page.locator('[data-combat-stats]')).toBeHidden();
+  await expect(page.locator('[data-progression-text]')).toBeHidden();
+  await expect(page.locator('.hud-fps')).toBeHidden();
+  await expect(page.locator('.hud-title')).toBeHidden();
+  await expect(page.locator('[data-inventory]')).toBeVisible();
+  await expect(page.locator('[data-attack]')).toBeVisible();
+});
