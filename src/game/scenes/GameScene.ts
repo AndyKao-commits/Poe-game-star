@@ -371,6 +371,7 @@ export class GameScene extends Phaser.Scene {
       gold: this.rewardLedger.gold,
       attack: this.player.stats.attack,
       defense: this.player.stats.defense,
+      skills: this.player.getCasterState(),
     });
   }
 
