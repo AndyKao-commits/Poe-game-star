@@ -27,9 +27,15 @@ test.describe('Art D landscape action button layout', () => {
     await expect(page.locator('[data-move-zone]')).toBeVisible();
     await page.locator('[data-inventory]').click();
     await expect(page.locator('[data-inventory-panel]')).toBeVisible();
+    for (const selector of ['[data-skill-q]', '[data-skill-e]', '[data-dodge]']) {
+      await expect(page.locator(selector)).toHaveAttribute('data-skill-state', 'disabled');
+    }
     await page.locator('[data-inv-close]').click();
     await expect(page.locator('[data-inventory-panel]')).toBeHidden();
     await expect(page.locator('[data-actions]')).toBeVisible();
+    for (const selector of ['[data-skill-q]', '[data-skill-e]', '[data-dodge]']) {
+      await expect(page.locator(selector)).not.toHaveAttribute('data-skill-state', 'disabled');
+    }
   });
 
   test('action buttons fit within the viewport and display the delivered icons', async ({ page }) => {
