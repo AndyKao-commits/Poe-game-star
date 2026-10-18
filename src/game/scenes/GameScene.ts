@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { createProgression, xpToNextLevel, type ProgressionState } from '@core/progression/experience';
 import { claimKillReward, createKillRewardLedger, type KillRewardLedger } from '@core/progression/killRewards';
 import { createSeededRng, rollLoot } from '@core/loot/lootTable';
+import { createGroundLootState, placeGroundDrop, pickupGroundDrop, PICKUP_RADIUS_TILES, type GroundLootState } from '@core/loot/groundDrops';
+import { distance, worldToScreen, depthFromFoot } from '@core/iso/coordinates';
 import { ENEMY_LOOT_TABLE } from '@core/loot/enemyLoot';
 import { claimKillLoot, grantLoot, createGearKit, createLootClaimLedger, equipFromInventory, unequipToInventory, type GearKit, type LootClaimLedger } from '@core/loadout/gearKit';
 import type { EquipmentSlot } from '@core/equipment/equipment';
@@ -36,6 +38,8 @@ export class GameScene extends Phaser.Scene {
   private lootRolls = 0;
   private gearKit: GearKit = createGearKit();
   private lootLedger: LootClaimLedger = createLootClaimLedger();
+  private groundLoot: GroundLootState = createGroundLootState();
+  private readonly groundLootMarkers = new Map<string, Phaser.GameObjects.Arc>();
   private inventoryPanel: InventoryPanel | null = null;
   private inventoryOpen = false;
   private enemyKillIds = new Map<EnemyController, string>();
@@ -69,6 +73,7 @@ export class GameScene extends Phaser.Scene {
     this.lootRolls = 0;
     this.gearKit = createGearKit();
     this.lootLedger = createLootClaimLedger();
+    this.clearGroundLoot();
     this.inventoryOpen = false;
     this.enemyKillIds.clear();
     this.nextEnemyKillId = 0;
@@ -194,6 +199,15 @@ export class GameScene extends Phaser.Scene {
       this.orientationGate?.destroy();
       this.orientationGate = null;
     });
+
+    // Desktop F pickup is an explicit action, never a skill or attack input.
+    const onPickupKey = (e: KeyboardEvent): void => {
+      if (e.code !== 'KeyF' || e.repeat || this.inventoryOpen || this.player.lifecycle.isDead) return;
+      e.preventDefault();
+      this.pickupNearestGroundLoot();
+    };
+    window.addEventListener('keydown', onPickupKey);
+    this.disposables.add(() => window.removeEventListener('keydown', onPickupKey));
 
     const onInventoryKey = (e: KeyboardEvent): void => {
       if ((e.code !== 'KeyI' && e.code !== 'KeyB') || e.repeat || this.player.lifecycle.isDead) return;
@@ -354,6 +368,7 @@ export class GameScene extends Phaser.Scene {
     if (!plan.allowed) return;
 
     this.restartCount += 1;
+    this.clearGroundLoot();
 
     if (plan.clearTweens) {
       this.tweens.killAll();
@@ -418,14 +433,68 @@ export class GameScene extends Phaser.Scene {
       if (loot.granted) {
         this.hud?.flashLoot(loot.granted.itemId, loot.granted.rarity);
         this.inventoryPanel?.render(this.gearKit);
-      } else if (loot.bagFull) {
-        // A valid drop was rolled but capacity blocked it: never imply pickup succeeded.
-        this.hud?.flashNotice('背包已滿，掉落物未取得');
+      } else if (loot.bagFull && loot.drop) {
+        // Keep rejected loot in the world, without repeating the unique kill claim.
+        this.spawnGroundLoot(killId, loot.drop, enemy.position);
       }
 
       // A claimed corpse no longer needs to be checked on every frame.
       this.enemyKillIds.delete(enemy);
     }
+  }
+
+  /** Physical marker is a temporary Phaser shape until Art D approves item art. */
+  private spawnGroundLoot(
+    id: string,
+    loot: { itemId: string; rarity: Rarity },
+    position: { x: number; y: number },
+  ): void {
+    const placed = placeGroundDrop(this.groundLoot, { id, loot, position });
+    if (!placed.ok) {
+      this.hud?.flashNotice('地面掉落數量已達上限，無法保留新物品');
+      return;
+    }
+    this.groundLoot = placed.state;
+    const screen = worldToScreen(position);
+    const marker = this.add.circle(screen.x, screen.y - 9, 7, 0xffc45c, 0.95);
+    marker.setStrokeStyle(2, 0x3a2e19);
+    marker.setDepth(depthFromFoot(position) + 2);
+    this.groundLootMarkers.set(id, marker);
+    this.hud?.flashNotice('背包已滿，物品掉落地面（靠近按 F 拾取）');
+  }
+
+  /** C's immutable pickup transaction is the single source of truth for inventory changes. */
+  private pickupNearestGroundLoot(): void {
+    const nearest = this.groundLoot.drops
+      .map((drop) => ({ drop, range: distance(drop.position, this.player.position) }))
+      .filter(({ range }) => range <= PICKUP_RADIUS_TILES)
+      .sort((a, b) => a.range - b.range)[0];
+    if (!nearest) {
+      this.hud?.flashNotice('附近沒有可拾取的物品');
+      return;
+    }
+    const picked = pickupGroundDrop(this.groundLoot, this.gearKit, nearest.drop.id, this.player.position);
+    if (!picked.ok) {
+      this.hud?.flashNotice(picked.reason === 'bag_full' ? '背包已滿，物品仍留在地面' : '無法拾取物品');
+      return;
+    }
+    this.groundLoot = picked.state;
+    this.gearKit = picked.kit;
+    this.groundLootMarkers.get(nearest.drop.id)?.destroy();
+    this.groundLootMarkers.delete(nearest.drop.id);
+    this.inventoryPanel?.render(this.gearKit);
+    this.hud?.flashLoot(nearest.drop.loot.itemId, nearest.drop.loot.rarity);
+  }
+
+  private clearGroundLoot(): void {
+    for (const marker of this.groundLootMarkers.values()) marker.destroy();
+    this.groundLootMarkers.clear();
+    this.groundLoot = createGroundLootState();
+  }
+
+  /** Read-only integration inspection; does not create or collect loot. */
+  getGroundLootForTests(): GroundLootState {
+    return this.groundLoot;
   }
 
   private spawnEnemiesFromBlueprint(): void {
@@ -515,6 +584,7 @@ export class GameScene extends Phaser.Scene {
 
   private teardown(): void {
     if (this.disposables.isDisposed) return;
+    this.clearGroundLoot();
     this.tweens.killAll();
     this.time.removeAllEvents();
     for (const enemy of this.enemies) {
