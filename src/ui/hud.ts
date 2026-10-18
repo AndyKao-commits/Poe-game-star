@@ -51,21 +51,29 @@ export class HudController {
 
   private mount(): void {
     this.root.innerHTML = `
-      <div class="hud-panel hud-stats">
+      <div class="hud-panel hud-stats" aria-label="角色資源">
         <div class="hud-title">Ashen Reliquary</div>
-        <div class="hud-bar-row">
-          <span>HP</span>
-          <div class="hud-bar-track"><div class="hud-bar-fill hp" data-hp-fill></div></div>
-          <span data-hp-text>100/100</span>
+        <div class="hud-vitals">
+          <div class="hud-resource hud-health" aria-label="生命值">
+            <div class="hud-bar-row">
+              <span class="hud-resource-label">HP</span>
+              <div class="hud-bar-track"><div class="hud-bar-fill hp" data-hp-fill></div></div>
+              <span data-hp-text>100/100</span>
+            </div>
+          </div>
+          <div class="hud-resource hud-mana" aria-label="魔力值">
+            <div class="hud-bar-row">
+              <span class="hud-resource-label">MP</span>
+              <div class="hud-bar-track"><div class="hud-bar-fill mp" data-mp-fill></div></div>
+              <span data-mp-text>50/50</span>
+            </div>
+          </div>
         </div>
-        <div class="hud-bar-row">
-          <span>MP</span>
-          <div class="hud-bar-track"><div class="hud-bar-fill mp" data-mp-fill></div></div>
-          <span data-mp-text>50/50</span>
+        <div class="hud-meta">
+          <div class="hud-bar-row hud-combat-row"><span data-combat-stats>ATK -- · DEF --</span></div>
+          <div class="hud-bar-row hud-progress-row"><span data-progression-text>Lv 1 · 0/85 XP · 0 G</span></div>
+          <div class="hud-bar-track hud-xp-track"><div class="hud-bar-fill mp" data-xp-fill></div></div>
         </div>
-        <div class="hud-bar-row"><span data-combat-stats>ATK -- · DEF --</span></div>
-        <div class="hud-bar-row"><span data-progression-text>Lv 1 · 0/85 XP · 0 G</span></div>
-        <div class="hud-bar-track"><div class="hud-bar-fill mp" data-xp-fill></div></div>
       </div>
       <div class="hud-panel hud-skills" aria-label="技能狀態">
         <div class="hud-skill" data-hud-skill="q"><span>Q</span><span data-skill-cd></span></div>
