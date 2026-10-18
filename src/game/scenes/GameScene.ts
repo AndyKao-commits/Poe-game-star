@@ -295,6 +295,12 @@ export class GameScene extends Phaser.Scene {
       this.gearKit = result.kit;
       this.player.syncEquipment(this.gearKit.equipment);
     }
+    const feedback = result.ok
+      ? '裝備成功'
+      : result.reason === 'inventory_full' ? '背包已滿，無法更換裝備'
+      : result.reason === 'missing' ? '背包中找不到這件物品'
+      : '無法裝備此物品';
+    this.inventoryPanel?.setStatus(feedback);
     this.inventoryPanel?.render(this.gearKit);
   }
 
@@ -304,6 +310,11 @@ export class GameScene extends Phaser.Scene {
       this.gearKit = result.kit;
       this.player.syncEquipment(this.gearKit.equipment);
     }
+    const feedback = result.ok
+      ? '卸下裝備成功'
+      : result.reason === 'inventory_full' ? '背包已滿，無法卸下裝備'
+      : '無法卸下此裝備';
+    this.inventoryPanel?.setStatus(feedback);
     this.inventoryPanel?.render(this.gearKit);
   }
 
