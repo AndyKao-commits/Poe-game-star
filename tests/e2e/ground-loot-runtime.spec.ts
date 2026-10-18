@@ -21,6 +21,7 @@ test('C ground reward appears in the world and D pickup action collects exactly 
     scene.spawnGroundLoot('test-drop', { itemId: 'ashen_blade', rarity: 'rare' }, scene.getPlayerForTests().position);
   });
   await expect(page.locator('[data-loot-toast]')).toContainText('掉落地面');
+  await expect(page.locator('[data-pickup]')).toBeVisible();
   await page.locator('[data-pickup]').click();
   const after = await page.evaluate(() => {
     const scene = window.__ASHEN_GAME__!.scene.getScene('GameScene') as {
@@ -34,8 +35,8 @@ test('C ground reward appears in the world and D pickup action collects exactly 
     };
   });
   expect(after).toEqual({ drops: 0, items: [{ itemId: 'ashen_blade', rarity: 'rare', quantity: 1 }] });
-  await page.locator('[data-pickup]').click();
-  await expect(page.locator('[data-loot-toast]')).toContainText('附近沒有');
+  await expect(page.locator('[data-pickup]')).toBeHidden();
+  await expect(page.locator('[data-pickup]')).toBeDisabled();
 });
 
 test('ground pickup never removes the world item while C inventory is full', async ({ page }) => {
