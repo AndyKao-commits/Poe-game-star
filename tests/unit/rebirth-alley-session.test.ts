@@ -67,12 +67,12 @@ describe('Rebirth input-to-encounter session', () => {
     session.encounter.enemies[0].position = { x: 120, y: 140 };
     expect(session.tick(50).actions[0].ok).toBe(true);
   });
-  it('ends session when final enemy is defeated and rejects further skills', () => {
+  it('keeps movement active when final enemy is defeated but rejects further skills', () => {
     const session = sessionWithEnemy(10);
     session.setInput({ stick: idle, basicHeld: true });
     const state = session.tick(0);
     expect(state.state.cleared).toBe(true);
-    expect(session.isEnded).toBe(true);
+    expect(session.isEnded).toBe(false);
     expect(session.trigger('punch', 50).ok).toBe(false);
     expect(session.tick(50).actions).toHaveLength(0);
   });
@@ -91,7 +91,7 @@ describe('Rebirth input-to-encounter session', () => {
     expect(session.tapBasic(100).reason).toBe('cooldown');
     expect(session.tapBasic(450).ok).toBe(true);
   });
-  it('keyboard basic tap is disabled once the encounter ends', () => {
+  it('keyboard basic tap is disabled after clearing enemies', () => {
     const session = sessionWithEnemy(5);
     session.tapBasic(0);
     session.tick(0);
