@@ -235,7 +235,11 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
         sprite.setFrame(animationFrame(this.enemyMetadata, 'south', motion, this.clockMs, 150));
       }
       sprite.setVisible(enemy.hp > 0);
-      sprite.setTint(enemy.phase === 'telegraph' ? 0xff6672 : 0xffffff);
+      sprite.setTint(enemy.phase === 'telegraph' ? 0xff6672
+        : enemy.phase === 'stagger' ? 0xffd49a : 0xffffff);
+      if (enemy.phase === 'stagger') {
+        sprite.setAlpha(0.82 + 0.18 * Math.sin(this.clockMs / 38) ** 2);
+      } else sprite.setAlpha(1);
       sprite.setDepth(Math.floor(enemy.position.y));
       const bar = this.enemyHealthBars.get(enemy.id);
       if (bar) {
