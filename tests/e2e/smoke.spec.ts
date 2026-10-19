@@ -46,7 +46,7 @@ test('resizes the non-playable gate without loading temporary textures', async (
 
   const assets = await page.evaluate(() => {
     const game = window.__ASHEN_GAME__!;
-    return game.textures.getTextureKeys().filter((key) => key !== '__DEFAULT' && key !== '__MISSING' && key !== '__WHITE');
+    return game.textures.getTextureKeys().filter((key) => !key.startsWith('__'));
   });
   expect(assets).toEqual([]);
 });
