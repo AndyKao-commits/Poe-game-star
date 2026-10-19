@@ -51,6 +51,15 @@ export class RebirthAlleySession {
     this.basicHeld = input.basicHeld;
   }
 
+  /** Keyboard/switch-accessible basic tap executes immediately, not between frames. */
+  tapBasic(nowMs: number): CombatResult {
+    this.assertTime(nowMs);
+    if (this.ended) return { ok: false, action: 'basic', reason: 'dead' };
+    const result = this.encounter.action('basic', nowMs);
+    if (result.ok) this.nextBasicAttemptAt = nowMs + HOLD_REPEAT_MS;
+    return result;
+  }
+
   /**
    * One-shot skills can be triggered by an independent second pointer while
    * the left thumb continues steering.
