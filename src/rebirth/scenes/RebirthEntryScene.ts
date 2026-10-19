@@ -20,14 +20,14 @@ export class RebirthEntryScene extends Phaser.Scene {
 
     this.heading = this.add.text(center, top - 28, 'ASHEN RELIQUARY: REBIRTH', {
       fontFamily: 'system-ui, sans-serif',
-      fontSize: 'clamp(18px, 3vw, 28px)',
+      fontSize: '24px',
       fontStyle: 'bold',
       color: '#eafaff',
       align: 'center',
     }).setOrigin(0.5);
 
     this.detail = this.add.text(center, top + 22,
-      '正式美術與新版遊戲架構製作中\\n目前未開放遊玩',
+      '正式美術與新版遊戲架構製作中\n目前未開放遊玩',
       {
         fontFamily: 'system-ui, sans-serif',
         fontSize: '16px',
