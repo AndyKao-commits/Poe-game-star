@@ -126,4 +126,18 @@ describe('Rebirth mobile HUD combat bridge', () => {
     f.bridge.dispose();
   });
 
+  it('releases attack on native touchend even without pointerup after two-finger capture', () => {
+    const f = fixture();
+    f.controls.attack.dispatchEvent(pointer('pointerdown', 12));
+    expect(f.controls.attack.classList.contains('pressed')).toBe(true);
+    const touchend = new Event('touchend');
+    Object.defineProperty(touchend, 'changedTouches', {
+      value: { length: 1, item: () => ({ target: f.controls.attack }) },
+    });
+    f.win.dispatchEvent(touchend);
+    expect(f.controls.attack.classList.contains('pressed')).toBe(false);
+    expect(vi.mocked(f.sink.setInput).mock.lastCall?.[1]).toBe(false);
+    f.bridge.dispose();
+  });
+
 });
