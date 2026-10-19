@@ -42,9 +42,9 @@ jobs:
       - name: Install Chromium and WebKit
         id: browsers
         run: npx playwright install --with-deps chromium webkit
-      - name: Browser smoke (desktop engines; NOT real phones)
+      - name: Rebirth gate browser smoke (desktop engines; NOT real phones)
         id: smoke
-        run: npx playwright test --project=chromium --project=webkit
+        run: npx playwright test tests/e2e/smoke.spec.ts --project=chromium --project=webkit
       - name: Write QA run summary
         if: always()
         env:
