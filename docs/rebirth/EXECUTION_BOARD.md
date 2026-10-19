@@ -158,3 +158,9 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - The connected GitHub commit-workflow lookup is PR-filtered and cannot confirm push-triggered QA. No valid npm/Playwright execution evidence obtained.
 - QA: external Vercel build status PASS; npm ci/typecheck/unit/Playwright NOT VERIFIED; physical phones NOT RUN. No game code changes.
 - Next: use an accessible authenticated GitHub Actions runner/log endpoint or local checkout to run required QA; maintain feature freeze until evidence exists.
+
+### Cycle 13 and 14 - CI evidence tracking
+- Cycle 13: changed rebirth QA workflow to publish a summary and upload available test artifacts on every run. Commit df8f5747cf9375a81bed926ef2857712e16c6b45.
+- Cycle 14: checked the commit status; Vercel returned success for df8f574. The commit workflow lookup returned no PR runs. This does not establish whether push CI executed.
+- Test results: npm install, typecheck, unit tests and Playwright remain unverified. Physical mobile testing was not run.
+- Next action: inspect the Actions run page and per-step logs. Keep gameplay changes on hold until evidence is available.
