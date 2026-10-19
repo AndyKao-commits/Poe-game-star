@@ -43,10 +43,15 @@ export class RebirthArtPreviewScene extends Phaser.Scene {
     this.scale.on('resize', this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off('resize', this.handleResize, this);
+      this.input.keyboard?.off('keydown', this.handleKeyDown, this);
     });
 
     // Review-only keyboard controls, not production mobile input.
-    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+    this.input.keyboard?.on('keydown', this.handleKeyDown, this);
+    this.renderFrame();
+  }
+
+  private handleKeyDown(event: KeyboardEvent): void {
       const directions: Record<string, FacingDirection> = {
         ArrowDown: 'south', ArrowUp: 'north', ArrowLeft: 'west', ArrowRight: 'east',
       };
@@ -54,8 +59,6 @@ export class RebirthArtPreviewScene extends Phaser.Scene {
       else if (event.code === 'Space') this.setPose(this.direction, 'attack');
       else if (event.code === 'KeyH') this.setPose(this.direction, 'hurt');
       else if (event.code === 'KeyI') this.setPose(this.direction, 'idle');
-    });
-    this.renderFrame();
   }
 
   update(_time: number, delta: number): void {
