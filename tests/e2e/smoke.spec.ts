@@ -99,8 +99,8 @@ test('supports move, attack, death, and full encounter restart', async ({ page }
     expect(after.enemies).toBe(spawnCount);
     expect(after.grace).toBeGreaterThan(0);
     expect(after.restarts).toBe(i + 1);
-    expect(after.hp).toBe(100);
-    expect(after.mp).toBe(50);
+    expect(after.hp).toBe(120);
+    expect(after.mp).toBe(60);
     expect(after.dead).toBe(false);
   }
 });
