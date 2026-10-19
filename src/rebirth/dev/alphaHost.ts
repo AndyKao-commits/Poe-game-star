@@ -41,19 +41,23 @@ export function mountRebirthAlpha(
     scene: [scene],
     render: { antialias: false },
   });
-  scene.events.once(Phaser.Scenes.Events.CREATE, () => {
+  const attach = (): void => {
     bridge?.dispose();
     bridge = new RebirthMobileCombatBridge(controls, scene);
-  });
-  scene.events.on(Phaser.Scenes.Events.SHUTDOWN, () => {
+  };
+  const detach = (): void => {
     bridge?.dispose();
     bridge = null;
-  });
+  };
+  // CREATE occurs again after scene.restart(); once() would leave controls dead.
+  scene.events.on(Phaser.Scenes.Events.CREATE, attach);
+  scene.events.on(Phaser.Scenes.Events.SHUTDOWN, detach);
   return {
     game,
     destroy() {
-      bridge?.dispose();
-      bridge = null;
+      scene.events.off(Phaser.Scenes.Events.CREATE, attach);
+      scene.events.off(Phaser.Scenes.Events.SHUTDOWN, detach);
+      detach();
       game.destroy(true);
     },
   };
