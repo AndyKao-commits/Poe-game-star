@@ -26,6 +26,8 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Rebirth runtime isolation gate
+        run: node scripts/check-rebirth-boundary.mjs
       - name: TypeScript typecheck
         run: npm run typecheck
       - name: Vitest unit tests
