@@ -19,6 +19,11 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private enemySprites = new Map<string, Phaser.GameObjects.Sprite>();
   private enemyHealthBars = new Map<string, Phaser.GameObjects.Graphics>();
   private playerBars: Phaser.GameObjects.Graphics | null = null;
+  private dangerGraphics: Phaser.GameObjects.Graphics | null = null;
+  private hitFlash: Phaser.GameObjects.Graphics | null = null;
+  private outcomePanel: Phaser.GameObjects.Container | null = null;
+  private feedbackExpiresAt = 0;
+  private hitFlashExpiresAt = 0;
   private playerMetadata: SpriteSheetMetadata | null = null;
   private enemyMetadata: SpriteSheetMetadata | null = null;
   private hud: Phaser.GameObjects.Text | null = null;
@@ -57,6 +62,9 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.session = new RebirthAlleySession(new RebirthAlleyEncounter());
     this.clockMs = 0;
     this.completed = false;
+    this.feedbackExpiresAt = 0;
+    this.hitFlashExpiresAt = 0;
+    this.outcomePanel = null;
     this.stick = { x: 0, y: 0, magnitude: 0 };
     const playerTexture = this.textures.get('rebirth-alpha-aze');
     const enemyTexture = this.textures.get('rebirth-alpha-brawler');
@@ -91,6 +99,8 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
         'rebirth-alpha-brawler', 0,
       ).setOrigin(0.5, 0.83).setScale(2));
     }
+    this.dangerGraphics = this.add.graphics().setDepth(85);
+    this.hitFlash = this.add.graphics().setScrollFactor(0).setDepth(120);
     this.playerBars = this.add.graphics().setScrollFactor(0).setDepth(99);
     this.hud = this.add.text(12, 10, '', {
       fontFamily: 'system-ui, sans-serif', fontSize: '13px',
@@ -105,6 +115,9 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.enemySprites.clear();
       this.enemyHealthBars.clear();
       this.playerBars = null;
+      this.dangerGraphics = null;
+      this.hitFlash = null;
+      this.outcomePanel = null;
       this.playerSprite = null;
       this.hud = null;
       this.feedback = null;
@@ -175,11 +188,17 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     if (!this.playerSprite || this.completed) return;
     // Clock remains monotonic even after browser backgrounding.
     this.clockMs += Math.max(0, Math.min(50, delta));
+    if (this.clockMs >= this.feedbackExpiresAt) this.feedback?.setText('');
+    this.hitFlash?.clear();
+    if (this.clockMs < this.hitFlashExpiresAt) {
+      this.hitFlash?.fillStyle(0xf34f67, 0.13).fillRect(0, 0, this.scale.width, this.scale.height);
+    }
     const result = this.session.tick(this.clockMs);
     this.renderState(result.state);
     if (result.state.cleared || result.state.defeated) {
       this.completed = true;
       this.showFeedback(result.state.cleared ? '巷弄戰鬥完成' : '角色倒下');
+      this.showOutcome(result.state.cleared);
       this.resetInput();
     }
   }
@@ -197,7 +216,17 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
         this.playerMetadata, facing, motion, this.clockMs, 150,
       ));
     }
+    this.dangerGraphics?.clear();
     for (const enemy of state.enemies) {
+      if (enemy.hp > 0 && enemy.phase === 'telegraph') {
+        const progress = Math.max(0, Math.min(1,
+          1 - (enemy.phaseEndsAt - this.clockMs) / enemy.telegraphMs));
+        const pulse = 0.32 + 0.24 * Math.sin(this.clockMs / 75);
+        this.dangerGraphics?.lineStyle(2 + progress * 2, 0xff625c, 0.7 + pulse * 0.25)
+          .strokeCircle(enemy.position.x, enemy.position.y, enemy.reach);
+        this.dangerGraphics?.fillStyle(0xff4d59, 0.09 + progress * 0.2)
+          .fillCircle(enemy.position.x, enemy.position.y, enemy.reach);
+      }
       const sprite = this.enemySprites.get(enemy.id);
       if (!sprite) continue;
       sprite.setPosition(enemy.position.x, enemy.position.y);
@@ -231,14 +260,40 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       `HP ${Math.ceil(player.hp)}/${player.maxHp}   MP ${Math.floor(player.mp)}/${player.maxMp}   敵人 ${state.enemies.filter(e => e.hp > 0).length}`,
     );
     for (const event of state.events) {
-      if (event.kind === 'player-hit') this.showFeedback(`受到 ${event.damage} 點傷害`);
+      if (event.kind === 'player-hit') {
+        this.hitFlashExpiresAt = this.clockMs + 180;
+        this.cameras.main.shake(130, 0.003);
+        this.showFeedback(`受到 ${event.damage} 點傷害`);
+      }
       if (event.kind === 'enemy-defeated') this.showFeedback('擊倒敵人！');
       if (event.kind === 'attack' && event.damage) this.showFeedback(`命中 ${event.damage}！`);
     }
   }
 
   private showFeedback(message: string): void {
+    this.feedbackExpiresAt = this.clockMs + 950;
     this.feedback?.setText(message);
+  }
+
+  private showOutcome(cleared: boolean): void {
+    if (this.outcomePanel) return;
+    const backdrop = this.add.graphics()
+      .fillStyle(0x07111d, 0.86).fillRoundedRect(-150, -57, 300, 114, 10)
+      .lineStyle(2, cleared ? 0x58d8be : 0xef7485, 0.95)
+      .strokeRoundedRect(-150, -57, 300, 114, 10);
+    const title = this.add.text(0, -26, cleared ? '巷弄已清除' : '挑戰失敗', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '22px',
+      color: cleared ? '#8df9d7' : '#ff8b9c', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    const detail = this.add.text(0, 14,
+      cleared ? '阿澤暫時安全了' : '重新調整節奏，再試一次', {
+        fontFamily: 'system-ui, sans-serif', fontSize: '13px', color: '#e5f2f8',
+      }).setOrigin(0.5);
+    const instruction = this.add.text(0, 40, '點擊「重新挑戰」可再次進入', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '11px', color: '#a8c1ce',
+    }).setOrigin(0.5);
+    this.outcomePanel = this.add.container(this.scale.width / 2, this.scale.height / 2,
+      [backdrop, title, detail, instruction]).setScrollFactor(0).setDepth(150);
   }
 
   private reasonText(reason?: string): string {
