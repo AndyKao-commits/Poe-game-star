@@ -92,7 +92,7 @@ export class RebirthAlleyEncounter {
   }
 
   action(action: Action, nowMs: number): CombatResult {
-    if (this.player.hp <= 0 || this.enemies.every(enemy => enemy.hp <= 0)) {
+    if (this.player.hp <= 0) {
       return { ok: false, action, reason: 'dead' };
     }
     const result = performAction(this.player, action, this.enemies, nowMs);
