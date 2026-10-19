@@ -38,6 +38,9 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.load.spritesheet('rebirth-alpha-brawler', '/rebirth/art/fire-brawler-character.png', {
       frameWidth: 32, frameHeight: 48,
     });
+    this.load.spritesheet('rebirth-alpha-ground', '/rebirth/art/urban-ground-atlas.png', {
+      frameWidth: 32, frameHeight: 32,
+    });
     this.load.json('rebirth-alpha-aze-meta', '/rebirth/art/aze-character.json');
     this.load.json('rebirth-alpha-brawler-meta', '/rebirth/art/fire-brawler-character.json');
   }
@@ -61,8 +64,13 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     validateSpriteSheetMetadata(enemyMeta, enemySource.width, enemySource.height);
     this.playerMetadata = meta;
     this.enemyMetadata = enemyMeta;
+    const groundTexture = this.textures.get('rebirth-alpha-ground');
+    if (groundTexture.key === '__MISSING' || groundTexture.frameTotal < 16) {
+      throw new Error('Rebirth Alpha blocked: complete original ENV-01 tile atlas required');
+    }
     this.cameras.main.setBackgroundColor('#101a2a');
     this.cameras.main.setRoundPixels(true);
+    this.renderOriginalGround();
     const state = this.session.encounter.snapshot();
     this.playerSprite = this.add.sprite(
       state.player.position.x, state.player.position.y,
@@ -93,6 +101,29 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.feedback = null;
     });
     this.renderState(state);
+  }
+
+  /** Every ground tile is a frame from the original ENV-01 atlas, not geometry placeholders. */
+  private renderOriginalGround(): void {
+    for (let y = 0; y < 9; y++) {
+      for (let x = 0; x < 15; x++) {
+        // Original asphalt/pavement variations; painted lane lines and drains
+        // are reserved for actual atlas frames, never generated shapes.
+        const isSidewalk = y < 2 || y >= 7;
+        const frame = isSidewalk
+          ? 4 + ((x * 3 + y) % 4)
+          : (x * 7 + y * 3) % 4;
+        this.add.image(x * 32, y * 32, 'rebirth-alpha-ground', frame)
+          .setOrigin(0).setDepth(-100);
+      }
+    }
+    for (const [x, y, frame] of [
+      [1, 5, 8], [1, 6, 8], [8, 5, 9], [8, 6, 9],
+      [11, 2, 10], [12, 2, 10], [2, 7, 12], [13, 7, 13],
+    ] as const) {
+      this.add.image(x * 32, y * 32, 'rebirth-alpha-ground', frame)
+        .setOrigin(0).setDepth(-99);
+    }
   }
 
   setInput(stick: StickVector, basicHeld: boolean): void {
