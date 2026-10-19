@@ -1,0 +1,100 @@
+{
+  "id": "CHAR-02",
+  "creator": "Original Rebirth pixel-art implementation",
+  "sourceFile": "art/rebirth/source/fire-brawler-character.ora",
+  "created": "2026-10-19",
+  "frameWidth": 32,
+  "frameHeight": 48,
+  "columns": 9,
+  "rows": 4,
+  "animations": {
+    "south": {
+      "idle": [
+        0
+      ],
+      "walk": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "attack": [
+        5,
+        6,
+        7
+      ],
+      "hurt": [
+        8
+      ]
+    },
+    "west": {
+      "idle": [
+        9
+      ],
+      "walk": [
+        10,
+        11,
+        12,
+        13
+      ],
+      "attack": [
+        14,
+        15,
+        16
+      ],
+      "hurt": [
+        17
+      ]
+    },
+    "east": {
+      "idle": [
+        18
+      ],
+      "walk": [
+        19,
+        20,
+        21,
+        22
+      ],
+      "attack": [
+        23,
+        24,
+        25
+      ],
+      "hurt": [
+        26
+      ]
+    },
+    "north": {
+      "idle": [
+        27
+      ],
+      "walk": [
+        28,
+        29,
+        30,
+        31
+      ],
+      "attack": [
+        32,
+        33,
+        34
+      ],
+      "hurt": [
+        35
+      ]
+    }
+  },
+  "feetAnchor": {
+    "x": 16,
+    "y": 43
+  },
+  "collisionFootprint": {
+    "width": 17,
+    "height": 10
+  },
+  "approved": false,
+  "reviewStatus": "ORIGINAL_CANDIDATE_NEEDS_VISUAL_QA",
+  "revision": "1",
+  "productionNotes": "Original brawler with orange energized gauntlet, four directions and distinct action frames."
+}
