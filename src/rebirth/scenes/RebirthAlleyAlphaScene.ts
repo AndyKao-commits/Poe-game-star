@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { RebirthAlleySession } from '../dev/alleySession';
 import { RebirthAlleyEncounter, type AlleySnapshot } from '../combat/alleyEncounter';
 import { type StickVector } from '../input/touchControls';
-import { animationFrame, type SpriteSheetMetadata } from '../art/animationContract';
+import { animationFrame, validateSpriteSheetMetadata, type SpriteSheetMetadata } from '../art/animationContract';
 
 /**
  * Chapter 1 alley scene integration for the *future approved art build*.
@@ -18,6 +18,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private playerSprite: Phaser.GameObjects.Sprite | null = null;
   private enemySprites = new Map<string, Phaser.GameObjects.Sprite>();
   private playerMetadata: SpriteSheetMetadata | null = null;
+  private enemyMetadata: SpriteSheetMetadata | null = null;
   private hud: Phaser.GameObjects.Text | null = null;
   private feedback: Phaser.GameObjects.Text | null = null;
   private clockMs = 0;
@@ -36,6 +37,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       frameWidth: 32, frameHeight: 48,
     });
     this.load.json('rebirth-alpha-aze-meta', '/rebirth/art/aze-character.json');
+    this.load.json('rebirth-alpha-brawler-meta', '/rebirth/art/fire-brawler-character.json');
   }
 
   create(): void {
@@ -49,8 +51,14 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       throw new Error('Rebirth Alpha blocked: approved protagonist and enemy spritesheets required');
     }
     const meta = this.cache.json.get('rebirth-alpha-aze-meta') as SpriteSheetMetadata | undefined;
-    if (!meta) throw new Error('Rebirth Alpha blocked: protagonist animation metadata required');
+    const enemyMeta = this.cache.json.get('rebirth-alpha-brawler-meta') as SpriteSheetMetadata | undefined;
+    if (!meta || !enemyMeta) throw new Error('Rebirth Alpha blocked: complete animation metadata required');
+    const playerSource = playerTexture.source[0];
+    const enemySource = enemyTexture.source[0];
+    validateSpriteSheetMetadata(meta, playerSource.width, playerSource.height);
+    validateSpriteSheetMetadata(enemyMeta, enemySource.width, enemySource.height);
     this.playerMetadata = meta;
+    this.enemyMetadata = enemyMeta;
     this.cameras.main.setBackgroundColor('#101a2a');
     this.cameras.main.setRoundPixels(true);
     const state = this.session.encounter.snapshot();
@@ -133,6 +141,10 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       const sprite = this.enemySprites.get(enemy.id);
       if (!sprite) continue;
       sprite.setPosition(enemy.position.x, enemy.position.y);
+      if (this.enemyMetadata && enemy.hp > 0) {
+        const motion = enemy.phase === 'telegraph' ? 'attack' : enemy.phase === 'chase' ? 'walk' : 'idle';
+        sprite.setFrame(animationFrame(this.enemyMetadata, 'south', motion, this.clockMs, 150));
+      }
       sprite.setVisible(enemy.hp > 0);
       sprite.setTint(enemy.phase === 'telegraph' ? 0xff6672 : 0xffffff);
       sprite.setDepth(Math.floor(enemy.position.y));
