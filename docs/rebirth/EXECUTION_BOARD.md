@@ -268,3 +268,20 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - Updated .github/workflows/rebirth-qa.yml to assign stable step IDs and include each individual outcome (success/failure/skipped) in the GitHub Actions step summary and artifact. Commit 08b439bf628dc879988eed0fa50e850faa6d541b.
 - Environment probe: local Node v22.16.0, npm v10.9.2 available; git ls-remote failed with DNS error resolving github.com. Thus full checkout and local npm ci/typecheck/unit/build/Playwright NOT RUN.
 - CI run lookup via available GitHub connector remains limited to PR-triggered workflows; push run logs NOT VERIFIED. No claims of test pass. Physical mobile NOT RUN. Next T01 cycle: inspect push-run per-step report on GitHub Actions, or secure a permitted runnable checkout.
+
+
+### 2026-10-19 — Cycle: executable sandbox QA and Rebirth-only browser scope
+- Task: establish actual command-level QA evidence for Rebirth without inspecting legacy source, art or historical branches. Source of truth: GAME_CONTRACT v0.7.2; branch feat/rebirth-v1.
+- Created isolated Vercel Sandbox session `sbx_M5hhmEHGSvc67stBL4lwc01oADC0`, checked out exact Git SHA `f89254bf1ddc2ab5433bf4d4863af3dbd1a816cf`; runtime Node 24.21.0 / npm 11.19.0 (different from CI Node 22). No production deployment.
+- Initial sandbox `npm ci` at `/vercel` failed because repository is under `/vercel/Poe-game-star`; reran at correct working directory and PASS. Browser launch initially failed due to missing `libglib-2.0.so.0`; installed Playwright system dependencies in isolated sandbox and reran.
+- Actual browser smoke exposed three test assertion defects: `legacyActive` was null instead of false when scenes absent, Phaser text creates internal texture keys, and Vite bundles are served under `/assets/`. Fixed assertions without using legacy implementation as reference. Commit `11ae55435db85a3915c9a913dabeaa18ebe9791a`.
+- CI workflow previously attempted unrelated browser tests for disabled gameplay. Restricted the Rebirth QA browser job to `tests/e2e/smoke.spec.ts` (desktop Chromium/WebKit). Commit `f89254bf1ddc2ab5433bf4d4863af3dbd1a816cf`.
+- Re-executed all commands on exact `f89254b` checkout in sandbox, shell `set -e`, command id `cmd_a861d72a09414665a2422914637c`, exit code 0:
+  - `npm ci --no-audit --no-fund`: PASS.
+  - `node scripts/check-rebirth-boundary.mjs`: PASS, 3-file active entry graph, non-playable gate retained.
+  - `npm run typecheck`: PASS.
+  - `npm test`: PASS, 28 files and 128 tests. This repository-wide test count is NOT evidence that legacy tests define Rebirth behavior; only Rebirth-owned tests are canonical.
+  - `npm run build`: PASS (Vite bundle size warning remains).
+  - `npx playwright test tests/e2e/smoke.spec.ts --project=chromium --project=webkit --reporter=dot`: PASS, 8/8 desktop browser checks.
+- GitHub Actions push-run logs: NOT VERIFIED independently. Physical iPhone Safari/Android Chrome: NOT RUN. Rebirth gameplay and art acceptance gates G1–G5 remain BLOCKED. Sandbox QA PASS applies only to current non-playable gate.
+- Next task: verify GitHub Actions Node 22 execution and CI run artifacts; then plan Rebirth-only finished art review and implement gameplay only after art approval.
