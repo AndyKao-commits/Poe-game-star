@@ -17,6 +17,8 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private session = new RebirthAlleySession(new RebirthAlleyEncounter());
   private playerSprite: Phaser.GameObjects.Sprite | null = null;
   private enemySprites = new Map<string, Phaser.GameObjects.Sprite>();
+  private enemyHealthBars = new Map<string, Phaser.GameObjects.Graphics>();
+  private playerBars: Phaser.GameObjects.Graphics | null = null;
   private playerMetadata: SpriteSheetMetadata | null = null;
   private enemyMetadata: SpriteSheetMetadata | null = null;
   private hud: Phaser.GameObjects.Text | null = null;
@@ -67,11 +69,13 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       'rebirth-alpha-aze', 0,
     ).setOrigin(0.5, 0.83).setScale(2);
     for (const enemy of state.enemies) {
+      this.enemyHealthBars.set(enemy.id, this.add.graphics().setDepth(90));
       this.enemySprites.set(enemy.id, this.add.sprite(
         enemy.position.x, enemy.position.y,
         'rebirth-alpha-brawler', 0,
       ).setOrigin(0.5, 0.83).setScale(2));
     }
+    this.playerBars = this.add.graphics().setScrollFactor(0).setDepth(99);
     this.hud = this.add.text(12, 10, '', {
       fontFamily: 'system-ui, sans-serif', fontSize: '13px',
       color: '#f0f7fa', backgroundColor: '#101a2a',
@@ -82,6 +86,8 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.resetInput();
       this.enemySprites.clear();
+      this.enemyHealthBars.clear();
+      this.playerBars = null;
       this.playerSprite = null;
       this.hud = null;
       this.feedback = null;
@@ -161,6 +167,23 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       sprite.setVisible(enemy.hp > 0);
       sprite.setTint(enemy.phase === 'telegraph' ? 0xff6672 : 0xffffff);
       sprite.setDepth(Math.floor(enemy.position.y));
+      const bar = this.enemyHealthBars.get(enemy.id);
+      if (bar) {
+        bar.clear().setVisible(enemy.hp > 0);
+        if (enemy.hp > 0) {
+          bar.fillStyle(0x06121c, 0.9).fillRoundedRect(enemy.position.x - 19, enemy.position.y - 48, 38, 6, 2);
+          bar.fillStyle(enemy.phase === 'telegraph' ? 0xffac56 : 0xd95168, 1)
+            .fillRect(enemy.position.x - 17, enemy.position.y - 46, 34 * enemy.hp / enemy.maxHp, 2);
+        }
+      }
+    }
+    this.playerBars?.clear();
+    if (this.playerBars) {
+      this.playerBars.fillStyle(0x06121c, 0.95).fillRoundedRect(9, 33, 142, 27, 5);
+      this.playerBars.fillStyle(0x2a3946).fillRect(15, 39, 130, 6);
+      this.playerBars.fillStyle(0xe45d70).fillRect(15, 39, 130 * player.hp / player.maxHp, 6);
+      this.playerBars.fillStyle(0x2a3946).fillRect(15, 50, 130, 5);
+      this.playerBars.fillStyle(0x4db9e3).fillRect(15, 50, 130 * player.mp / player.maxMp, 5);
     }
     this.playerSprite.setDepth(Math.floor(player.position.y));
     this.hud?.setText(
@@ -169,6 +192,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     for (const event of state.events) {
       if (event.kind === 'player-hit') this.showFeedback(`受到 ${event.damage} 點傷害`);
       if (event.kind === 'enemy-defeated') this.showFeedback('擊倒敵人！');
+      if (event.kind === 'attack' && event.damage) this.showFeedback(`命中 ${event.damage}！`);
     }
   }
 
