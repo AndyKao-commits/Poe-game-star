@@ -80,3 +80,13 @@ Status: IN PROGRESS (isolated Rebirth combat rules implemented; not wired to gam
 - Caveat: the existing tile textures and combat controllers are still legacy placeholders; this is NOT a finished modern-Taiwan art scene, and the new combat core is NOT connected yet.
 - Validation: GitHub commits successful; Vitest/typecheck/build/E2E/real-device QA NOT RUN. Do not claim this map is verified in a browser.
 - Next: run CI/typecheck and smoke test the alley; build dedicated Rebirth mobile input + two usable skill buttons, then integrate isolated combat stats/damage.
+
+### 2026-10-19 — Cycle 3: visual refresh, mobile-first Rebirth shell
+- User explicitly rejected old page appearance; implemented a new modern Taiwan urban-magic HUD skin on Rebirth branch only.
+- `index.html`: new page title, description, mobile browser theme color; removed legacy ruin-tile favicon. Commit `1cf3872`.
+- `src/ui/hud.ts`: urban chapter header, revised health/mana labels and initial placeholders, new death/retry copy. Commit `1531965`.
+- `src/ui/orientationGate.ts`: updated mobile landscape guidance and chapter tone. Commit `b30a07e`.
+- `src/styles.css`: added neon cyan/coral urban styling, rounded glass panels, compact landscape sizing, reduced-motion support. Commit `098dfae`.
+- Functional limits: styling only; legacy combat stats, legacy tile textures, disabled skill buttons and input behavior remain until separately integrated. HUD placeholder HP/MP labels are NOT proof actual player values are Rebirth values.
+- Validation: GitHub commits successful. Typecheck, unit tests, build, browser screenshot and physical phone QA NOT RUN. Visual design is not yet approved by actual screenshots/device tests.
+- Next: integrate new Rebirth stats into game controllers and wire two usable touch skills; then inspect browser rendering and adjust touch occlusion.
