@@ -37,6 +37,20 @@ test.describe('Rebirth private Alpha actual Phaser boot', () => {
     const attack = await page.locator('#attack').boundingBox();
     expect(base).toBeTruthy();
     expect(attack).toBeTruthy();
+    await page.evaluate(() => {
+      const events: string[] = [];
+      (window as Window & { __rebirthTouchEvents?: string[] }).__rebirthTouchEvents = events;
+      for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'touchstart', 'touchend', 'touchcancel']) {
+        window.addEventListener(type, (event: Event) => {
+          const touch = event as TouchEvent;
+          const pointer = event as PointerEvent;
+          events.push(type + ':target=' + (event.target as HTMLElement)?.id +
+            ':pointer=' + (pointer.pointerId ?? '-') +
+            ':active=' + (touch.touches?.length ?? '-') +
+            ':changed=' + (touch.changedTouches?.length ?? '-'));
+        }, { capture: true });
+      }
+    });
     const client = await page.context().newCDPSession(page);
     const finger = { x: Math.round(base!.x + base!.width / 2), y: Math.round(base!.y + base!.height / 2) };
     const moved = { x: finger.x + 40, y: finger.y - 10 };
@@ -53,6 +67,8 @@ test.describe('Rebirth private Alpha actual Phaser boot', () => {
     await dispatch('touchStart', [{ ...moved, id: 1 }, { ...strike, id: 2 }]);
     await expect(page.locator('#attack')).toHaveClass(/pressed/);
     await dispatch('touchEnd', [{ ...moved, id: 1 }]);
+    console.log('MULTITOUCH_RELEASE_DIAGNOSTIC', await page.evaluate(() =>
+      (window as Window & { __rebirthTouchEvents?: string[] }).__rebirthTouchEvents));
     await expect(page.locator('#attack')).not.toHaveClass(/pressed/);
     await dispatch('touchEnd', []);
     await expect.poll(() => page.locator('#stick-knob').evaluate(
