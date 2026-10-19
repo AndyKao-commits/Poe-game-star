@@ -20,6 +20,7 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         rebirthInputLab: path.resolve(__dirname, 'rebirth-input-lab.html'),
+        rebirthAlpha: path.resolve(__dirname, 'rebirth-alpha.html'),
       },
     },
   },
