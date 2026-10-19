@@ -36,6 +36,9 @@ jobs:
       - name: Vitest unit tests
         id: unit
         run: npm test
+      - name: V2 candidate installer regression tests
+        id: candidate_installer
+        run: python3 -m unittest discover -s tests/python -p 'test_*.py' -v
       - name: Production build
         id: build
         run: npm run build
@@ -55,6 +58,7 @@ jobs:
           BOUNDARY_OUTCOME: ${{ steps.boundary.outcome }}
           TYPECHECK_OUTCOME: ${{ steps.typecheck.outcome }}
           UNIT_OUTCOME: ${{ steps.unit.outcome }}
+          CANDIDATE_INSTALLER_OUTCOME: ${{ steps.candidate_installer.outcome }}
           BUILD_OUTCOME: ${{ steps.build.outcome }}
           BROWSERS_OUTCOME: ${{ steps.browsers.outcome }}
           SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
@@ -69,6 +73,7 @@ jobs:
             echo "- Rebirth isolation guard: $BOUNDARY_OUTCOME"
             echo "- TypeScript typecheck: $TYPECHECK_OUTCOME"
             echo "- Vitest unit tests: $UNIT_OUTCOME"
+            echo "- V2 candidate installer regression tests: $CANDIDATE_INSTALLER_OUTCOME"
             echo "- Production build: $BUILD_OUTCOME"
             echo "- Browser install: $BROWSERS_OUTCOME"
             echo "- Playwright Chromium/WebKit: $SMOKE_OUTCOME"
