@@ -361,8 +361,39 @@ body,
   width: min(8vh, 48px);
   height: min(8vh, 48px);
   font-size: 12px;
+  --cd-ratio: 0;
+  overflow: hidden;
 }
 
+.touch-skill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, 0.55);
+  transform-origin: bottom center;
+  transform: scaleY(var(--cd-ratio, 0));
+  pointer-events: none;
+}
+
+.touch-skill.is-ready {
+  border-color: rgba(201, 162, 39, 0.75);
+}
+
+.touch-skill.is-active {
+  background: rgba(201, 162, 39, 0.35);
+}
+
+.touch-skill.is-cooldown {
+  opacity: 0.7;
+}
+
+.touch-skill.is-no-resource {
+  opacity: 0.45;
+  filter: grayscale(0.35);
+}
+
+.touch-skill:disabled,
 .touch-skill.is-locked {
   opacity: 0.35;
   filter: grayscale(0.6);
@@ -402,7 +433,8 @@ body,
 /* Independent of .touch-visual opacity — always recoverable in hidden mode */
 .touch-settings {
   position: absolute;
-  top: calc(44px + var(--safe-top));
+  /* Below the inventory HUD action: prevent overlapping mobile hit targets. */
+  top: calc(72px + var(--safe-top));
   right: calc(12px + var(--safe-right));
   z-index: 30;
   pointer-events: auto;
@@ -435,6 +467,7 @@ body,
 
 .touch-layer.is-disabled .touch-hit,
 .touch-layer.is-disabled .touch-attack,
+.touch-layer.is-disabled .touch-skill,
 .touch-layer.is-disabled .touch-settings {
   pointer-events: none;
 }
@@ -500,4 +533,560 @@ body,
   padding: 10px 20px;
   font: inherit;
   letter-spacing: 0.06em;
+}
+
+/* C inventory / equipment UI */
+.hud-actions {
+  top: calc(12px + var(--safe-top));
+  right: calc(96px + var(--safe-right));
+  padding: 6px 8px;
+  pointer-events: auto;
+  z-index: 12;
+}
+
+.hud-inv-btn {
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: rgba(201, 162, 39, 0.12);
+  color: var(--ink);
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.hud-inv-btn:hover,
+.hud-inv-btn:focus-visible {
+  background: rgba(201, 162, 39, 0.28);
+}
+
+.hud-loot-toast {
+  position: absolute;
+  left: 50%;
+  top: calc(18% + var(--safe-top));
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  background: rgba(12, 14, 20, 0.88);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font-size: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 15;
+}
+
+.hud-loot-toast.is-visible {
+  opacity: 1;
+}
+
+/* —— Inventory / equipment modal (functional placeholder UI) —— */
+#inventory-root.is-open,
+#inventory-root:not([hidden]) {
+  pointer-events: auto;
+}
+
+.inv-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 8, 12, 0.55);
+  pointer-events: auto;
+}
+
+.inv-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 24px - var(--safe-left) - var(--safe-right)));
+  max-height: min(86vh, calc(100vh - 24px - var(--safe-top) - var(--safe-bottom)));
+  overflow: auto;
+  background: rgba(12, 14, 20, 0.94);
+  border: 1px solid var(--border);
+  padding: 14px 16px 12px;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.inv-title {
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.inv-capacity {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.inv-section-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.inv-equip-list,
+.inv-bag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inv-equip-row,
+.inv-bag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.inv-equip-meta,
+.inv-bag-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.inv-slot-name,
+.inv-item-sub,
+.inv-equip-bonus {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.inv-equip-name,
+.inv-item-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rarity-common .inv-item-name,
+.inv-equip-name.rarity-common { color: #c8c2b6; }
+.rarity-uncommon .inv-item-name,
+.inv-equip-name.rarity-uncommon { color: #6fbf73; }
+.rarity-rare .inv-item-name,
+.inv-equip-name.rarity-rare { color: #5b9fd6; }
+.rarity-epic .inv-item-name,
+.inv-equip-name.rarity-epic { color: #b07adf; }
+.rarity-legendary .inv-item-name,
+.inv-equip-name.rarity-legendary { color: #d4a017; }
+
+.inv-btn {
+  flex-shrink: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: rgba(201, 162, 39, 0.12);
+  color: var(--ink);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.inv-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.inv-btn:not(:disabled):hover,
+.inv-btn:not(:disabled):focus-visible {
+  background: rgba(201, 162, 39, 0.28);
+}
+
+.inv-empty {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px 0;
+}
+
+.inv-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 8px;
+}
+
+.inv-status {
+  color: var(--accent);
+  min-height: 1em;
+}
+
+@media (orientation: landscape) and (max-height: 480px) {
+  .inv-panel {
+    max-height: calc(100vh - 12px - var(--safe-top) - var(--safe-bottom));
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .hud-actions {
+    right: calc(88px + var(--safe-right));
+  }
+}
+
+
+#inventory-root { position:absolute; inset:0; z-index:45; pointer-events:none; }
+#inventory-root[hidden] { display:none; }
+
+/* Phase 2 D: read-only skill status strip; never steals touch input. */
+.hud-skills {
+  position: absolute;
+  left: calc(12px + var(--safe-left));
+  top: calc(128px + var(--safe-top));
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  pointer-events: none;
+  z-index: 11;
+}
+.hud-skill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  min-width: 35px;
+  min-height: 35px;
+  border: 1px solid var(--border);
+  background: rgba(10, 12, 16, 0.8);
+  color: var(--ink);
+  font: 11px/1.2 var(--hud-font);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none !important;
+}
+.hud-skill.is-ready { border-color: #7eae8c; }
+.hud-skill.is-cooldown { border-color: #d5a64a; }
+.hud-skill.is-insufficient-mana,
+.hud-skill.is-insufficient-stamina,
+.hud-skill.is-dead,
+.hud-skill.is-disabled { opacity: 0.55; }
+.hud-skill [data-skill-cd] { color: #d5a64a; font-size: 10px; }
+@media (orientation: landscape) and (max-height: 480px) {
+  .hud-skills { top: calc(110px + var(--safe-top)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-bar-fill, .hud-loot-toast, .hud-death { transition: none; }
+}
+
+/* Mobile uses the touch skill cluster; do not duplicate desktop status chrome. */
+@media (pointer: coarse) {
+  .hud-skills {
+    display: none;
+  }
+}
+
+/* Art D action icon overlay: decorative only, preserving original hit zones. */
+.touch-attack,
+.touch-skill[data-skill-q],
+.touch-skill[data-skill-e] {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 65% 65%;
+}
+.touch-attack {
+  background-image: url('/assets/art-d/ui-attack.png');
+}
+.touch-skill[data-skill-q],
+.touch-skill[data-skill-e] {
+  background-image: url('/assets/art-d/ui-skill.png');
+}
+
+/* Mobile skill cooldown countdown, sourced from the live combat caster state. */
+.touch-skill .touch-cooldown-count {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  font-size: clamp(12px, 3.2vh, 19px);
+  font-weight: 800;
+  color: #fff5dc;
+  text-shadow: 0 1px 3px #17120e, 0 0 5px #17120e;
+  pointer-events: none;
+}
+.touch-skill .touch-cooldown-count[hidden] {
+  display: none;
+}
+
+/* Compact landscape inventory: fixed header, scrollable contents, usable touch targets. */
+@media (orientation: landscape) and (max-height: 480px) {
+  .inv-panel {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .inv-header {
+    position: sticky;
+    top: -10px;
+    z-index: 2;
+    background: rgba(12, 14, 20, 0.98);
+    padding: 6px 0;
+  }
+  .inv-btn {
+    min-height: 36px;
+    min-width: 52px;
+  }
+  .inv-equip-row,
+  .inv-bag-row {
+    min-height: 44px;
+  }
+  .inv-footer {
+    flex-wrap: wrap;
+  }
+}
+
+/* Phase 3 mobile battlefield-first HUD: keep vitals but stop chrome filling the viewport. */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  .hud-stats {
+    top: calc(6px + var(--safe-top));
+    left: calc(6px + var(--safe-left));
+    min-width: 0;
+    width: min(174px, 25vw);
+    padding: 5px 7px;
+    background: rgba(12, 14, 20, 0.58);
+    backdrop-filter: none;
+  }
+  .hud-title,
+  .hud-fps,
+  .touch-hint {
+    display: none;
+  }
+  .hud-bar-row {
+    grid-template-columns: 19px minmax(0, 1fr) auto;
+    gap: 4px;
+    margin-bottom: 2px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .hud-bar-track { height: 4px; }
+  .hud-stats [data-combat-stats],
+  .hud-stats [data-progression-text] {
+    font-size: 9px;
+  }
+  .hud-stats .hud-bar-row:has([data-combat-stats]),
+  .hud-stats .hud-bar-row:has([data-progression-text]) {
+    margin-bottom: 1px;
+  }
+  .hud-actions {
+    top: calc(6px + var(--safe-top));
+    right: calc(6px + var(--safe-right));
+    padding: 3px;
+    background: rgba(12, 14, 20, 0.5);
+    backdrop-filter: none;
+  }
+  .hud-inv-btn {
+    padding: 5px 7px;
+    font-size: 11px;
+    min-height: 30px;
+  }
+  .touch-settings {
+    top: calc(47px + var(--safe-top));
+    right: calc(6px + var(--safe-right));
+  }
+  .touch-mode {
+    padding: 3px 5px;
+    background: rgba(12, 14, 20, 0.52);
+  }
+  .hud-loot-toast {
+    top: calc(12% + var(--safe-top));
+    max-width: 48vw;
+    text-align: center;
+  }
+}
+
+/* Phase 3 visual acceptance: a two-resource HUD, not a desktop dashboard on top of combat. */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  .hud-stats {
+    width: min(176px, 28vw);
+    border: 0;
+    border-radius: 8px;
+    padding: 6px 8px;
+    background: rgba(10, 12, 16, 0.35);
+  }
+  .hud-stats .hud-bar-row:has([data-combat-stats]),
+  .hud-stats .hud-bar-row:has([data-progression-text]),
+  .hud-stats > .hud-bar-track {
+    display: none;
+  }
+  .hud-stats .hud-bar-row {
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    font-size: 10px;
+    margin: 0 0 3px;
+  }
+  .hud-stats .hud-bar-row:last-of-type { margin-bottom: 0; }
+  .hud-stats .hud-bar-track { height: 6px; border-radius: 4px; }
+  .hud-actions {
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    backdrop-filter: none;
+  }
+  .touch-settings .touch-mode { border-radius: 8px; }
+}
+
+/* Phase 3B: reference-led dark-fantasy ARPG HUD. Data remains bound to GameScene. */
+.hud-stats {
+  top: auto;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  min-width: 0;
+  height: 116px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+.hud-stats .hud-title { display: none; }
+.hud-vitals { position: absolute; inset: 0; pointer-events: none; }
+.hud-resource {
+  position: absolute;
+  bottom: calc(9px + var(--safe-bottom));
+  width: clamp(74px, 10vw, 124px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 5px ridge #75644e;
+  box-shadow: 0 0 0 3px #17141c, inset 0 5px 12px #140f17, 0 6px 15px #07080a;
+  overflow: hidden;
+}
+.hud-health { left: calc(15px + var(--safe-left)); background: radial-gradient(circle at 40% 35%, #d94b49, #6e141d 68%, #21070c); }
+.hud-mana { right: calc(15px + var(--safe-right)); background: radial-gradient(circle at 40% 35%, #579ce3, #193e92 68%, #091029); }
+.hud-resource .hud-bar-row { display: block; height: 100%; margin: 0; padding: 0; }
+.hud-resource .hud-resource-label { display: none; }
+.hud-resource .hud-bar-track {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  border: 0;
+  background: rgba(5, 6, 11, 0.64);
+  overflow: hidden;
+  transform: rotate(180deg);
+}
+.hud-resource .hud-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a1232d, #ed6968) !important;
+  opacity: 0.88;
+}
+.hud-mana .hud-bar-fill { background: linear-gradient(90deg, #163f9d, #5d9de7) !important; }
+.hud-resource [data-hp-text],
+.hud-resource [data-mp-text] {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  font: 600 clamp(10px, 1.3vw, 14px)/1 var(--hud-font);
+  color: #fff0df;
+  text-shadow: 0 2px 4px #08070d, 0 0 6px #08070d;
+  white-space: nowrap;
+}
+.hud-meta {
+  position: absolute;
+  left: 50%;
+  bottom: calc(8px + var(--safe-bottom));
+  transform: translateX(-50%);
+  width: min(43vw, 525px);
+  padding: 7px 15px;
+  background: linear-gradient(#25202a, #0a0a10);
+  border: 2px solid #65543e;
+  box-shadow: 0 2px 0 #161014, inset 0 1px 0 #99805a;
+}
+.hud-meta .hud-bar-row {
+  display: block;
+  margin: 0 0 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  text-align: center;
+}
+.hud-meta .hud-bar-row span { display: block; }
+.hud-meta .hud-xp-track { height: 7px; border-color: #5d4b32; }
+.hud-meta .hud-xp-track .hud-bar-fill { background: linear-gradient(90deg, #825520, #ffc565); }
+.hud-skills {
+  left: 50%;
+  top: auto;
+  bottom: calc(70px + var(--safe-bottom));
+  transform: translateX(-50%);
+  padding: 4px;
+  gap: 5px;
+  background: rgba(10, 9, 13, 0.82);
+  border: 2px solid #5a4a39;
+}
+.hud-skill {
+  min-width: 40px;
+  min-height: 40px;
+  background: linear-gradient(145deg, #2b2630, #0c0b12);
+  border: 2px ridge #766047;
+  border-radius: 3px;
+}
+.hud-hints { bottom: calc(131px + var(--safe-bottom)); opacity: 0.7; }
+.hud-actions { top: calc(10px + var(--safe-top)); right: calc(12px + var(--safe-right)); }
+.hud-fps { display: none; }
+
+/* On touch screens the orbs become a compact top-left resource cluster.
+   Existing combat controls stay on the bottom right and retain their hit zones. */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  .hud-stats {
+    inset: 0 auto auto 0;
+    width: min(190px, 31vw);
+    height: 64px;
+    background: transparent;
+    padding: 0;
+    border: 0;
+  }
+  .hud-stats .hud-vitals {
+    inset: calc(7px + var(--safe-top)) auto auto calc(7px + var(--safe-left));
+    display: flex;
+    gap: 7px;
+  }
+  .hud-stats .hud-resource {
+    position: relative;
+    inset: auto;
+    width: clamp(47px, 11vh, 62px);
+    height: clamp(47px, 11vh, 62px);
+    border-width: 3px;
+    box-shadow: 0 0 0 1px #161118, inset 0 2px 6px #110c11;
+  }
+  .hud-stats .hud-resource .hud-bar-row {
+    display: block;
+    margin: 0;
+    height: 100%;
+  }
+  .hud-stats .hud-resource .hud-bar-track { height: 100%; }
+  .hud-stats .hud-resource [data-hp-text],
+  .hud-stats .hud-resource [data-mp-text] {
+    font-size: 9px;
+    letter-spacing: -0.3px;
+  }
+  .hud-stats .hud-meta { display: none; }
+  .hud-skills, .hud-hints, .hud-title, .hud-fps { display: none; }
+  .hud-actions {
+    top: calc(6px + var(--safe-top));
+    right: calc(6px + var(--safe-right));
+  }
 }

@@ -45,6 +45,20 @@ export interface EnemyAttackTickResult {
   telegraphing: boolean;
 }
 
+export interface EnemyAttackUpdateOptions {
+  /**
+   * When set, gates opening a new windup:
+   * - `true` → begin windup if cooldown is ready (archetype commit)
+   * - `false` → never open a new windup this tick
+   * When omitted, Phase 1 auto-engage behavior is preserved.
+   */
+  allowAttack?: boolean;
+}
+
+export function isEnemyAttackSequencePhase(phase: EnemyCombatPhase): boolean {
+  return phase === 'windup' || phase === 'attack' || phase === 'recovery';
+}
+
 /**
  * Per-enemy melee brain: idle/chase → windup → strike → recovery → cooldown.
  * Cooldown is instance-local (not shared across enemies).
@@ -68,6 +82,15 @@ export class EnemyAttackBrain {
     return this.phase === 'dead';
   }
 
+  /** Windup / strike / recovery lock locomotion and further attack commits. */
+  get inAttackSequence(): boolean {
+    return isEnemyAttackSequencePhase(this.phase);
+  }
+
+  get configSnapshot(): EnemyAttackConfig {
+    return { ...this.config };
+  }
+
   forceDead(): void {
     this.phase = 'dead';
     this.phaseMs = 0;
@@ -85,7 +108,12 @@ export class EnemyAttackBrain {
     this.cooldownMs = 0;
   }
 
-  update(deltaMs: number, self: Vec2, target: Vec2): EnemyAttackTickResult {
+  update(
+    deltaMs: number,
+    self: Vec2,
+    target: Vec2,
+    options: EnemyAttackUpdateOptions = {},
+  ): EnemyAttackTickResult {
     if (this.phase === 'dead') {
       return this.result(false, false, false, false);
     }
@@ -134,19 +162,30 @@ export class EnemyAttackBrain {
       return this.result(false, false, false, false);
     }
 
-    if (this.cooldownMs <= 0 && dist <= this.config.engageRange) {
+    // Locomotion phases (idle / chase): movement allowed so retreat / kiting works.
+    const shouldOpenWindup = this.shouldOpenWindup(dist, options.allowAttack);
+    if (shouldOpenWindup) {
       this.phase = 'windup';
       this.phaseMs = this.config.windupMs;
       return this.result(false, false, false, true);
     }
 
-    if (dist <= this.config.engageRange) {
-      this.phase = 'chase';
-      return this.result(false, false, false, false);
-    }
-
     this.phase = dist > 0.01 ? 'chase' : 'idle';
     return this.result(false, false, true, false);
+  }
+
+  private shouldOpenWindup(dist: number, allowAttack: boolean | undefined): boolean {
+    if (this.cooldownMs > 0) return false;
+
+    if (allowAttack === true) {
+      // Archetype already decided engage / commit — open windup immediately.
+      return true;
+    }
+    if (allowAttack === false) {
+      return false;
+    }
+    // Baseline: auto-engage when inside engage range.
+    return dist <= this.config.engageRange;
   }
 
   private result(

@@ -8,6 +8,8 @@ export {
   type SkillKind,
 } from './definitions';
 
+export type { SkillUiState } from './skillUi';
+
 export {
   cloneCasterState,
   createCasterState,

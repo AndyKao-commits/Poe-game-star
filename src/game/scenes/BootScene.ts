@@ -6,19 +6,28 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image('tile-floor', '/assets/tile-floor.png');
-    this.load.image('tile-wall', '/assets/tile-wall.png');
-    this.load.image('tile-obstacle', '/assets/tile-obstacle.png');
-    this.load.image('tile-void', '/assets/tile-void.png');
-    this.load.spritesheet('player', '/assets/player.png', {
+    this.load.image('tile-floor', '/assets/art-d/tile-floor.png');
+    this.load.image('tile-wall', '/assets/art-d/tile-wall.png');
+    this.load.image('tile-obstacle', '/assets/art-d/tile-obstacle.png');
+    this.load.image('tile-void', '/assets/art-d/tile-void.png');
+    this.load.spritesheet('player', '/assets/art-d/player.png', {
       frameWidth: 32,
       frameHeight: 32,
     });
-    this.load.spritesheet('enemy', '/assets/enemy.png', {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
-    this.load.image('slash', '/assets/slash.png');
+    for (const role of ['crawler', 'sentinel'] as const) {
+      this.load.spritesheet(role, `/assets/art-d/${role}.png`, {
+        frameWidth: 32,
+        frameHeight: 32,
+      });
+    }
+    this.load.image('slash', '/assets/art-d/slash.png');
+    // Phase 2 visual assets: preload independently of gameplay wiring.
+    for (const effect of ['telegraph', 'hit'] as const) {
+      this.load.image(`art-d-${effect}`, `/assets/art-d/${effect}.png`);
+    }
+    for (const control of ['attack', 'skill', 'potion'] as const) {
+      this.load.image(`art-d-ui-${control}`, `/assets/art-d/ui-${control}.png`);
+    }
   }
 
   create(): void {
@@ -63,35 +72,25 @@ export class BootScene extends Phaser.Scene {
   }
 
   private createEnemyAnims(): void {
-    this.anims.create({
-      key: 'enemy-idle',
-      frames: this.anims.generateFrameNumbers('enemy', { start: 0, end: 3 }),
-      frameRate: 4,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: 'enemy-chase',
-      frames: this.anims.generateFrameNumbers('enemy', { start: 4, end: 7 }),
-      frameRate: 8,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: 'enemy-hurt',
-      frames: this.anims.generateFrameNumbers('enemy', { start: 8, end: 11 }),
-      frameRate: 10,
-      repeat: 0,
-    });
-    this.anims.create({
-      key: 'enemy-windup',
-      frames: this.anims.generateFrameNumbers('enemy', { start: 12, end: 15 }),
-      frameRate: 8,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: 'enemy-attack',
-      frames: this.anims.generateFrameNumbers('enemy', { start: 16, end: 19 }),
-      frameRate: 12,
-      repeat: 0,
-    });
+    const rows = [
+      ['idle', 4, true],
+      ['chase', 8, true],
+      ['hurt', 10, false],
+      ['windup', 8, true],
+      ['attack', 12, false],
+    ] as const;
+    for (const role of ['crawler', 'sentinel'] as const) {
+      rows.forEach(([state, frameRate, loop], row) => {
+        this.anims.create({
+          key: `${role}-${state}`,
+          frames: this.anims.generateFrameNumbers(role, {
+            start: row * 4,
+            end: row * 4 + 3,
+          }),
+          frameRate,
+          repeat: loop ? -1 : 0,
+        });
+      });
+    }
   }
 }

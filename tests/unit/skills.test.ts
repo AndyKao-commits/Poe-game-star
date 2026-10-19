@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { calculateDamage } from '../../src/core/combat/damage';
+import { calculateDamage, createPlayerStats, rollDamage } from '../../src/core/combat/damage';
+import { deriveCombatStats, equipItem } from '../../src/core/equipment/equipment';
 import {
   createCasterState,
   getSkillDefinition,
@@ -188,3 +189,56 @@ describe('resource helpers', () => {
     expect(state.resources.stamina).toBe(25);
   });
 });
+
+describe('C equipment × A skills × B combat damage contract', () => {
+  it('uses equipped attack for Q/E and target defense for damage mitigation', () => {
+    const naked = createPlayerStats();
+    const weapon = equipItem({}, {
+      id: 'integration-weapon', slot: 'weapon', bonuses: { attack: 7 },
+    });
+    const equipped = deriveCombatStats(naked, weapon);
+    expect(equipped.attack).toBe(19);
+    expect(naked.attack).toBe(12);
+
+    for (const skillId of ['q', 'e'] as const) {
+      const initial = createCasterState();
+      const bareCast = tryCast(initial, skillId, {
+        baseAttack: naked.attack, defense: 2, critChance: 0, rng: () => 1,
+      });
+      const gearCast = tryCast(initial, skillId, {
+        baseAttack: equipped.attack, defense: 2, critChance: 0, rng: () => 1,
+      });
+      expect(bareCast.ok).toBe(true);
+      expect(gearCast.ok).toBe(true);
+      if (!bareCast.ok || !gearCast.ok) continue;
+
+      const multiplier = SKILL_DEFINITIONS[skillId].skillMultiplier;
+      expect(gearCast.damage?.amount).toBe(
+        rollDamage(equipped.attack, 2, { skillMultiplier: multiplier, critChance: 0, rng: () => 1 }).amount,
+      );
+      expect(gearCast.damage!.amount).toBeGreaterThan(bareCast.damage!.amount);
+      expect(gearCast.state.resources.mana).toBe(
+        initial.resources.mana - SKILL_DEFINITIONS[skillId].manaCost,
+      );
+      expect(initial.resources.mana).toBe(50);
+    }
+  });
+
+  it('reduces B enemy incoming damage with C armor defense, without healing', () => {
+    const naked = { ...createPlayerStats(), hp: 80 };
+    const armor = equipItem({}, {
+      id: 'integration-armor', slot: 'armor', bonuses: { defense: 15, maxHp: 20 },
+    });
+    const equipped = deriveCombatStats(naked, armor);
+    expect(equipped.defense).toBe(20);
+    expect(equipped.maxHp).toBe(120);
+    expect(equipped.hp).toBe(80);
+
+    const incoming = (defense: number) =>
+      rollDamage(60, defense, { critChance: 0, rng: () => 1 }).amount;
+    expect(incoming(equipped.defense)).toBeLessThan(incoming(naked.defense));
+    expect(incoming(equipped.defense)).toBe(50);
+    expect(incoming(naked.defense)).toBe(57);
+  });
+});
+

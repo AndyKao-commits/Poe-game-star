@@ -1,0 +1,37 @@
+name: Phase 2 integration QA
+
+on:
+  push:
+    branches:
+      - feat/phase2-runtime-integration
+  pull_request:
+    branches:
+      - feat/phase2-runtime-integration
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Install Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Browser E2E (Chromium + WebKit)
+        run: npx playwright test --project=chromium --project=webkit
+      - name: Art D asset contract
+        run: node scripts/verify-art-d.mjs

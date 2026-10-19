@@ -1,4 +1,14 @@
 import Phaser from 'phaser';
+import { createProgression, xpToNextLevel, type ProgressionState } from '@core/progression/experience';
+import { claimKillReward, createKillRewardLedger, type KillRewardLedger } from '@core/progression/killRewards';
+import { createSeededRng, rollLoot } from '@core/loot/lootTable';
+import { createGroundLootState, placeGroundDrop, pickupGroundDrop, PICKUP_RADIUS_TILES, type GroundLootState } from '@core/loot/groundDrops';
+import { distance, worldToScreen, depthFromFoot } from '@core/iso/coordinates';
+import { ENEMY_LOOT_TABLE } from '@core/loot/enemyLoot';
+import { claimKillLoot, grantLoot, createGearKit, createLootClaimLedger, equipFromInventory, unequipToInventory, type GearKit, type LootClaimLedger } from '@core/loadout/gearKit';
+import type { EquipmentSlot } from '@core/equipment/equipment';
+import type { Rarity } from '@core/loot/rarity';
+import { InventoryPanel } from '@ui/inventoryPanel';
 import { mapPixelBounds } from '@core/collision/grid';
 import { createRuinTestMap, type RuinMapBlueprint } from '@core/map/ruinMap';
 import { clampDeltaMs } from '@core/time/delta';
@@ -14,6 +24,7 @@ import { OrientationGate } from '@ui/orientationGate';
 import { SafariGestureGuard } from '@ui/safariGestureGuard';
 import { InputDebugHud } from '@ui/inputDebugHud';
 import { EnemyController } from '../entities/EnemyController';
+import { encounterSpecForSpawnIndex } from '../encounters/enemyRoster';
 import { PlayerController } from '../entities/PlayerController';
 import { renderTileMap } from '../map/TileRenderer';
 import { CombatFeedbackSystem } from '../systems/CombatFeedback';
@@ -21,6 +32,21 @@ import { InputController } from '../input/InputController';
 
 export class GameScene extends Phaser.Scene {
   private player!: PlayerController;
+  private progression: ProgressionState = createProgression();
+  private rewardLedger: KillRewardLedger = createKillRewardLedger();
+  private readonly lootRng = createSeededRng(0xA51E4);
+  private lootRolls = 0;
+  private gearKit: GearKit = createGearKit();
+  private lootLedger: LootClaimLedger = createLootClaimLedger();
+  private groundLoot: GroundLootState = createGroundLootState();
+  // Keep overflow rewards in memory while physical markers stay capped at 32.
+  // This encounter has a finite enemy roster; reset clears uncollected rewards.
+  private pendingGroundLoot: Array<{ id: string; loot: { itemId: string; rarity: Rarity }; position: { x: number; y: number } }> = [];
+  private readonly groundLootMarkers = new Map<string, Phaser.GameObjects.Arc>();
+  private inventoryPanel: InventoryPanel | null = null;
+  private inventoryOpen = false;
+  private enemyKillIds = new Map<EnemyController, string>();
+  private nextEnemyKillId = 0;
   private enemies: EnemyController[] = [];
   private hud: HudController | null = null;
   private feedback!: CombatFeedbackSystem;
@@ -45,6 +71,15 @@ export class GameScene extends Phaser.Scene {
     this.disposables.reset();
     this.lastDead = null;
     this.lastTouchVisible = null;
+    this.progression = createProgression();
+    this.rewardLedger = createKillRewardLedger();
+    this.lootRolls = 0;
+    this.gearKit = createGearKit();
+    this.lootLedger = createLootClaimLedger();
+    this.clearGroundLoot();
+    this.inventoryOpen = false;
+    this.enemyKillIds.clear();
+    this.nextEnemyKillId = 0;
     this.feedback = new CombatFeedbackSystem(this);
     this.blueprint = createRuinTestMap();
     renderTileMap(this, this.blueprint.map);
@@ -87,10 +122,29 @@ export class GameScene extends Phaser.Scene {
     this.hud?.destroy();
     this.hud = new HudController(hudRoot);
     this.hud.setRestartHandler(() => this.handleRestart());
+    this.hud.setInventoryHandler(() => this.setInventoryOpen(!this.inventoryOpen));
+    this.hud.setPickupHandler(() => {
+      if (!this.inventoryOpen && !this.player.lifecycle.isDead) this.pickupNearestGroundLoot();
+    });
     this.disposables.add(() => {
       this.hud?.destroy();
       this.hud = null;
     });
+
+    const invRoot = document.getElementById('inventory-root');
+    if (!invRoot) throw new Error('Missing #inventory-root');
+    this.inventoryPanel?.destroy();
+    this.inventoryPanel = new InventoryPanel(invRoot, {
+      onClose: () => this.setInventoryOpen(false),
+      onEquip: (itemId, rarity) => this.handleEquip(itemId, rarity),
+      onUnequip: (slot) => this.handleUnequip(slot),
+    });
+    this.disposables.add(() => {
+      this.inventoryPanel?.destroy();
+      this.inventoryPanel = null;
+    });
+    this.player.syncEquipment(this.gearKit.equipment, 'full');
+    this.inventoryPanel.render(this.gearKit);
 
     const touchRoot = document.getElementById('touch-root');
     if (!touchRoot) throw new Error('Missing #touch-root');
@@ -152,9 +206,27 @@ export class GameScene extends Phaser.Scene {
       this.orientationGate = null;
     });
 
+    // Desktop F pickup is an explicit action, never a skill or attack input.
+    const onPickupKey = (e: KeyboardEvent): void => {
+      if (e.code !== 'KeyF' || e.repeat || this.inventoryOpen || this.player.lifecycle.isDead) return;
+      e.preventDefault();
+      this.pickupNearestGroundLoot();
+    };
+    window.addEventListener('keydown', onPickupKey);
+    this.disposables.add(() => window.removeEventListener('keydown', onPickupKey));
+
+    const onInventoryKey = (e: KeyboardEvent): void => {
+      if ((e.code !== 'KeyI' && e.code !== 'KeyB') || e.repeat || this.player.lifecycle.isDead) return;
+      e.preventDefault();
+      this.setInventoryOpen(!this.inventoryOpen);
+    };
+    window.addEventListener('keydown', onInventoryKey);
+    this.disposables.add(() => window.removeEventListener('keydown', onInventoryKey));
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardown());
     this.syncControlAvailability();
+    this.syncPickupAvailability();
   }
 
   update(_time: number, rawDelta: number): void {
@@ -165,9 +237,10 @@ export class GameScene extends Phaser.Scene {
     this.spawnGraceMs = tickSpawnGrace(this.spawnGraceMs, delta);
 
     const dead = this.player.lifecycle.isDead;
+    if (dead && this.inventoryOpen) this.setInventoryOpen(false);
     this.applyDeathControlState(dead);
 
-    if (!dead) {
+    if (!dead && !this.inventoryOpen) {
       this.touchControls?.update(delta);
     }
 
@@ -177,6 +250,15 @@ export class GameScene extends Phaser.Scene {
       enemy.update(delta, this.player, { suppressDamage });
     }
 
+    // An enemy may kill the player during this frame. Re-read lifecycle state
+    // after enemy updates so inventory, controls, skill chrome and HUD agree.
+    const deadAfterCombat = this.player.lifecycle.isDead;
+    if (deadAfterCombat && this.inventoryOpen) this.setInventoryOpen(false);
+    this.applyDeathControlState(deadAfterCombat);
+    this.touchControls?.setSkillUi(this.player.getSkillUiState());
+
+    this.collectEnemyKillRewards();
+    this.syncPickupAvailability();
     this.player.lifecycle.consumeDeathEvent();
 
     this.hud.update({
@@ -185,7 +267,14 @@ export class GameScene extends Phaser.Scene {
       mp: this.player.stats.mp,
       maxMp: this.player.stats.maxMp,
       fps: this.game.loop.actualFps,
-      dead,
+      dead: deadAfterCombat,
+      level: this.progression.level,
+      xp: this.progression.xp,
+      xpToNext: xpToNextLevel(this.progression.level),
+      gold: this.rewardLedger.gold,
+      attack: this.player.stats.attack,
+      defense: this.player.stats.defense,
+      skills: this.player.getCasterState(),
     });
     this.inputDebugHud?.update();
   }
@@ -194,7 +283,7 @@ export class GameScene extends Phaser.Scene {
   private applyDeathControlState(dead: boolean): void {
     if (this.lastDead === dead) return;
     this.lastDead = dead;
-    this.playerInput.setEnabled(!dead);
+    this.playerInput.setEnabled(!dead && !this.inventoryOpen);
     if (dead) {
       // Hide immediately and clear all pointer state
       this.setTouchVisible(false);
@@ -206,9 +295,72 @@ export class GameScene extends Phaser.Scene {
   }
 
   private syncControlAvailability(): void {
-    const show = this.touchWanted && !this.player?.lifecycle.isDead;
+    const show = this.touchWanted && !this.player?.lifecycle.isDead && !this.inventoryOpen;
     this.setTouchVisible(show);
     this.touchControls?.layout();
+  }
+
+  private setInventoryOpen(open: boolean): void {
+    if (open && this.player.lifecycle.isDead) return;
+    this.inventoryOpen = open;
+    this.inventoryPanel?.render(this.gearKit);
+    this.inventoryPanel?.setOpen(open);
+    this.playerInput.setEnabled(!open && !this.player.lifecycle.isDead);
+    this.playerInput.clearTouch();
+    this.touchControls?.setEnabled(!open && !this.player.lifecycle.isDead);
+    this.syncControlAvailability();
+    this.syncPickupAvailability();
+  }
+
+  private handleEquip(itemId: string, rarity: Rarity): void {
+    const result = equipFromInventory(this.gearKit, itemId, rarity);
+    if (result.ok) {
+      this.gearKit = result.kit;
+      this.player.syncEquipment(this.gearKit.equipment);
+      this.refreshHudAfterGearChange();
+    }
+    const feedback = result.ok
+      ? '裝備成功'
+      : result.reason === 'inventory_full' ? '背包已滿，無法更換裝備'
+      : result.reason === 'missing' ? '背包中找不到這件物品'
+      : '無法裝備此物品';
+    this.inventoryPanel?.setStatus(feedback);
+    this.inventoryPanel?.render(this.gearKit);
+  }
+
+  private handleUnequip(slot: EquipmentSlot): void {
+    const result = unequipToInventory(this.gearKit, slot);
+    if (result.ok) {
+      this.gearKit = result.kit;
+      this.player.syncEquipment(this.gearKit.equipment);
+      this.refreshHudAfterGearChange();
+    }
+    const feedback = result.ok
+      ? '卸下裝備成功'
+      : result.reason === 'inventory_full' ? '背包已滿，無法卸下裝備'
+      : '無法卸下此裝備';
+    this.inventoryPanel?.setStatus(feedback);
+    this.inventoryPanel?.render(this.gearKit);
+  }
+
+  /** Refresh D HUD in the same UI action as C equipment mutations. */
+  private refreshHudAfterGearChange(): void {
+    this.hud?.update({
+      hp: this.player.stats.hp,
+      maxHp: this.player.stats.maxHp,
+      mp: this.player.stats.mp,
+      maxMp: this.player.stats.maxMp,
+      fps: this.game.loop.actualFps,
+      dead: this.player.lifecycle.isDead,
+      level: this.progression.level,
+      xp: this.progression.xp,
+      xpToNext: xpToNextLevel(this.progression.level),
+      gold: this.rewardLedger.gold,
+      attack: this.player.stats.attack,
+      defense: this.player.stats.defense,
+      skills: this.player.getCasterState(),
+    });
+    this.touchControls?.setSkillUi(this.player.getSkillUiState());
   }
 
   private setTouchVisible(show: boolean): void {
@@ -225,6 +377,7 @@ export class GameScene extends Phaser.Scene {
     if (!plan.allowed) return;
 
     this.restartCount += 1;
+    this.clearGroundLoot();
 
     if (plan.clearTweens) {
       this.tweens.killAll();
@@ -236,10 +389,12 @@ export class GameScene extends Phaser.Scene {
     if (plan.destroyAllEnemies) {
       for (const enemy of this.enemies) {
         enemy.destroy();
+        this.enemyKillIds.delete(enemy);
       }
       this.enemies = [];
     }
 
+    this.setInventoryOpen(false);
     this.player.respawn();
     this.spawnEnemiesFromBlueprint();
     this.spawnGraceMs = plan.graceMs;
@@ -247,6 +402,8 @@ export class GameScene extends Phaser.Scene {
     // Force re-evaluate visibility after respawn (clears lastDead cache)
     this.lastDead = null;
     this.applyDeathControlState(false);
+    // Restore touch skill chrome immediately rather than waiting for the next frame.
+    this.touchControls?.setSkillUi(this.player.getSkillUiState());
 
     this.cameras.main.startFollow(this.player.entity.sprite, true, 0.12, 0.12);
     this.hud?.update({
@@ -256,17 +413,193 @@ export class GameScene extends Phaser.Scene {
       maxMp: this.player.stats.maxMp,
       fps: this.game.loop.actualFps,
       dead: false,
+      level: this.progression.level,
+      xp: this.progression.xp,
+      xpToNext: xpToNextLevel(this.progression.level),
+      gold: this.rewardLedger.gold,
+      attack: this.player.stats.attack,
+      defense: this.player.stats.defense,
+      skills: this.player.getCasterState(),
     });
   }
 
+  private collectEnemyKillRewards(): void {
+    for (const enemy of this.enemies) {
+      if (enemy.alive) continue;
+      const killId = this.enemyKillIds.get(enemy);
+      if (!killId) continue;
+      // Each spawned enemy instance has a unique ID, including after encounter resets.
+      const claimed = claimKillReward(this.rewardLedger, this.progression, killId, { xp: 25, gold: 5 });
+      if (!claimed) continue;
+      this.rewardLedger = claimed.ledger;
+      this.progression = claimed.progression.state;
+      // Claim identity is shared with XP/gold: one loot roll per unique kill.
+      const drop = rollLoot(ENEMY_LOOT_TABLE, this.lootRng);
+      if (drop) this.lootRolls++;
+      const loot = claimKillLoot(this.lootLedger, this.gearKit, killId, drop);
+      this.lootLedger = loot.ledger;
+      this.gearKit = loot.kit;
+      if (loot.granted) {
+        this.hud?.flashLoot(loot.granted.itemId, loot.granted.rarity);
+        this.inventoryPanel?.render(this.gearKit);
+      } else if (loot.bagFull && loot.drop) {
+        // Keep rejected loot in the world, without repeating the unique kill claim.
+        this.spawnGroundLoot(killId, loot.drop, enemy.position);
+      }
+
+      // A claimed corpse no longer needs to be checked on every frame.
+      this.enemyKillIds.delete(enemy);
+    }
+  }
+
+  /** Physical marker is a temporary Phaser shape until Art D approves item art. */
+  private spawnGroundLoot(
+    id: string,
+    loot: { itemId: string; rarity: Rarity },
+    position: { x: number; y: number },
+    showNotice = true,
+  ): void {
+    const placed = placeGroundDrop(this.groundLoot, { id, loot, position });
+    if (!placed.ok) {
+      if (placed.reason === 'full') {
+        if (!this.pendingGroundLoot.some((entry) => entry.id === id)) {
+          this.pendingGroundLoot.push({ id, loot: { ...loot }, position: { ...position } });
+        }
+        if (showNotice) this.hud?.flashNotice('地面掉落已滿，戰利品暫存；拾取後將補上');
+      } else if (showNotice) {
+        this.hud?.flashNotice('無法產生地面掉落物');
+      }
+      return;
+    }
+    this.groundLoot = placed.state;
+    const screen = worldToScreen(position);
+    const marker = this.add.circle(screen.x, screen.y - 9, 7, 0xffc45c, 0.95);
+    marker.setStrokeStyle(2, 0x3a2e19);
+    marker.setDepth(depthFromFoot(position) + 2);
+    this.groundLootMarkers.set(id, marker);
+    this.syncPickupAvailability();
+    if (showNotice) this.hud?.flashNotice('背包已滿，物品掉落地面（靠近按 F 拾取）');
+  }
+
+  /** Promote queued loot into a free physical marker slot after a pickup. */
+  private promotePendingGroundLoot(): void {
+    if (this.pendingGroundLoot.length === 0) return;
+    const next = this.pendingGroundLoot.shift()!;
+    this.spawnGroundLoot(next.id, next.loot, next.position, false);
+  }
+
+  /** Keep mobile pickup visible only when an actionable drop is within range. */
+  private syncPickupAvailability(): void {
+    if (!this.hud || !this.player) return;
+    const available = !this.inventoryOpen && !this.player.lifecycle.isDead &&
+      this.groundLoot.drops.some((drop) => distance(drop.position, this.player.position) <= PICKUP_RADIUS_TILES);
+    this.hud.setPickupAvailable(available);
+  }
+
+  /** C's immutable pickup transaction is the single source of truth for inventory changes. */
+  private pickupNearestGroundLoot(): void {
+    // Prefer the closest collectible drop. A blocked weapon must not prevent a
+    // slightly farther stackable material from being picked up in a full bag.
+    const nearby = this.groundLoot.drops
+      .map((drop) => ({ drop, range: distance(drop.position, this.player.position) }))
+      .filter(({ range }) => range <= PICKUP_RADIUS_TILES)
+      .sort((a, b) => a.range - b.range);
+    if (nearby.length === 0) {
+      this.hud?.flashNotice('附近沒有可拾取的物品');
+      return;
+    }
+    let bagBlocked = false;
+    for (const { drop } of nearby) {
+      const picked = pickupGroundDrop(this.groundLoot, this.gearKit, drop.id, this.player.position);
+      if (!picked.ok) {
+        if (picked.reason === 'bag_full') {
+          bagBlocked = true;
+          continue;
+        }
+        this.hud?.flashNotice('無法拾取物品');
+        return;
+      }
+      this.groundLoot = picked.state;
+      this.gearKit = picked.kit;
+      this.groundLootMarkers.get(drop.id)?.destroy();
+      this.groundLootMarkers.delete(drop.id);
+      this.promotePendingGroundLoot();
+      this.syncPickupAvailability();
+      this.inventoryPanel?.render(this.gearKit);
+      this.hud?.flashLoot(drop.loot.itemId, drop.loot.rarity);
+      return;
+    }
+    this.hud?.flashNotice(bagBlocked ? '背包已滿，物品仍留在地面' : '無法拾取物品');
+  }
+
+  private clearGroundLoot(): void {
+    for (const marker of this.groundLootMarkers.values()) marker.destroy();
+    this.groundLootMarkers.clear();
+    this.groundLoot = createGroundLootState();
+    this.pendingGroundLoot = [];
+  }
+
+  /** Read-only pending count for overflow regression checks. */
+  getPendingGroundLootCountForTests(): number {
+    return this.pendingGroundLoot.length;
+  }
+
+  /** Read-only integration inspection; does not create or collect loot. */
+  getGroundLootForTests(): GroundLootState {
+    return this.groundLoot;
+  }
+
   private spawnEnemiesFromBlueprint(): void {
-    this.enemies = this.blueprint.enemySpawns.map(
-      (spawn) => new EnemyController(this, spawn, this.blueprint.map, this.feedback),
-    );
+    // Roster assignment lives in enemyRoster — keep this scene touch minimal
+    // so Track E / UI integration can continue owning broader GameScene edits.
+    this.enemies = this.blueprint.enemySpawns.map((spawn, index) => {
+      const enemy = new EnemyController(this, spawn, this.blueprint.map, this.feedback, {
+        encounter: encounterSpecForSpawnIndex(index),
+      });
+      this.enemyKillIds.set(enemy, `enemy-${++this.nextEnemyKillId}`);
+      return enemy;
+    });
+  }
+
+  /** Deterministic E2E fixture injection; never used by normal loot rolls. */
+  grantLootForTests(itemId: string, rarity: Rarity): boolean {
+    const result = grantLoot(this.gearKit, { itemId, rarity });
+    if (!result.ok) return false;
+    this.gearKit = result.kit;
+    this.inventoryPanel?.render(this.gearKit);
+    return true;
+  }
+
+  getGearKitForTests(): GearKit {
+    return this.gearKit;
+  }
+
+  getInventoryOpenForTests(): boolean {
+    return this.inventoryOpen;
+  }
+
+  getLootRollCountForTests(): number {
+    return this.lootRolls;
   }
 
   getRestartCount(): number {
     return this.restartCount;
+  }
+
+  /** Read-only enemy render states for browser Art D regression checks. */
+  getEnemyVisualsForTests(): Array<{
+    alive: boolean;
+    phase: string;
+    telegraphVisible: boolean;
+    telegraphPosition: { x: number; y: number } | null;
+    spritePosition: { x: number; y: number };
+  }> {
+    return this.enemies.map((enemy) => ({
+      alive: enemy.alive,
+      phase: enemy.combatPhase,
+      ...enemy.getVisualFxForTests(),
+      spritePosition: { x: enemy.entity.sprite.x, y: enemy.entity.sprite.y },
+    }));
   }
 
   getEnemyCountForTests(): number {
@@ -303,12 +636,14 @@ export class GameScene extends Phaser.Scene {
 
   private teardown(): void {
     if (this.disposables.isDisposed) return;
+    this.clearGroundLoot();
     this.tweens.killAll();
     this.time.removeAllEvents();
     for (const enemy of this.enemies) {
       enemy.destroy();
     }
     this.enemies = [];
+    this.enemyKillIds.clear();
     this.player?.destroy();
     this.disposables.disposeAll();
   }

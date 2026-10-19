@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import {
   ATTACK_COOLDOWN_MS,
+  ATTACK_ARC_DEGREES,
+  ATTACK_RANGE,
   AttackCooldown,
   filterTargetsInCone,
 } from '@core/combat/attackCone';
@@ -18,14 +20,30 @@ import { moveWithCollision, type TileMapData } from '@core/collision/grid';
 import { createPlayerStateMachine } from '@core/entities/stateMachine';
 import { PlayerLifecycle } from '@core/entities/playerLifecycle';
 import { RESPAWN_GRACE_MS } from '@core/encounter/reset';
+import { deriveCombatStats, type EquipmentState } from '@core/equipment/equipment';
 import { resolveAutoAimAngle } from '@core/input/autoAim';
 import { worldToScreen, type Vec2 } from '@core/iso/coordinates';
 import { facingFromAngle, facingFromVector, type Facing } from '@core/movement/direction';
+import {
+  createCasterState,
+  setDead,
+  tickCooldowns,
+  tryCast,
+  validateCast,
+  type SkillCasterState,
+} from '@core/skills/caster';
+import { getSkillDefinition, type SkillId } from '@core/skills/definitions';
+import type { SkillUiState } from '@core/skills/skillUi';
 import { WorldEntity } from '../world/WorldEntity';
 import type { CombatFeedbackSystem } from '../systems/CombatFeedback';
 import type { InputController } from '../input/InputController';
 
 const MOVE_SPEED = 3.2;
+/** Collision-safe dodge dash length in world tiles. */
+const DODGE_DISTANCE = 1.45;
+/** Arc Burst uses a slightly wider / longer cone than basic / Q. */
+const ARC_BURST_RANGE = 1.7;
+const ARC_BURST_ARC_DEGREES = 150;
 
 export interface Attackable {
   alive: boolean;
@@ -36,18 +54,25 @@ export interface Attackable {
   ): { amount: number; isCrit: boolean; killed: boolean } | void;
 }
 
+export type { SkillUiState };
+
 export class PlayerController {
   readonly entity: WorldEntity;
   stats: CombatStats;
+  private readonly nakedBase: CombatStats = createPlayerStats();
+  private equipment: EquipmentState = {};
   readonly cooldown = new AttackCooldown(ATTACK_COOLDOWN_MS);
   readonly lifecycle = new PlayerLifecycle();
   readonly iframes = new Invulnerability(PLAYER_IFRAME_MS);
   readonly attackTimeline: AttackTimeline;
+  private caster: SkillCasterState;
   private readonly sm = createPlayerStateMachine();
   private facing: Facing = 'se';
   private pendingTargets: Attackable[] = [];
   private readonly spawn: Vec2;
   private deathVisualPlayed = false;
+  /** Transient slash sprites outlive their Tween if a restart cancels all tweens. */
+  private readonly slashEffects = new Set<Phaser.GameObjects.Image>();
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -59,6 +84,12 @@ export class PlayerController {
   ) {
     this.spawn = { ...spawn };
     this.stats = createPlayerStats();
+    this.caster = createCasterState({
+      maxMana: this.stats.maxMp,
+      mana: this.stats.mp,
+      maxStamina: 100,
+      stamina: 100,
+    });
     this.attackTimeline = new AttackTimeline({
       moveLockMs: attackConfig?.moveLockMs ?? 280,
       hitFrameMs: attackConfig?.hitFrameMs ?? 120,
@@ -66,6 +97,32 @@ export class PlayerController {
     });
     this.entity = new WorldEntity(scene, 'player', spawn);
     this.playAnim('idle');
+  }
+
+  /** Re-derive from naked stats so swapping gear never stacks bonuses. */
+  syncEquipment(equipment: EquipmentState, vitals: 'keep' | 'full' = 'keep'): void {
+    this.equipment = equipment;
+    const currentHp = this.stats.hp;
+    const currentMp = this.stats.mp;
+    const derived = deriveCombatStats(this.nakedBase, equipment);
+    this.stats = {
+      ...derived,
+      hp: vitals === 'full' ? derived.maxHp : Math.min(currentHp, derived.maxHp),
+      mp: vitals === 'full' ? derived.maxMp : Math.min(currentMp, derived.maxMp),
+    };
+    // Caster is the authoritative mana/cooldown state; preserve cooldowns on gear changes.
+    this.caster = {
+      ...this.caster,
+      resources: {
+        ...this.caster.resources,
+        mana: this.stats.mp,
+        maxMana: this.stats.maxMp,
+      },
+    };
+  }
+
+  get equipmentState(): EquipmentState {
+    return this.equipment;
   }
 
   get position(): Vec2 {
@@ -84,9 +141,44 @@ export class PlayerController {
     return this.facing;
   }
 
+  /** Authoritative skill caster snapshot for tests / debug. */
+  getCasterState(): SkillCasterState {
+    return this.caster;
+  }
+
+  /** UI-readable cooldowns + resources (single MP authority synced to stats.mp). */
+  getSkillUiState(): SkillUiState {
+    const cooldownTotal: Record<SkillId, number> = {
+      q: getSkillDefinition('q').cooldownMs,
+      e: getSkillDefinition('e').cooldownMs,
+      dodge: getSkillDefinition('dodge').cooldownMs,
+    };
+    const canCast: Record<SkillId, boolean> = { q: false, e: false, dodge: false };
+    const failReason: Record<SkillId, string | null> = { q: null, e: null, dodge: null };
+    for (const id of ['q', 'e', 'dodge'] as SkillId[]) {
+      const check = validateCast(this.caster, id);
+      canCast[id] = check.ok;
+      failReason[id] = check.ok ? null : check.reason;
+    }
+    return {
+      mana: this.caster.resources.mana,
+      maxMana: this.caster.resources.maxMana,
+      stamina: this.caster.resources.stamina,
+      maxStamina: this.caster.resources.maxStamina,
+      cooldowns: { ...this.caster.cooldowns },
+      cooldownTotal,
+      canCast,
+      failReason,
+      dead: this.caster.dead,
+      disabled: this.caster.disabled,
+    };
+  }
+
   update(deltaMs: number, enemies: Attackable[]): void {
     this.iframes.update(deltaMs);
     this.cooldown.update(deltaMs);
+    this.caster = tickCooldowns(this.caster, deltaMs);
+    this.syncManaToStats();
 
     if (this.lifecycle.isDead) {
       this.ensureDeathVisual();
@@ -103,6 +195,10 @@ export class PlayerController {
     }
 
     const sample = this.input.sample();
+
+    for (const skillId of sample.skillPresses) {
+      this.trySkill(skillId, enemies, sample.touchActive || sample.moving);
+    }
 
     if (this.lifecycle.canAttack && sample.attackHeld) {
       this.tryAttack(enemies, sample.touchActive);
@@ -138,6 +234,97 @@ export class PlayerController {
     });
     if (!this.attackTimeline.isActive) {
       this.playAnim('run');
+    }
+  }
+
+  private trySkill(skillId: SkillId, enemies: Attackable[], touchActive: boolean): void {
+    if (!this.lifecycle.canAttack && skillId !== 'dodge') return;
+    if (!this.lifecycle.canMove && skillId === 'dodge') return;
+
+    this.pullManaFromStats();
+    const result = tryCast(this.caster, skillId, {
+      baseAttack: this.stats.attack,
+      defense: 0,
+    });
+    this.caster = result.state;
+    this.syncManaToStats();
+
+    if (!result.ok) return;
+
+    if (skillId === 'dodge') {
+      this.applyDodge(result.iframeGrantedMs);
+      return;
+    }
+
+    // Attack skills: resolve cone immediately with skill multiplier.
+    const aim = this.resolveAim(enemies, touchActive);
+    this.facing = facingFromAngle(aim);
+    this.sm.force('attack');
+    this.playAnim('attack');
+    this.spawnSlash(aim);
+
+    const def = result.skill;
+    const range = skillId === 'e' ? ARC_BURST_RANGE : ATTACK_RANGE;
+    const arcDegrees = skillId === 'e' ? ARC_BURST_ARC_DEGREES : ATTACK_ARC_DEGREES;
+    const hits = filterTargetsInCone(
+      this.entity.position,
+      aim,
+      enemies.filter((e) => e.alive),
+      range,
+      arcDegrees,
+    );
+    // Encode multiplier into the attack stat so EnemyController's GDD roll matches
+    // baseAttack * skillMultiplier without changing the shared Attackable contract.
+    const scaledAttack = this.stats.attack * def.skillMultiplier;
+    for (const target of hits) {
+      const hit = target.takeDamage(scaledAttack, {
+        attackerPos: this.entity.position,
+      });
+      if (hit && this.feedback.enabled) {
+        this.feedback.floatDamage({
+          amount: hit.amount,
+          isCrit: hit.isCrit,
+          world: { ...target.position },
+        });
+        this.feedback.requestHitPause();
+      }
+    }
+  }
+
+  private applyDodge(iframeGrantedMs: number): void {
+    if (iframeGrantedMs > 0) {
+      this.iframes.trigger(iframeGrantedMs);
+    }
+    const angle = this.facingToAngle(this.facing);
+    const delta = {
+      x: Math.cos(angle) * DODGE_DISTANCE,
+      y: Math.sin(angle) * DODGE_DISTANCE,
+    };
+    this.entity.position = moveWithCollision(this.map, this.entity.position, delta);
+    this.feedback.flash(this.entity.sprite, 0xaaccff);
+    this.playAnim('run');
+  }
+
+  private facingToAngle(facing: Facing): number {
+    switch (facing) {
+      case 'e':
+        return 0;
+      case 'se':
+        return Math.PI * 0.25;
+      case 's':
+        return Math.PI * 0.5;
+      case 'sw':
+        return Math.PI * 0.75;
+      case 'w':
+        return Math.PI;
+      case 'nw':
+        return -Math.PI * 0.75;
+      case 'n':
+        return -Math.PI * 0.5;
+      case 'ne':
+        return -Math.PI * 0.25;
+      default:
+        return Math.PI * 0.25;
     }
   }
 
@@ -215,6 +402,7 @@ export class PlayerController {
     if (died) {
       this.sm.force('dead');
       this.attackTimeline.reset();
+      this.caster = setDead(this.caster, true);
       this.input.clearTouch();
       this.ensureDeathVisual();
     }
@@ -247,10 +435,12 @@ export class PlayerController {
   respawn(): void {
     const restored = this.lifecycle.respawn(this.spawn);
     this.stats = restored.stats;
+    this.syncEquipment(this.equipment, 'full');
     this.entity.position = restored.position;
     this.cooldown.reset();
     this.attackTimeline.reset();
     this.pendingTargets = [];
+    this.clearSlashEffects();
     this.deathVisualPlayed = false;
     this.sm.force('idle');
     this.entity.sprite.setAlpha(1);
@@ -259,9 +449,33 @@ export class PlayerController {
     this.entity.sprite.setAngle(0);
     this.iframes.clear();
     this.iframes.trigger(RESPAWN_GRACE_MS);
+    this.caster = createCasterState({
+      maxMana: this.stats.maxMp,
+      mana: this.stats.mp,
+      maxStamina: 100,
+      stamina: 100,
+      dead: false,
+      disabled: false,
+    });
     this.input.clearTouch();
     this.playAnim('idle');
     this.entity.syncTransform();
+  }
+
+  private pullManaFromStats(): void {
+    this.caster = {
+      ...this.caster,
+      resources: {
+        ...this.caster.resources,
+        mana: this.stats.mp,
+        maxMana: this.stats.maxMp,
+      },
+    };
+  }
+
+  private syncManaToStats(): void {
+    this.stats.mp = this.caster.resources.mana;
+    this.stats.maxMp = this.caster.resources.maxMana;
   }
 
   private ensureDeathVisual(): void {
@@ -284,6 +498,7 @@ export class PlayerController {
     };
     const screen = worldToScreen(ahead);
     const slash = this.scene.add.image(screen.x, screen.y, 'slash');
+    this.slashEffects.add(slash);
     slash.setDepth(this.entity.sprite.depth + 1);
     slash.setAlpha(0.95);
     const screenDx = Math.cos(aimAngle) - Math.sin(aimAngle);
@@ -294,7 +509,10 @@ export class PlayerController {
       alpha: 0,
       scale: 1.25,
       duration: 180,
-      onComplete: () => slash.destroy(),
+      onComplete: () => {
+        this.slashEffects.delete(slash);
+        slash.destroy();
+      },
     });
   }
 
@@ -305,7 +523,16 @@ export class PlayerController {
     }
   }
 
+  private clearSlashEffects(): void {
+    for (const slash of this.slashEffects) {
+      this.scene.tweens.killTweensOf(slash);
+      slash.destroy();
+    }
+    this.slashEffects.clear();
+  }
+
   destroy(): void {
+    this.clearSlashEffects();
     this.entity.destroy();
   }
 }
