@@ -2,7 +2,7 @@
   "name": "poe-game-star",
   "version": "0.1.0",
   "private": true,
-  "description": "Dark fantasy isometric ARPG — Phase 1 playable prototype",
+  "description": "Ashen Reliquary: Rebirth — mobile-first urban fantasy action RPG",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,10 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "generate:assets": "node scripts/generate-placeholders.mjs",
-    "prebuild": "npm run generate:assets",
-    "predev": "npm run generate:assets"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "phaser": "^3.87.0"
