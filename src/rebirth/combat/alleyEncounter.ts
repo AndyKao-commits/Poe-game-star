@@ -33,6 +33,10 @@ export const ALLEY_BOUNDS: Readonly<AlleyBounds> = Object.freeze({
   minX: 24, maxX: 456, minY: 24, maxY: 246,
 });
 const MAX_STEP_MS = 50;
+/** A landed hit cannot be immediately stacked by another enemy. */
+export const PLAYER_HIT_IFRAMES_MS = 650;
+/** Dash protects the player during its opening motion. */
+export const DASH_IFRAMES_MS = 200;
 
 function clampToBounds(point: Vec2, bounds: AlleyBounds): Vec2 {
   return {
@@ -73,6 +77,7 @@ export class RebirthAlleyEncounter {
   private defeatedReported = false;
   private defeatedEnemyIds = new Set<string>();
   private events: AlleyEvent[] = [];
+  private invulnerableUntilMs = 0;
 
   constructor(
     player: CombatActor = createPlayer({ x: 110, y: 140 }),
@@ -87,12 +92,18 @@ export class RebirthAlleyEncounter {
   }
 
   action(action: Action, nowMs: number): CombatResult {
+    if (this.player.hp <= 0 || this.enemies.every(enemy => enemy.hp <= 0)) {
+      return { ok: false, action, reason: 'dead' };
+    }
     const result = performAction(this.player, action, this.enemies, nowMs);
     if (!result.ok) return result;
-    if (result.destination) this.player.position = clampToBounds(result.destination, this.bounds);
+    if (result.destination) {
+      this.player.position = clampToBounds(result.destination, this.bounds);
+      this.invulnerableUntilMs = Math.max(this.invulnerableUntilMs, nowMs + DASH_IFRAMES_MS);
+    }
     this.events.push({ kind: 'attack', action, targetId: result.targetId, damage: result.damage });
     this.recordDefeats();
-    return result;
+    return result.destination ? { ...result, destination: { ...this.player.position } } : result;
   }
 
   tick(nowMs: number, stick: StickVector): AlleySnapshot {
@@ -113,7 +124,10 @@ export class RebirthAlleyEncounter {
         this.player.facing = { x: velocity.x / length, y: velocity.y / length };
       }
       regenerateMana(this.player, deltaMs, nowMs);
-      for (const enemy of this.enemies) this.advanceEnemy(enemy, nowMs, deltaMs);
+      for (const enemy of this.enemies) {
+        if (this.player.hp <= 0) break;
+        this.advanceEnemy(enemy, nowMs, deltaMs);
+      }
     }
     this.recordDefeats();
     if (this.player.hp <= 0 && !this.defeatedReported) {
@@ -133,9 +147,10 @@ export class RebirthAlleyEncounter {
     if (enemy.phase === 'telegraph') {
       if (nowMs < enemy.phaseEndsAt) return;
       // Attack resolves once, with range rechecked to allow dodging.
-      if (gap <= enemy.reach) {
+      if (gap <= enemy.reach && nowMs >= this.invulnerableUntilMs && this.player.hp > 0) {
         const damage = damageFor(enemy.attack, 1, this.player.defense);
         this.player.hp = Math.max(0, this.player.hp - damage);
+        this.invulnerableUntilMs = nowMs + PLAYER_HIT_IFRAMES_MS;
         this.events.push({ kind: 'player-hit', enemyId: enemy.id, damage, hp: this.player.hp });
       }
       enemy.phase = 'recovery';
