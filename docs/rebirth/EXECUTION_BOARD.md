@@ -115,3 +115,9 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - Vercel preview for exact commit `c47418c` still reports **ERROR**, `lint_or_type_error`, `npm run build exited with 2`: deployment `dpl_4HRZqxx4TBKPLin8UUK8JaA99iWE` (https://vercel.com/tr19741007-3730s-projects/poe-game-star/4HRZqxx4TBKPLin8UUK8JaA99iWE). This proves at least one further issue or unresolved environment error; no detailed compiler output was accessible.
 - Validation: code fix committed, external build FAIL. Local typecheck/unit/browser/mobile tests NOT RUN. GitHub push CI result not verified.
 - Next: retrieve detailed Vercel/GitHub Actions compiler diagnostics (the deployment events API returned 404 previously); fix only confirmed errors; keep QA gate BLOCKED until successful build and tests.
+
+### 2026-10-19 — Cycle 7: repair browser regression expectations
+- Audited Playwright smoke source directly. Despite Cycle 5 claim, `tests/e2e/smoke.spec.ts` still had two `/100\\/100/` and one `/50\\/50/` HUD assertions. Corrected all to `120/120` and `60/60` in commit `c5f11ca`. The prior replacement had only updated the JS numeric expectations, not the escaped regex assertions; this log supersedes that earlier claim.
+- Vercel preview for `c5f11ca` reports **FAIL** (https://vercel.com/tr19741007-3730s-projects/poe-game-star/FqvoLu7A5DqHAWBk3FExKN79S76V). Browser tests were NOT RUN, because the preview build failed; fixing test assertions does not fix build errors.
+- Attempts to retrieve Vercel deployment events via the connector returned 404 even for confirmed deployment IDs; exact TypeScript diagnostic still unavailable. Local GitHub checkout blocked by DNS.
+- QA gate remains BLOCKED. Next: obtain compiler error text through Vercel build logs or another executable CI source, then fix exact errors; do not add features or claim tests passed.
