@@ -99,9 +99,10 @@ export function performAction(
     actor.lastCastAt = nowMs;
     return { ok: true, action, destination };
   }
-  const target = nearestTarget(actor.position, enemies, rule.range);
+  const strikeRule = action === 'basic' ? COMBAT_RULES.basic : COMBAT_RULES.punch;
+  const target = nearestTarget(actor.position, enemies, strikeRule.range);
   if (!target) return { ok: false, action, reason: 'no-target' };
-  const damage = damageFor(actor.attack, rule.multiplier, target.defense);
+  const damage = damageFor(actor.attack, strikeRule.multiplier, target.defense);
   target.hp = Math.max(0, target.hp - damage);
   actor.mp -= rule.mp;
   actor.readyAt[action] = nowMs + rule.cooldown;
