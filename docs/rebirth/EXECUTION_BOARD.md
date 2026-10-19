@@ -254,7 +254,7 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 
 ## Sequential execution checklist (2026-10-19; Rebirth-only)
 - [x] T01 — Obtain auditable GitHub Actions evidence for npm ci, runtime boundary guard, typecheck, Vitest, build, Playwright Chromium and WebKit. Acceptance: actual run URL, per-step outcomes and logs/artifact; CI configuration alone is NOT PASS.
-- [ ] T02 — Resolve all failures in T01; verify fresh green run at the exact feat/rebirth-v1 commit. Do not infer CI PASS from Vercel READY.
+- [x] T02 — Resolve all failures in T01; verify fresh green run at the exact feat/rebirth-v1 commit. Do not infer CI PASS from Vercel READY.
 - [ ] T03 — Verify Rebirth active runtime has zero legacy/temporary artwork or code dependencies, including browser network checks.
 - [ ] T04 — Produce purpose-made final Rebirth artwork per ART_PRODUCTION_SPEC; inspect and approve each delivered asset before integration. No placeholders.
 - [ ] T05 — Integrate Rebirth-owned alley scene, touch movement, attack, skills and enemies only with approved final art and passing prerequisites.
@@ -301,3 +301,10 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - T01 acceptance met at SHA ae48cdf4. T02 has no CI failures at that SHA. A later board-only commit does not alter code, but its own CI run should be checked separately if strict HEAD-level acceptance is required.
 - Remaining T03: inspect current Rebirth runtime and network behavior against zero-legacy/zero-placeholder policy; T04 formal art assets remain not delivered. Physical iPhone Safari / Android Chrome NOT RUN; G1-G5 not accepted.
 - Next cycle: T03 focused active-runtime import and browser request audit. Do not enable gameplay or integrate provisional artwork.
+
+### 2026-10-19 — T02: fresh green GitHub Actions validation
+- Re-read GAME_CONTRACT v0.7.2 and execution board on feat/rebirth-v1. Verified the exact branch commit `2efb71204a4d075ce8d00b2eea060c5be79bc415` with GitHub Actions public REST API using a fresh isolated Vercel sandbox; no legacy implementation was consulted.
+- GitHub Actions Rebirth QA run `39205123511` (https://github.com/AndyKao-commits/Poe-game-star/actions/runs/39205123511), job `117906174923`: completed SUCCESS, all 15 reported job steps SUCCESS, including checkout, Node 22 setup, npm ci, isolation guard, typecheck, Vitest, production build, browser install, Rebirth gate Chromium/WebKit smoke, QA summary and evidence artifact upload.
+- No actionable failures at the validated SHA; T02 is COMPLETE without source modifications. Older canceled runs were superseded by later pushes due to concurrency, not treated as code failures.
+- Limitations: CI validates only the non-playable Rebirth gate, not gameplay or final art. Physical iOS Safari and Android Chrome remain NOT RUN. No production deployment or main merge.
+- Next: T03 runtime and browser-network zero-legacy/zero-placeholder audit.
