@@ -116,4 +116,40 @@ describe('Rebirth first alley encounter simulation', () => {
     expect(fight.enemies[0].position.x).not.toBe(-900);
     expect(fight.snapshot().events).toEqual([]);
   });
+  it('prevents two synchronized enemies from dealing double damage', () => {
+    const player = createPlayer({ x: 100, y: 140 });
+    const enemies = createAlleyEnemies();
+    enemies[0].position = { x: 120, y: 140 };
+    enemies[1].position = { x: 125, y: 140 };
+    const fight = new RebirthAlleyEncounter(player, enemies);
+    expect(fight.tick(0, idle).events.filter(e => e.kind === 'windup')).toHaveLength(2);
+    const state = fight.tick(500, idle);
+    expect(state.player.hp).toBe(113);
+    expect(state.events.filter(e => e.kind === 'player-hit')).toHaveLength(1);
+    expect(fight.tick(501, idle).events.filter(e => e.kind === 'player-hit')).toHaveLength(0);
+  });
+
+  it('dash grants a brief invulnerability window and returns clamped destination', () => {
+    const player = createPlayer({ x: 440, y: 140 });
+    player.facing = { x: 1, y: 0 };
+    const enemies = createAlleyEnemies();
+    enemies.splice(1);
+    enemies[0].position = { x: 450, y: 140 };
+    enemies[0].telegraphMs = 100;
+    const fight = new RebirthAlleyEncounter(player, enemies);
+    fight.tick(0, idle);
+    const dash = fight.action('dash', 50);
+    expect(dash.destination).toEqual({ x: ALLEY_BOUNDS.maxX, y: 140 });
+    const state = fight.tick(100, idle);
+    expect(state.player.hp).toBe(120);
+    expect(state.events.filter(e => e.kind === 'player-hit')).toHaveLength(0);
+  });
+
+  it('cannot attack after clearing the encounter', () => {
+    const fight = new RebirthAlleyEncounter(createPlayer({ x: 100, y: 140 }), []);
+    const before = fight.player.mp;
+    expect(fight.action('dash', 0).reason).toBe('dead');
+    expect(fight.player.mp).toBe(before);
+  });
+
 });
