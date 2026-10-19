@@ -164,3 +164,12 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - Cycle 14: checked the commit status; Vercel returned success for df8f574. The commit workflow lookup returned no PR runs. This does not establish whether push CI executed.
 - Test results: npm install, typecheck, unit tests and Playwright remain unverified. Physical mobile testing was not run.
 - Next action: inspect the Actions run page and per-step logs. Keep gameplay changes on hold until evidence is available.
+
+### 2026-10-19 — Cycle 8: decouple Rebirth respawn from legacy 100/50 stats
+- User requested removal of old-version information from the new project. Preserve archived branches and main; do NOT bulk-delete active shared engine components without dependency audit.
+- Removed `createPlayerStats()` hardcoded legacy default from `PlayerLifecycle.respawn`; callers must supply fresh combat stats explicitly. Commit `3e4a6d6`.
+- Updated Rebirth PlayerController to call `lifecycle.respawn(spawn, createRebirthPlayerStats())` and use returned canonical stats; removed legacy 100/50 workaround comment. Commit `38d23bf`.
+- Updated legacy lifecycle unit test to supply its expected legacy fixture explicitly, so the reusable lifecycle logic remains version-neutral. Commit `f873c21`.
+- This is a scoped dependency cleanup, not full deletion of legacy assets, UI or combat code. Old enemy controller still supports legacy fallback and Phaser art remains placeholder.
+- Validation: GitHub commits successful; Vercel status for `f873c21` pending at time of check; typecheck/unit/build/mobile QA NOT VERIFIED. No deletions of main or archive.
+- Next: obtain compiler diagnostics and validate; audit remaining legacy runtime dependencies before removing unused files. Do not introduce regressions by deleting code still imported by the new scene.
