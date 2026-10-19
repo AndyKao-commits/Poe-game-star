@@ -39,13 +39,14 @@ export class RebirthJoystickController {
   }
 
   /**
-   * Capture only the first pointer within the left-side activation circle.
+   * Capture the first pointer within the left-side activation zone.
    * A second finger is free to attack/cast and cannot steal the joystick.
    */
   pointerDown(id: number, point: Point): boolean {
     if (this.pointerId !== null || !Number.isInteger(id) || id < 0 ||
         ![point.x, point.y].every(Number.isFinite) ||
-        Math.hypot(point.x - this.fixedCenter.x, point.y - this.fixedCenter.y) > this.config.captureRadius) {
+        Math.abs(point.x - this.fixedCenter.x) > this.config.captureRadius ||
+        Math.abs(point.y - this.fixedCenter.y) > this.config.captureRadius) {
       return false;
     }
     this.pointerId = id;
