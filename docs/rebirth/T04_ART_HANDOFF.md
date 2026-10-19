@@ -1,6 +1,6 @@
 # T04 — ENV-01 / CHAR-01 final art acceptance checklist
 
-Status: **BLOCKED — no approved runtime art**. This is a production handoff, not an asset delivery or approval.
+Status: **USER-APPROVED PROVISIONAL ART DIRECTION (2026-10-19); REPOSITORY INTEGRATION PENDING**. User explicitly accepted CHAR-01 v2 for temporary use with future replacement. This is *not* a full T04 release or gameplay authorization.
 Contract: `docs/rebirth/GAME_CONTRACT.md` v0.7.2; `docs/rebirth/ART_PRODUCTION_SPEC.md` v0.1.
 
 ## ENV-01 — urban-ground-atlas
@@ -28,5 +28,13 @@ Contract: `docs/rebirth/GAME_CONTRACT.md` v0.7.2; `docs/rebirth/ART_PRODUCTION_S
 
 ## Current cycle
 - Generated concept collages are **NOT deliverable sprite sheets**: flattening, irregular frames, embedded UI/signage text, and missing source/metadata violate acceptance.
-- **ENV-01:** NOT DELIVERED. **CHAR-01:** NOT DELIVERED. **T04:** IN PROGRESS.
+- **ENV-01:** candidate delivered in downloadable V2 ZIP; technical and visual acceptance pending. **CHAR-01:** V2 candidate delivered in ZIP and approved by user for provisional use with future replacement; technical/repository integration pending. **T04:** IN PROGRESS.
 - Next: produce individually editable original pixel artwork and review real exports before integrating into runtime. Gameplay gate remains closed.
+
+## 2026-10-19 owner decision — approved provisional use, replace later
+- User: 「勉強可以接受 可以先使用 後續再更替可以嗎」.
+- Interpretation: authorize **CHAR-01 V2** for provisional in-development use, with an explicit replacement path. ENV-01 may accompany it as a candidate for internal development, but is not independently declared visually approved.
+- Source of candidate: `rebirth_t04_v2.zip` conversation artifact. Contains layered `.ora`, RGBA PNG and JSON for CHAR-01 and ENV-01. Binary contents have **not** been committed to the repository. Never imply GitHub contains them until a commit is verified.
+- Future replacement contract: keep logical asset IDs (`CHAR-01`, `ENV-01`), frame dimensions, animation state keys, facing names, feet anchors and collision footprint stable, or introduce a versioned metadata migration. Gameplay systems must not hardcode sprite sheet row positions.
+- Provisional approval is **not** an exception to zero-legacy policy and is **not** final art approval. Retain `approved:false` in candidate metadata until source/PNG/JSON are integrated and verified; distinguish `ownerProvisionalApproval` from `releaseApproved`.
+- Release gate stays closed until other first-batch assets, gameplay and physical phone QA meet their respective gates.
