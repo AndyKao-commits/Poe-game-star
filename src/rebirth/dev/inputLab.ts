@@ -66,7 +66,7 @@ function setup(): void {
   controller = new RebirthJoystickController(layout.joystickCenter, {
     radius: layout.joystickRadius,
     deadZone: 0.16,
-    captureRadius: layout.joystickRadius * 1.3,
+    captureRadius: layout.joystickRadius * 1.8,
   }, mode);
   adapter = new RebirthJoystickPointerAdapter(surface, controller, renderStick);
   [layout.basicAttackCenter, layout.skillOneCenter, layout.skillTwoCenter].forEach(
