@@ -3,7 +3,8 @@ import { expect, test } from '@playwright/test';
 test.describe('Rebirth private Alpha art gate', () => {
   test.use({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true });
 
-  test('does not unlock gameplay with missing original protagonist art', async ({ page }) => {
+  test('does not unlock gameplay if original protagonist art is missing', async ({ page }) => {
+    await page.route('**/rebirth/art/aze-character.png', route => route.fulfill({ status: 404, body: 'not found' }));
     await page.goto('/rebirth-alpha.html');
     await expect(page.locator('#status-title')).toHaveText('戰鬥尚未開放');
     await expect(page.locator('#start')).toBeDisabled();
