@@ -111,7 +111,7 @@ export class RebirthMobileCombatBridge {
         // attack latched forever. Keep holding if a finger is still inside.
         const rect = button.getBoundingClientRect();
         let stillTouching = false;
-        for (let i = 0; i < touchEvent.touches.length; i++) {
+        for (let i = 0; i < (touchEvent.touches?.length ?? 0); i++) {
           const touch = touchEvent.touches.item(i);
           if (touch && touch.clientX >= rect.left && touch.clientX <= rect.right &&
               touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
