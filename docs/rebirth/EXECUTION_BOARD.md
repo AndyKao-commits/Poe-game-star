@@ -219,3 +219,10 @@ Status: BLOCKED — v0.7.2 zero-placeholder / zero-legacy-reference requirement 
 - No legacy source/art consulted; no placeholders created; no image or playable scene represented as complete. Technical sprite/tile sizes are provisional and subject to real device tests. Art direction document is a production specification, not evidence of approved finished art.
 - GitHub commit PASS. npm ci/typecheck/unit/build/Playwright/real-device checks NOT RUN for this documentation-only cycle. Gameplay activation remains BLOCKED.
 - Next bounded task: produce and review the first Rebirth-exclusive finished visual asset(s) to spec; do not wire incomplete art to runtime. Then implement a Rebirth-owned scene renderer when asset acceptance is met.
+
+### 2026-10-19 — Responsive Rebirth entry gate (bounded UI task)
+- Read GAME_CONTRACT v0.7.2 and current board. Only Rebirth-owned entry scene and its smoke test were edited; no legacy files or historical branches consulted.
+- Added portrait-only orientation guidance, responsive heading size and constrained text width to `src/rebirth/scenes/RebirthEntryScene.ts`. Commit `ae983e16b0ce572f5382671a38f9c8847c2dcf37`.
+- Added Playwright assertion for landscape hidden / portrait visible orientation guidance and narrow viewport heading bounds to `tests/e2e/smoke.spec.ts`. Commit `3de80fdd4fdeaab908bf52bc09f686bca8032626`.
+- Evidence: GitHub file writes PASS; Vercel status for `3de80fd` PENDING at inspection (https://vercel.com/tr19741007-3730s-projects/poe-game-star/37jJGES64cqQZ8ZLs2V6veHutJV1). npm ci/typecheck/unit/build/Playwright NOT RUN in this cycle; iPhone Safari and Android Chrome real-device NOT RUN. Do not treat test code as passed execution.
+- No artwork added; non-playable release gate remains active. Next: check Vercel and CI logs for the new commit, execute smoke tests, fix any failures before enabling gameplay.
