@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 export { REQUIRED_ALPHA_ART, verifyAlphaArt } from '../art/alphaReadiness';
+import { verifyAlphaArt } from '../art/alphaReadiness';
 import { RebirthAlleyAlphaScene } from '../scenes/RebirthAlleyAlphaScene';
 import {
   RebirthMobileCombatBridge, type MobileCombatControls,
@@ -63,4 +64,26 @@ export function mountRebirthAlpha(
       game.destroy(true);
     },
   };
+}
+
+/**
+ * Explicit opt-in developer-only bootstrap. Neither successful fetches nor a
+ * green CI run imply artistic approval; caller must supply a separate review
+ * decision. The release entry never imports this function.
+ */
+export async function mountReviewedRebirthAlpha(
+  container: HTMLElement,
+  controls: MobileCombatControls,
+  options: { artReviewed: boolean; fetcher?: typeof fetch },
+): Promise<AlphaHost> {
+  if (!options.artReviewed) {
+    throw new Error('Rebirth Alpha blocked: original art review not approved');
+  }
+  const readiness = await verifyAlphaArt(options.fetcher);
+  if (!readiness.ready) {
+    throw new Error(
+      `Rebirth Alpha blocked: missing [${readiness.missing.join(', ')}], invalid MIME [${readiness.invalidType.join(', ')}]`,
+    );
+  }
+  return mountRebirthAlpha(container, controls);
 }
