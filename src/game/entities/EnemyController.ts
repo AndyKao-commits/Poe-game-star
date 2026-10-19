@@ -7,6 +7,7 @@ import {
   type CombatStats,
 } from '@core/combat/damage';
 import { knockbackDelta } from '@core/combat/feedback';
+import { calculateRebirthDamage, createRebirthEnemyStats, REBIRTH_ENEMIES } from '../../rebirth/core/combat';
 import { moveWithCollision, type TileMapData } from '@core/collision/grid';
 import { createEnemyStateMachine } from '@core/entities/stateMachine';
 import { chaseVelocity } from '@core/ai/chase';
@@ -38,8 +39,11 @@ export class EnemyController {
     private readonly map: TileMapData,
     private readonly feedback: CombatFeedbackSystem,
     maxHp = 40,
+    private readonly rebirthEnemyId?: keyof typeof REBIRTH_ENEMIES,
   ) {
-    this.stats = createEnemyStats(maxHp, 8, 2);
+    this.stats = rebirthEnemyId
+      ? createRebirthEnemyStats(rebirthEnemyId)
+      : createEnemyStats(maxHp, 8, 2);
     this.entity = new WorldEntity(scene, 'enemy', spawn);
     this.entity.sprite.play('enemy-idle');
   }
@@ -96,11 +100,16 @@ export class EnemyController {
   ): { amount: number; isCrit: boolean; killed: boolean } {
     if (this.dead) return { amount: 0, isCrit: false, killed: false };
 
-    const roll = calculateDamage({
-      baseAttack: attackerAttack,
-      defense: this.stats.defense,
-      critChance: DEFAULT_CRIT_CHANCE,
-    });
+    const roll = this.rebirthEnemyId
+      ? calculateRebirthDamage({
+          attack: attackerAttack,
+          targetDefense: this.stats.defense,
+        })
+      : calculateDamage({
+          baseAttack: attackerAttack,
+          defense: this.stats.defense,
+          critChance: DEFAULT_CRIT_CHANCE,
+        });
     const next = applyDamage(this.stats, roll.amount);
     this.stats.hp = next.hp;
     this.brain.forceHurt(220);
@@ -120,7 +129,7 @@ export class EnemyController {
     if (killed) {
       this.die();
     }
-    return { amount: roll.amount, isCrit: roll.isCrit, killed };
+    return { amount: roll.amount, isCrit: 'isCritical' in roll ? roll.isCritical : roll.isCrit, killed };
   }
 
   private die(): void {
