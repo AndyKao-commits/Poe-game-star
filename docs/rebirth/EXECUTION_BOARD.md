@@ -4,6 +4,15 @@ Source of truth: [GAME_CONTRACT.md](./GAME_CONTRACT.md)
 Branch: feat/rebirth-v1
 Status: BLOCKED — v0.7.2 zero-placeholder / zero-legacy-reference requirement not met; build and device QA not verified.
 
+## Current execution order — reset 2026-10-19
+1. P0: enforce Rebirth-only runtime import boundary and maintain the non-playable gate; never consult legacy source or assets.
+2. P0: obtain verifiable npm ci, typecheck, Vitest, build and desktop Chromium/WebKit Playwright results. Vercel build success alone is insufficient.
+3. P1: produce and visually approve purpose-made final Rebirth artwork per ART_PRODUCTION_SPEC; no placeholder assets.
+4. P1: implement Rebirth-owned scene, touch input and combat only after corresponding final assets and QA prerequisites exist.
+5. P2: add exploration, persistence and story incrementally with tests, then separately verify physical iOS Safari and Android Chrome.
+All work stays on feat/rebirth-v1. No main merge, production deploy, legacy inspection or readiness claims without evidence.
+
+
 ## Verified baseline audit
 - Existing repository README identifies Vite + TypeScript + Phaser 3, Vitest and Playwright.
 - Existing `src/main.ts` boots `createGameConfig` into `#game-root`.
@@ -226,3 +235,12 @@ Status: BLOCKED — v0.7.2 zero-placeholder / zero-legacy-reference requirement 
 - Added Playwright assertion for landscape hidden / portrait visible orientation guidance and narrow viewport heading bounds to `tests/e2e/smoke.spec.ts`. Commit `3de80fdd4fdeaab908bf52bc09f686bca8032626`.
 - Evidence: GitHub file writes PASS; Vercel status for `3de80fd` PENDING at inspection (https://vercel.com/tr19741007-3730s-projects/poe-game-star/37jJGES64cqQZ8ZLs2V6veHutJV1). npm ci/typecheck/unit/build/Playwright NOT RUN in this cycle; iPhone Safari and Android Chrome real-device NOT RUN. Do not treat test code as passed execution.
 - No artwork added; non-playable release gate remains active. Next: check Vercel and CI logs for the new commit, execute smoke tests, fix any failures before enabling gameplay.
+
+### 2026-10-19 — Cycle: execution reset and runtime boundary QA
+- Read GAME_CONTRACT v0.7.2, current execution board, and Rebirth-only runtime files before editing. Verified latest previous board commit 94757eac1ee06d5b14669dc0bd4303d1ad56f585.
+- Added `scripts/check-rebirth-boundary.mjs`, a Node-only static guard that traverses the active entry's local import graph but refuses to read paths outside `src/rebirth` (except `src/main.ts`). It rejects unresolved imports, unexpected external dependencies, dynamic imports, forbidden asset paths and changes to the non-playable scene gate. Commit 82bb76adbd727dc7a47959af19d2e9273f9bff41.
+- Inserted this check before typecheck in Rebirth GitHub Actions workflow. Commit 3b53e8c5af23820ccc8e8c12c8611bea6379ba62.
+- Locally ran `node --check` and positive/negative self-tests against a minimal synthetic Rebirth-shaped fixture: PASS; intentionally unresolved outside-boundary import was rejected as expected. These are script self-tests, NOT the full repository's CI run.
+- Vercel commit status for 3b53e8c: PASS (https://vercel.com/tr19741007-3730s-projects/poe-game-star/3pXMzs7RAnsRSnqKhWByS5nq8wLs). GitHub commit-workflow lookup returned no PR-triggered runs; push CI result remains unavailable.
+- Full repo npm ci/typecheck/unit/build/Playwright: NOT RUN in this cycle. Physical iOS Safari/Android Chrome: NOT RUN. Release gate remains CLOSED; no finished art delivered.
+- Next: obtain actual push-triggered GitHub Actions run logs for boundary guard and full QA; fix failures before enabling gameplay.
