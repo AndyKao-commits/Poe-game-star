@@ -94,6 +94,19 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.session.setInput({ stick, basicHeld });
   }
 
+  basicTap(): void {
+    if (this.completed) return;
+    const result = this.session.tapBasic(this.clockMs);
+    if (result.ok) this.showFeedback('命中！');
+    else this.showFeedback(this.reasonText(result.reason));
+  }
+
+  retry(): void {
+    // Restart creates a fresh encounter, while the host reattaches mobile HUD.
+    this.resetInput();
+    this.scene.restart();
+  }
+
   punch(): void {
     if (this.completed) return;
     const result = this.session.trigger('punch', this.clockMs);
