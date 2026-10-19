@@ -7,6 +7,8 @@ export const REQUIRED_ALPHA_ART = [
   '/rebirth/art/aze-character.json',
   '/rebirth/art/fire-brawler-character.png',
   '/rebirth/art/fire-brawler-character.json',
+  '/rebirth/art/urban-ground-atlas.png',
+  '/rebirth/art/urban-ground-atlas.json',
 ] as const;
 
 export interface ArtReadiness {
