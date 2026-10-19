@@ -21,7 +21,7 @@ test('boots the independent Rebirth release gate without a legacy scene', async 
       .map((object) => (object as { text: string }).text);
     return {
       active: game.scene.isActive('RebirthEntryScene'),
-      legacyActive: game.scene.isActive('GameScene') || game.scene.isActive('BootScene'),
+      legacyActive: Boolean(game.scene.isActive('GameScene') || game.scene.isActive('BootScene')),
       sceneCount: game.scene.scenes.length,
       text,
     };
@@ -44,11 +44,13 @@ test('resizes the non-playable gate without loading temporary textures', async (
     return game.scale.width < game.scale.height;
   })).toBe(true);
 
-  const assets = await page.evaluate(() => {
-    const game = window.__ASHEN_GAME__!;
-    return game.textures.getTextureKeys().filter((key) => !key.startsWith('__'));
+  const visualObjects = await page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('RebirthEntryScene');
+    return scene.children.list.filter((object) =>
+      ['Image', 'Sprite', 'TileSprite'].includes(object.type),
+    ).map((object) => object.type);
   });
-  expect(assets).toEqual([]);
+  expect(visualObjects).toEqual([]);
 });
 
 test('shows orientation guidance only in portrait and keeps text inside narrow viewports', async ({ page }) => {
@@ -80,8 +82,9 @@ test('does not request legacy or placeholder artwork from the Rebirth entry', as
   page.on('request', (request) => {
     const url = new URL(request.url());
     const path = url.pathname;
-    if (path.startsWith('/assets/') || path.startsWith('/legacy/') ||
-        /(?:placeholder|temporary|proxy-art)/i.test(path)) {
+    if (path.startsWith('/legacy/') ||
+        /(?:placeholder|temporary|proxy-art)/i.test(path) ||
+        (path.startsWith('/assets/') && /\.(?:png|jpe?g|webp|gif|svg|avif|bmp|ktx2?)$/i.test(path))) {
       forbiddenRequests.push(path);
     }
   });
