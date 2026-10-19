@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { mapPixelBounds } from '@core/collision/grid';
-import { createRuinTestMap, type RuinMapBlueprint } from '@core/map/ruinMap';
+import { createUrbanAlleyMap, type UrbanAlleyBlueprint } from '../../rebirth/map/urbanAlley';
 import { clampDeltaMs } from '@core/time/delta';
 import { DisposableBag } from '@core/scene/disposables';
 import {
@@ -24,7 +24,7 @@ export class GameScene extends Phaser.Scene {
   private enemies: EnemyController[] = [];
   private hud: HudController | null = null;
   private feedback!: CombatFeedbackSystem;
-  private blueprint!: RuinMapBlueprint;
+  private blueprint!: UrbanAlleyBlueprint;
   private readonly disposables = new DisposableBag();
   private restartCount = 0;
   private spawnGraceMs = 0;
@@ -46,7 +46,7 @@ export class GameScene extends Phaser.Scene {
     this.lastDead = null;
     this.lastTouchVisible = null;
     this.feedback = new CombatFeedbackSystem(this);
-    this.blueprint = createRuinTestMap();
+    this.blueprint = createUrbanAlleyMap();
     renderTileMap(this, this.blueprint.map);
 
     this.playerInput = new InputController(this);
