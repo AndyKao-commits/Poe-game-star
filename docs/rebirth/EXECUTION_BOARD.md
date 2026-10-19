@@ -331,3 +331,10 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - Asset acceptance count remains 0/9 final groups. Do not place the board under `public/rebirth/art/` or import it in runtime. Do not use AI board slices as proxy/temporary sprites.
 - Next T04 production task: create individually authored `ENV-01` 32x32 orthogonal ground atlas and `CHAR-01` 32x48 阿澤 four-direction sheet with editable sources, export metadata, native-scale mobile legibility review; then progress other required assets. No gameplay activation before all acceptance gates.
 - GAME_CONTRACT v0.7.2 unchanged; no main merge or production deploy.
+
+### 2026-10-19 — T04 cycle C: concrete art handoff and fail-closed validator
+- Created `docs/rebirth/T04_ART_HANDOFF.md` (commit `d77c13bd0eafa6683fb99c9238a96b2537544504`) with specific editable source, PNG, metadata, direction/state, viewport, provenance and visual sign-off criteria for ENV-01 and CHAR-01.
+- Added `scripts/audit-rebirth-art.mjs` (commit `e265f4a0c95f77cd1ddb9a3550a1e0fc095ed7f8`): read-only validator checks layered source presence, PNG signature/alpha/tile or frame grid, JSON provenance, approval and four-direction player animations. It **never** fabricates assets or unlocks the scene.
+- Verified in isolated sandbox on exact commit e265f4a: `node --check` PASS; `node scripts/audit-rebirth-art.mjs` correctly exits 1 with six unmet checks (source, PNG and metadata missing for each of ENV-01 and CHAR-01). Shell verified expected blocking behavior, exit 0; command `cmd_a120a783957a450494641129e9c5`.
+- A newly generated collage was reviewed and NOT accepted as an editable spritesheet or tileset: flattened panels, embedded UI lettering, no 32x32 or 32x48 verified grid, no provenance source or animation metadata. No art added to runtime or claimed as approved.
+- T04 remains IN PROGRESS, final art 0/9 groups. Next: original editable production of ENV-01 and CHAR-01 assets; re-run validator, visual mobile reviews, and official CI after approved exports.
