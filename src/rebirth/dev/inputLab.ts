@@ -25,8 +25,9 @@ let adapter: RebirthJoystickPointerAdapter;
 let mode: 'fixed' | 'floating' = 'fixed';
 let avatarPosition: Point = { x: innerWidth / 2, y: innerHeight / 2 };
 let lastFrame = performance.now();
-let actionCount = [0, 0, 0];
+const actionCount = [0, 0, 0];
 const actionOwners = new Map<number, number>();
+let lastAction = '尚未觸發';
 
 function safeInsets(): { left: number; right: number; bottom: number } {
   const probe = document.createElement('div');
@@ -71,7 +72,7 @@ function setup(): void {
   [layout.basicAttackCenter, layout.skillOneCenter, layout.skillTwoCenter].forEach(
     (center, index) => place(actions[index], center, layout.actionRadius * 2),
   );
-  actionOwners.clear();
+  clearActionPointers();
   avatarPosition = {
     x: Math.max(24, Math.min(rect.width - 24, avatarPosition.x)),
     y: Math.max(24, Math.min(rect.height - 24, avatarPosition.y)),
@@ -79,41 +80,46 @@ function setup(): void {
   renderStick();
 }
 
-function localPoint(event: PointerEvent): Point {
-  const rect = surface.getBoundingClientRect();
-  return { x: event.clientX - rect.left, y: event.clientY - rect.top };
-}
-function actionIndex(point: Point): number {
-  const centers = [layout.basicAttackCenter, layout.skillOneCenter, layout.skillTwoCenter];
-  return centers.findIndex(center => Math.hypot(center.x - point.x, center.y - point.y) <= layout.actionRadius);
-}
-
-surface.addEventListener('pointerdown', event => {
-  if (controller.snapshot().pointerId === event.pointerId) return;
-  const index = actionIndex(localPoint(event));
-  if (index < 0) return;
-  actionOwners.set(event.pointerId, index);
-  actionCount[index]++;
-  actions[index].style.background = '#4c91b9';
-  event.preventDefault();
-});
-for (const eventName of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-  surface.addEventListener(eventName, event => {
-    const index = actionOwners.get((event as PointerEvent).pointerId);
-    if (index === undefined) return;
-    actionOwners.delete((event as PointerEvent).pointerId);
-    if (![...actionOwners.values()].includes(index)) actions[index].style.background = '';
+/**
+ * Action controls own their pointer events instead of using hit testing on
+ * the entire game surface. iOS Safari needs real hit targets, especially when
+ * a second finger presses attack while the joystick owns pointer capture.
+ */
+actions.forEach((button, index) => {
+  button.addEventListener('pointerdown', event => {
+    event.stopPropagation();
+    if (actionOwners.has(event.pointerId)) return;
+    actionOwners.set(event.pointerId, index);
+    actionCount[index]++;
+    lastAction = ['攻擊', '技能 1', '技能 2'][index];
+    button.classList.add('pressed');
+    try { button.setPointerCapture(event.pointerId); } catch { /* Pointer capture is optional for taps. */ }
+    event.preventDefault();
   });
-}
-window.addEventListener('blur', () => {
-  actionOwners.clear();
-  actions.forEach(action => { action.style.background = ''; });
+  const release = (event: PointerEvent): void => {
+    event.stopPropagation();
+    if (actionOwners.get(event.pointerId) !== index) return;
+    actionOwners.delete(event.pointerId);
+    if (![...actionOwners.values()].includes(index)) button.classList.remove('pressed');
+  };
+  button.addEventListener('pointerup', release);
+  button.addEventListener('pointercancel', release);
+  button.addEventListener('lostpointercapture', release);
+  // Keyboard accessibility; pointerdown already counted touch and mouse.
+  button.addEventListener('click', event => {
+    event.stopPropagation();
+    if (event.detail !== 0) return;
+    actionCount[index]++;
+    lastAction = ['攻擊', '技能 1', '技能 2'][index];
+  });
 });
+function clearActionPointers(): void {
+  actionOwners.clear();
+  actions.forEach(action => action.classList.remove('pressed'));
+}
+window.addEventListener('blur', clearActionPointers);
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    actionOwners.clear();
-    actions.forEach(action => { action.style.background = ''; });
-  }
+  if (document.visibilityState === 'hidden') clearActionPointers();
 });
 
 modeButton.addEventListener('click', () => {
@@ -136,7 +142,7 @@ function frame(now: number): void {
   avatarPosition.y = Math.max(12, Math.min(rect.height - 12, avatarPosition.y + velocity.y * delta / 1000));
   avatar.style.left = avatarPosition.x + 'px';
   avatar.style.top = avatarPosition.y + 'px';
-  status.textContent = `模式:${mode} 移動:${snapshot.stick.magnitude.toFixed(2)} 攻擊:${actionCount[0]} 技1:${actionCount[1]} 技2:${actionCount[2]}`;
+  status.textContent = `模式:${mode} 移動:${snapshot.stick.magnitude.toFixed(2)} 攻擊:${actionCount[0]} 技1:${actionCount[1]} 技2:${actionCount[2]} 最後:${lastAction}`;
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
