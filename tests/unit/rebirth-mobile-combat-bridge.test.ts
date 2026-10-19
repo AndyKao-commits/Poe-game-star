@@ -17,6 +17,7 @@ class FakeElement extends EventTarget {
   releasePointerCapture(id: number) { this.captures.delete(id); }
   append() {}
   remove() {}
+  setAttribute(_name: string, _value: string) {}
 }
 class FakeDocument extends EventTarget {
   visibilityState = 'visible';
@@ -40,7 +41,7 @@ function fixture() {
   };
   const sink: MobileCombatSink = {
     setInput: vi.fn<(stick: StickVector, basicHeld: boolean) => void>(),
-    punch: vi.fn(), dash: vi.fn(), resetInput: vi.fn(),
+    punch: vi.fn(), dash: vi.fn(), basicTap: vi.fn(), resetInput: vi.fn(),
   };
   const win = new FakeWindow();
   const doc = new FakeDocument();
@@ -112,4 +113,17 @@ describe('Rebirth mobile HUD combat bridge', () => {
     f.controls.punch.dispatchEvent(pointer('pointerdown', 7));
     expect(f.sink.punch).toHaveBeenCalledTimes(previous);
   });
+  it('keeps joystick graphics transparent to pointer hit testing', () => {
+    const f = fixture();
+    expect(f.controls.joystickBase.style.pointerEvents).toBe('none');
+    expect(f.controls.joystickKnob.style.pointerEvents).toBe('none');
+    f.bridge.dispose();
+  });
+  it('keyboard basic click executes an immediate attack instead of a zero-frame hold', () => {
+    const f = fixture();
+    f.controls.attack.dispatchEvent(Object.assign(new Event('click'), { detail: 0 }));
+    expect(f.sink.basicTap).toHaveBeenCalledTimes(1);
+    f.bridge.dispose();
+  });
+
 });
