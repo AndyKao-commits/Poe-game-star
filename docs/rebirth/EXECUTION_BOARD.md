@@ -150,3 +150,11 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - Tried fetching deployment build events by exact deployment ID; Vercel API returned 404 `not_found`, so detailed build logs remain inaccessible via that endpoint.
 - QA: preview READY confirmed, but npm ci/typecheck/unit/Playwright NOT independently verified; physical mobile NOT RUN. No gameplay code changes.
 - Next: retrieve GitHub Actions push-run evidence using an accessible Actions endpoint or execute a checked-out repo in a runner; only then resume features.
+
+### 2026-10-19 — Cycle 12: runner-access diagnosis
+- Read canonical contract and current board before work.
+- Checked external commit status for `adfc9c0c6cd04ac5f7466418d07d154e9431d18b`: Vercel `success` (https://vercel.com/tr19741007-3730s-projects/poe-game-star/9MYv58JN7EhquKbFusVA9XqNfMyz).
+- Attempted direct Git remote read from available shell (`git ls-remote https://github.com/AndyKao-commits/Poe-game-star.git refs/heads/feat/rebirth-v1`); failed `Could not resolve host: github.com`. Public GitHub Actions API URL also inaccessible through available web reader.
+- The connected GitHub commit-workflow lookup is PR-filtered and cannot confirm push-triggered QA. No valid npm/Playwright execution evidence obtained.
+- QA: external Vercel build status PASS; npm ci/typecheck/unit/Playwright NOT VERIFIED; physical phones NOT RUN. No game code changes.
+- Next: use an accessible authenticated GitHub Actions runner/log endpoint or local checkout to run required QA; maintain feature freeze until evidence exists.
