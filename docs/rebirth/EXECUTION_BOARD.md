@@ -108,3 +108,10 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - GitHub combined commit status reported Vercel failure; GitHub Actions PR-filtered workflow lookup returned no runs (does not prove there were no push-triggered runs).
 - Local shell cannot reach GitHub (DNS failure); full checkout and npm ci not possible in this environment. Typecheck/unit/build/Playwright locally NOT RUN. iPhone Safari and Android Chrome real-device QA NOT RUN.
 - QA gate **BLOCKED / FAIL** on preview build. Next: obtain actual build logs or accessible CI diagnostics, fix exact type/build errors, rerun; do not claim browser/mobile readiness.
+
+### 2026-10-19 — Cycle 6: first confirmed compile error fix, recheck failed
+- Inspected Rebirth contract, board and live PlayerController/EnemyController/scene code for compiler incompatibilities.
+- Confirmed `calculateRebirthDamage` returns `isCritical`, while PlayerController.receiveAttack returned `roll.isCrit` (nonexistent property). Fixed `isCrit: roll.isCritical` in `src/game/entities/PlayerController.ts`, commit `c47418c`.
+- Vercel preview for exact commit `c47418c` still reports **ERROR**, `lint_or_type_error`, `npm run build exited with 2`: deployment `dpl_4HRZqxx4TBKPLin8UUK8JaA99iWE` (https://vercel.com/tr19741007-3730s-projects/poe-game-star/4HRZqxx4TBKPLin8UUK8JaA99iWE). This proves at least one further issue or unresolved environment error; no detailed compiler output was accessible.
+- Validation: code fix committed, external build FAIL. Local typecheck/unit/browser/mobile tests NOT RUN. GitHub push CI result not verified.
+- Next: retrieve detailed Vercel/GitHub Actions compiler diagnostics (the deployment events API returned 404 previously); fix only confirmed errors; keep QA gate BLOCKED until successful build and tests.
