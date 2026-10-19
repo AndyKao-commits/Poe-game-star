@@ -143,3 +143,10 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - GitHub commit-workflow lookup returned `[]` for this SHA; this API only exposes PR-triggered runs and does not establish whether push-triggered QA passed.
 - Validation: external Vercel build status PASS; npm ci/typecheck/unit/build individually NOT VERIFIED; Playwright Chromium/WebKit NOT RUN/NOT VERIFIED; real-device iOS Safari/Android Chrome NOT RUN.
 - No game code changes or deployment initiated. Next: obtain full GitHub Actions push workflow logs or another executable runner and validate all QA stages before gameplay additions.
+
+### 2026-10-19 — Cycle 11: preview deployment metadata and log-access audit
+- Read canonical contract and board; inspected Vercel preview deployment list scoped to `feat/rebirth-v1`.
+- Latest prior board commit `ed6f99bc8b0f184107113b52cb8cd834047101ad` has deployment `dpl_6Wj9k2cJPuBZCWPp9DiaK8pJsv7a`, state `READY`, target null (preview), matching Git SHA and branch. Inspector: https://vercel.com/tr19741007-3730s-projects/poe-game-star/6Wj9k2cJPuBZCWPp9DiaK8pJsv7a.
+- Tried fetching deployment build events by exact deployment ID; Vercel API returned 404 `not_found`, so detailed build logs remain inaccessible via that endpoint.
+- QA: preview READY confirmed, but npm ci/typecheck/unit/Playwright NOT independently verified; physical mobile NOT RUN. No gameplay code changes.
+- Next: retrieve GitHub Actions push-run evidence using an accessible Actions endpoint or execute a checked-out repo in a runner; only then resume features.
