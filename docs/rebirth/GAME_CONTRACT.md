@@ -1,5 +1,5 @@
 # Ashen Reliquary: Rebirth — CANONICAL GAME CONTRACT
-Version: GDD v0.7.1 (2026-10-19)
+Version: GDD v0.7.2 (2026-10-19)
 Status: APPROVED BASELINE / implementation details may evolve
 Owner decision: autonomous development permitted, preserve consistency and reversibility.
 
@@ -25,7 +25,7 @@ Owner decision: autonomous development permitted, preserve consistency and rever
 - Persistent: equipment, brought-back resources, safehouse upgrades, story progress. Run-only: random magical boosts and temporary run effects.
 - Combat UI: left virtual joystick, right basic attack (hold repeat) + 2 skills; auto-target assist, clear telegraphs, touch-friendly responsive safe areas.
 - Run length target: 5–10 min repeat runs, first guided chapter ~12–16 min (targets, not promises).
-- Do not merge into main, erase legacy data, or production deploy without explicit approval.
+- Do not merge into main or production deploy without explicit approval. Historical archive branches are excluded from Rebirth work and must not be consulted; repository history remains available for disaster recovery only, not design input.
 
 ## 2. Chapter 1 script / narrative beats (APPROVED DIRECTION, dialogue editable)
 A. Late night: protagonist leaves work at 23:40, texts with 小晴, buys noodles, drink and toilet paper; comedy from mundane magic.
@@ -71,10 +71,10 @@ These are starting hypotheses, revise only with test evidence and log the change
 
 ## 6. Engineering governance / protection (LOCKED)
 - Work only on isolated Rebirth branch feat/rebirth-v1 (or a successor dedicated Rebirth branch); do not modify legacy branches or main.
-- Reuse old Phaser 3 + TypeScript modules selectively after audit. Old 2:1 isometric keyboard/mouse architecture is NOT a mandatory Rebirth requirement.
+- Rebirth implementation must be designed from this contract and Rebirth-owned specifications ONLY. Do not inspect, copy, consult, or use legacy game code, design, artwork, story, tests or archived branches as implementation references. Generic technologies (Phaser 3, TypeScript, Vite) may be used, but not legacy-specific implementations.
 - Each work cycle: (1) read this contract, (2) inspect current branch/head and previous changes, (3) choose ONE bounded task, (4) implement, (5) run feasible checks, (6) record what actually passed/failed, (7) note next task.
 - Before writing: check for existing file and branch state; avoid overwrite or racing parallel tasks. Preserve save compatibility/versioning and avoid destructive migrations.
-- Do not mix legacy lore, sprites, combat values or UI into Rebirth without explicit assessment.
+- No legacy lore, sprites, tiles, combat defaults, UI, map, animation or gameplay logic may appear in the Rebirth runtime. No placeholder/temporary/proxy artwork is permitted in Rebirth previews or playable builds; create and review purpose-made Rebirth assets before activating dependent scenes. Unfinished art blocks the corresponding feature or release rather than being replaced by legacy/temporary visuals.
 - Code changes should be reversible, focused, and tracked with commits and test evidence.
 - Do not silently change LOCKED pillars. For significant new design proposals, record them as PROPOSED and seek user decision.
 - No unapproved main merge, destructive operation, production deployment, or fake success claims.
@@ -91,4 +91,5 @@ No gate is complete until evidence is recorded. Compilation alone != mobile QA.
 
 ## 8. Change-control log
 - 2026-10-19 v0.7.1: Created canonical baseline based on confirmed user choices, replacing prior folklore/ancient-magic storyline. No gameplay implementation claimed.
+- 2026-10-19 v0.7.2 APPROVED by owner: prohibit all placeholder artwork and any legacy-game reference or runtime dependency; Rebirth contract is sole design source. Scope: game art, runtime architecture, workflow and QA. Rollback: revert this contract change only with a new explicit owner decision. Existing Rebirth runtime is NONCOMPLIANT until audited and replaced; no readiness claim.
 - Subsequent changes must append: date, proposed/approved status, why, affected systems, tests, rollback plan.
