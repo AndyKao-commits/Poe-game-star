@@ -241,7 +241,7 @@ export class PlayerController {
         world: { ...this.entity.position },
       });
     }
-    return { ...result, amount: roll.amount, isCrit: roll.isCrit };
+    return { ...result, amount: roll.amount, isCrit: roll.isCritical };
   }
 
   respawn(): void {
