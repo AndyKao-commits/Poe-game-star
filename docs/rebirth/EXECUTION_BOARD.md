@@ -2,7 +2,7 @@
 Updated: 2026-10-19
 Source of truth: [GAME_CONTRACT.md](./GAME_CONTRACT.md)
 Branch: feat/rebirth-v1
-Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA still pending)
+Status: BLOCKED — v0.7.2 zero-placeholder / zero-legacy-reference requirement not met; build and device QA not verified.
 
 ## Verified baseline audit
 - Existing repository README identifies Vite + TypeScript + Phaser 3, Vitest and Playwright.
@@ -11,6 +11,15 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - Existing scene includes `InputController`, `TouchControlsOverlay`, `OrientationGate`, `SafariGestureGuard`, `InputDebugHud`, HUD, enemy/player controllers. These are reuse candidates only; suitability has not been tested.
 - Existing `index.html` still titles the app "Ashen Reliquary — Phase 1"; do not treat it as a Rebirth build.
 - Existing `package.json` exposes typecheck, unit tests, build, and Playwright E2E. No tests were run in this audit.
+
+## New owner mandate — v0.7.2 (2026-10-19)
+- [x] Lock canonical contract against all placeholder art and legacy-game reference (commit `7e664fe`).
+- [x] Update hourly automation to prohibit consulting legacy and to prioritize removing runtime dependencies.
+- [ ] Replace `BootScene.ts` image/spritesheet loading of `/assets/tile-*.png`, `/assets/player.png`, `/assets/enemy.png`, `/assets/slash.png` with purpose-built **final** Rebirth artwork, approved against the Rebirth art specification. These are currently active legacy/placeholder visuals; do not describe the current build as compliant.
+- [ ] Replace legacy tile renderer, isometric rendering and sprite animation architecture with Rebirth-specific implementation built only from current contract.
+- [ ] Remove runtime imports of legacy combat defaults and enemy fallbacks; isolate or replace shared lifecycle/input systems without consulting old versions for design.
+- [ ] Clean out obsolete legacy files and test fixtures from Rebirth branch only after reference audit and successful checks. Preserve `main` and archive branches untouched.
+- [ ] Complete QA (typecheck, unit, build, browser, physical devices). No playable/release acceptance until both new art and QA pass.
 
 ## Implementation milestones (in order)
 ### M0: Isolated baseline and audit
@@ -173,3 +182,10 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - This is a scoped dependency cleanup, not full deletion of legacy assets, UI or combat code. Old enemy controller still supports legacy fallback and Phaser art remains placeholder.
 - Validation: GitHub commits successful; Vercel status for `f873c21` pending at time of check; typecheck/unit/build/mobile QA NOT VERIFIED. No deletions of main or archive.
 - Next: obtain compiler diagnostics and validate; audit remaining legacy runtime dependencies before removing unused files. Do not introduce regressions by deleting code still imported by the new scene.
+
+### 2026-10-19 — Cycle 9: enforce owner-directed clean break
+- Owner explicitly prohibited **any temporary assets** and **any consultation/reference to the old version**, as the new canonical specification is complete.
+- Updated GAME_CONTRACT to v0.7.2 commit `7e664fe`, making zero placeholders and zero legacy references hard requirements.
+- Updated and re-enabled hourly automation with this strict rule. Historical branches are excluded from further development work.
+- Current Rebirth branch **does not yet meet the rule**: `BootScene.ts` actively loads `/assets/tile-floor.png`, `/assets/tile-wall.png`, `/assets/tile-obstacle.png`, `/assets/tile-void.png`, `/assets/player.png`, `/assets/enemy.png`, `/assets/slash.png`; the scene still uses older TileRenderer/WorldEntity architecture. These need genuine Rebirth replacements, not renamed old files.
+- Validation: policy and documentation GitHub commits only; asset replacement, build, unit, browser, physical-device QA NOT RUN/NOT COMPLETE. Release gate remains BLOCKED.
