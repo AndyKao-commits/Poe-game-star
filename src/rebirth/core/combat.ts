@@ -116,7 +116,7 @@ export interface RebirthSkillState {
   readonly readyAtMs: Readonly<Record<RebirthSkillId, number>>;
 }
 
-export function createRebirthSkillState(mp = REBIRTH_PLAYER.maxMp): RebirthSkillState {
+export function createRebirthSkillState(mp: number = REBIRTH_PLAYER.maxMp): RebirthSkillState {
   return { mp, readyAtMs: { basic: 0, magicPunch: 0, blink: 0 } };
 }
 
