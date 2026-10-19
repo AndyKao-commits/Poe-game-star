@@ -15,7 +15,7 @@ const failures = [];
 const check = (ok, message) => { if (!ok) failures.push(message); };
 for (const asset of candidates) {
   const base = resolve(root, 'public/rebirth/art', asset.name);
-  const sources = ['.aseprite', '.kra', '.psd'].map(ext => resolve(root, 'art/rebirth/source', asset.name + ext));
+  const sources = ['.ora', '.aseprite', '.kra', '.psd'].map(ext => resolve(root, 'art/rebirth/source', asset.name + ext));
   check(sources.some(existsSync), asset.id + ': editable source missing');
   const pngPath = base + '.png';
   const jsonPath = base + '.json';
