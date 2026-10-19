@@ -2,7 +2,7 @@
 Updated: 2026-10-19
 Source of truth: [GAME_CONTRACT.md](./GAME_CONTRACT.md)
 Branch: feat/rebirth-v1
-Status: IN PROGRESS (isolated Rebirth combat rules implemented; not wired to gameplay)
+Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA still pending)
 
 ## Verified baseline audit
 - Existing repository README identifies Vite + TypeScript + Phaser 3, Vitest and Playwright.
@@ -24,13 +24,13 @@ Status: IN PROGRESS (isolated Rebirth combat rules implemented; not wired to gam
 ### M1: Mobile-first Rebirth shell
 - [x] Switch existing prototype scene to a Rebirth-specific modern alley map blueprint (art and battle logic still legacy placeholders).
 - [ ] Preserve working landscape orientation hints and safe-area touch controls; adjust for two active skills.
-- [ ] Implement movement + hold-to-attack and basic cooldown/MP feedback.
+- [ ] Integrate Rebirth basic attack cooldown/MP recovery and touch skill buttons; legacy attack timeline remains.
 - [ ] Unit tests for control state and viewport layout; mobile browser smoke tests.
 
 ### M2: Combat vertical slice
 - [x] Implement independent player/enemy v0.7 stats and damage formula; added unit tests (NOT RUN).
 - [ ] Wire dash and magical punch to game scene (pure skill cooldown/MP gate implemented, not integrated).
-- [ ] Three enemy archetypes with telegraphs and fair damage windows.
+- [ ] Complete three enemy archetypes' distinct AI and telegraphs (archetype stats and spawns now integrated; AI still shared legacy logic).
 - [ ] Boss 阿彪 phase 1/2 and weak point; test thresholds and recovery.
 - [ ] No claim of balance until mobile playtests.
 
@@ -90,3 +90,12 @@ Status: IN PROGRESS (isolated Rebirth combat rules implemented; not wired to gam
 - Functional limits: styling only; legacy combat stats, legacy tile textures, disabled skill buttons and input behavior remain until separately integrated. HUD placeholder HP/MP labels are NOT proof actual player values are Rebirth values.
 - Validation: GitHub commits successful. Typecheck, unit tests, build, browser screenshot and physical phone QA NOT RUN. Visual design is not yet approved by actual screenshots/device tests.
 - Next: integrate new Rebirth stats into game controllers and wire two usable touch skills; then inspect browser rendering and adjust touch occlusion.
+
+### 2026-10-19 — Cycle 4: integrate Rebirth combat defaults into live scene
+- Read canonical GAME_CONTRACT and current board before edits. Reviewed PlayerController, EnemyController, GameScene and legacy PlayerLifecycle/damage implementations.
+- `src/game/entities/PlayerController.ts`: new Rebirth player stats on initial spawn and respawn; incoming enemy damage uses Rebirth defense formula with no enemy criticals. Adjusted prototype tile-space movement mapping from 150 screen units/sec to 150/32 tile units/sec (requires playtest). Commit `06a9b9c`.
+- `src/game/entities/EnemyController.ts`: optional Rebirth enemy archetype ID selects new HP/ATK/DEF and damage curve; preserves legacy constructor default for compatibility with older tests. All enemy AI/telegraphs still use shared legacy brain. Commit `a4cf4b5`.
+- `src/game/scenes/GameScene.ts`: mapped five tutorial spawns to 火拳混混/電擊仔/結界打手 archetypes. Commit `07cac3d`.
+- Checked GitHub Actions PR-triggered runs for last commit: none returned. This does NOT establish passing CI.
+- Validation: GitHub writes succeeded. Typecheck/unit/build/browser/physical-device tests NOT RUN; no claim of functional readiness. Existing legacy tests may require migration as Rebirth scene defaults change.
+- Next: execute TypeScript checks and combat regression tests; integrate Rebirth basic attack cadence and skills, then distinct enemy telegraphs and touch HUD.
