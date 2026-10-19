@@ -34,7 +34,7 @@ describe('player death and respawn', () => {
     const cooldown = new AttackCooldown(550);
     cooldown.tryStart();
 
-    const restored = life.respawn({ x: 4.5, y: 4.5 });
+    const restored = life.respawn({ x: 4.5, y: 4.5 }, createPlayerStats());
     cooldown.reset();
     timeline.reset();
 
