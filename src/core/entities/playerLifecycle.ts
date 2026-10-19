@@ -1,7 +1,4 @@
-import {
-  createPlayerStats,
-  type CombatStats,
-} from '../combat/damage';
+import type { CombatStats } from '../combat/damage';
 import type { Vec2 } from '../iso/coordinates';
 
 export type PlayerLifeState = 'alive' | 'dead';
@@ -54,11 +51,11 @@ export class PlayerLifecycle {
    * Restore combat vitals and clear dead flag.
    * Returns fresh stats + spawn position for the controller to apply.
    */
-  respawn(spawn: Vec2): { stats: CombatStats; position: Vec2 } {
+  respawn(spawn: Vec2, freshStats: CombatStats): { stats: CombatStats; position: Vec2 } {
     this.life = 'alive';
     this.deathEventEmitted = false;
     return {
-      stats: createPlayerStats(),
+      stats: { ...freshStats },
       position: { ...spawn },
     };
   }
