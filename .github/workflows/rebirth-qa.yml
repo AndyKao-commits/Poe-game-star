@@ -48,6 +48,9 @@ jobs:
       - name: Rebirth gate browser smoke (desktop engines; NOT real phones)
         id: smoke
         run: npx playwright test tests/e2e/smoke.spec.ts --project=chromium --project=webkit
+      - name: Mobile landscape input lab browser checks (emulated, not physical phones)
+        id: input_lab
+        run: npx playwright test tests/e2e/rebirth-input-lab.spec.ts --project=chromium --project=webkit
       - name: Write QA run summary
         if: always()
         env:
@@ -62,6 +65,7 @@ jobs:
           BUILD_OUTCOME: ${{ steps.build.outcome }}
           BROWSERS_OUTCOME: ${{ steps.browsers.outcome }}
           SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          INPUT_LAB_OUTCOME: ${{ steps.input_lab.outcome }}
         run: |
           {
             echo "## Rebirth QA"
@@ -76,7 +80,8 @@ jobs:
             echo "- V2 candidate installer regression tests: $CANDIDATE_INSTALLER_OUTCOME"
             echo "- Production build: $BUILD_OUTCOME"
             echo "- Browser install: $BROWSERS_OUTCOME"
-            echo "- Playwright Chromium/WebKit: $SMOKE_OUTCOME"
+            echo "- Playwright gate Chromium/WebKit: $SMOKE_OUTCOME"
+            echo "- Playwright mobile input lab Chromium/WebKit: $INPUT_LAB_OUTCOME"
             echo "- Browser engines: desktop Chromium and WebKit (not physical mobile devices)"
             echo "- Physical iOS/Android tests: NOT RUN by this workflow"
           } | tee rebirth-qa-summary.md >> "$GITHUB_STEP_SUMMARY"
