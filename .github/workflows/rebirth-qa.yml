@@ -45,6 +45,9 @@ jobs:
       - name: Install Chromium and WebKit
         id: browsers
         run: npx playwright install --with-deps chromium webkit
+      - name: Real Phaser Alpha runtime boot and two-finger input (original review assets)
+        id: alpha_runtime
+        run: npx playwright test tests/e2e/rebirth-alpha-runtime.spec.ts --project=chromium --project=webkit
       - name: Rebirth gate browser smoke (desktop engines; NOT real phones)
         id: smoke
         run: npx playwright test tests/e2e/smoke.spec.ts --project=chromium --project=webkit
@@ -54,9 +57,6 @@ jobs:
       - name: Private Alpha art gate browser checks (emulated, not physical phones)
         id: alpha_gate
         run: npx playwright test tests/e2e/rebirth-alpha-gate.spec.ts --project=chromium --project=webkit
-      - name: Real Phaser Alpha runtime boot and two-finger input (test-only art fixture)
-        id: alpha_runtime
-        run: npx playwright test tests/e2e/rebirth-alpha-runtime.spec.ts --project=chromium --project=webkit
       - name: Actual Chromium touch dispatch regression
         id: touch_gesture
         run: npx playwright test tests/e2e/rebirth-touch-gesture.spec.ts --project=chromium
