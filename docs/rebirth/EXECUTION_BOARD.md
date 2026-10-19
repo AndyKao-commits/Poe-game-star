@@ -17,7 +17,8 @@ Status: BLOCKED — v0.7.2 zero-placeholder / zero-legacy-reference requirement 
 - [x] Update hourly automation to prohibit consulting legacy and to prioritize removing runtime dependencies.
 - [x] Remove automatic placeholder generation from dev/build scripts and delete `scripts/generate-placeholders.mjs` on Rebirth branch (commits `f04fcc7`, `fa5a023`).
 - [ ] Replace `BootScene.ts` image/spritesheet loading of `/assets/tile-*.png`, `/assets/player.png`, `/assets/enemy.png`, `/assets/slash.png` with purpose-built **final** Rebirth artwork, approved against the Rebirth art specification. These are currently active legacy/placeholder visuals; do not describe the current build as compliant.
-- [ ] Replace legacy tile renderer, isometric rendering and sprite animation architecture with Rebirth-specific implementation built only from current contract.
+- [x] Switch active site bootstrap to Rebirth-only config and an asset-free release gate (commits `b1d810a`, `0372c06`, `a419161`); old scene and tile renderer remain in repository but are no longer loaded by `src/main.ts`.
+- [ ] Build the actual Rebirth gameplay renderer and replace legacy tile renderer/isometric architecture with Rebirth-specific implementation built only from current contract.
 - [ ] Remove runtime imports of legacy combat defaults and enemy fallbacks; isolate or replace shared lifecycle/input systems without consulting old versions for design.
 - [ ] Clean out obsolete legacy files and test fixtures from Rebirth branch only after reference audit and successful checks. Preserve `main` and archive branches untouched.
 - [ ] Complete QA (typecheck, unit, build, browser, physical devices). No playable/release acceptance until both new art and QA pass.
@@ -196,3 +197,11 @@ Status: BLOCKED — v0.7.2 zero-placeholder / zero-legacy-reference requirement 
 - Deleted `scripts/generate-placeholders.mjs` on Rebirth branch only. Commit `fa5a023`. Neither main nor archived branches modified.
 - Scope is **asset-generation pipeline only**. Existing static PNG files and `BootScene` references remain and violate v0.7.2; no compliant gameplay preview can be claimed. Next: replace active boot path with Rebirth-only implementation after approved purpose-made art exists; do not use temporary sprites or regenerate placeholders.
 - Validation: GitHub file writes PASS. npm ci/typecheck/unit/build/Playwright/real devices NOT RUN in this cycle. Existing preview status must be checked separately.
+
+### 2026-10-19 — Cycle 11: independent Rebirth bootstrap
+- Created `src/rebirth/scenes/RebirthEntryScene.ts` (commits `b1d810a`, `6d10bd6`): asset-free, honest non-playable release gate with status text; loads no sprites or temporary artwork.
+- Created `src/rebirth/config.ts` (commit `0372c06`) with Phaser configuration that registers only the Rebirth entry scene.
+- Updated `src/main.ts` to instantiate `createRebirthGameConfig` instead of the old `createGameConfig` (commit `a419161`). The active entry path no longer imports old game scenes, textures or animation loaders. Old source files remain physically present and are NOT yet removed.
+- This deliberately disables the legacy gameplay rather than passing it off as Rebirth. The actual Rebirth combat renderer, official art, touch controls and mobile gameplay remain NOT IMPLEMENTED; legacy Playwright smoke assertions for gameplay must be rewritten to match the release gate until actual gameplay exists.
+- Validation: GitHub writes PASS; local npm/typecheck/unit/build/browser/physical phone tests NOT RUN. Preview status to be checked; no production deployment.
+- Next: create Rebirth-only art production specification and final assets, then add a new gameplay scene only when complete assets exist; update QA to distinguish gate page from playable release.
