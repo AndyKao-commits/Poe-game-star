@@ -38,6 +38,8 @@ test.describe('Rebirth input lab (separate from release gate)', () => {
     await page.goto('/rebirth-input-lab.html');
     await page.locator('#attack').tap({ force: true });
     await expect(page.locator('#status')).toContainText('攻擊:1');
+    await expect(page.locator('#status')).toContainText('最後:攻擊');
+    await expect(page.locator('#attack')).not.toHaveClass(/pressed/);
     await page.locator('#mode').click();
     await expect(page.locator('#mode')).toHaveText('浮動搖桿');
   });
