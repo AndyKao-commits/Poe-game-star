@@ -153,4 +153,34 @@ describe('Rebirth first alley encounter simulation', () => {
     expect(fight.player.mp).toBe(before);
   });
 
+  it('successful strike pushes a living enemy away and interrupts its telegraph briefly', () => {
+    const enemies = createAlleyEnemies();
+    enemies.splice(1);
+    enemies[0].position = { x: 135, y: 140 };
+    const fight = new RebirthAlleyEncounter(createPlayer({ x: 100, y: 140 }), enemies);
+    fight.tick(0, idle);
+    expect(fight.enemies[0].phase).toBe('telegraph');
+    expect(fight.action('basic', 100).ok).toBe(true);
+    expect(fight.enemies[0].position.x).toBe(147);
+    expect(fight.enemies[0].phase).toBe('stagger');
+    fight.tick(200, idle);
+    expect(fight.enemies[0].phase).toBe('stagger');
+    fight.tick(310, idle);
+    expect(fight.enemies[0].phase).toBe('chase');
+  });
+
+  it('knockback stays inside arena and a lethal strike does not stagger a corpse', () => {
+    const enemies = createAlleyEnemies();
+    enemies.splice(1);
+    enemies[0].position = { x: 453, y: 140 };
+    const fight = new RebirthAlleyEncounter(createPlayer({ x: 420, y: 140 }), enemies);
+    expect(fight.action('basic', 0).ok).toBe(true);
+    expect(fight.enemies[0].position.x).toBe(ALLEY_BOUNDS.maxX);
+    fight.enemies[0].hp = 1;
+    fight.player.readyAt.basic = 0;
+    expect(fight.action('basic', 500).ok).toBe(true);
+    expect(fight.enemies[0].hp).toBe(0);
+    expect(fight.enemies[0].position.x).toBe(ALLEY_BOUNDS.maxX);
+  });
+
 });
