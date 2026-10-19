@@ -92,7 +92,7 @@ export class RebirthAlleySession {
     if (state.cleared || state.defeated) {
       this.ended = state.defeated;
       this.basicHeld = false;
-      this.stick = { ...IDLE };
+      if (state.defeated) this.stick = { ...IDLE };
     }
     this.lastNow = nowMs;
     return { state, actions };
