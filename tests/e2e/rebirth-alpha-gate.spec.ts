@@ -3,11 +3,11 @@ import { expect, test } from '@playwright/test';
 test.describe('Rebirth private Alpha art gate', () => {
   test.use({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true });
 
-  test('does not unlock gameplay with missing original enemy art', async ({ page }) => {
+  test('does not unlock gameplay with missing original protagonist art', async ({ page }) => {
     await page.goto('/rebirth-alpha.html');
     await expect(page.locator('#status-title')).toHaveText('戰鬥尚未開放');
     await expect(page.locator('#start')).toBeDisabled();
-    await expect(page.locator('#asset-list')).toContainText('fire-brawler-character.png');
+    await expect(page.locator('#asset-list')).toContainText('aze-character.png');
     await expect(page.locator('#controls')).toBeHidden();
     await expect(page.locator('#game canvas')).toHaveCount(0);
   });
