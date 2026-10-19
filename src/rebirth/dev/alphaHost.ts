@@ -26,6 +26,18 @@ export function mountRebirthAlpha(
 ): AlphaHost {
   let bridge: RebirthMobileCombatBridge | null = null;
   const scene = new RebirthAlleyAlphaScene();
+  const attach = (): void => {
+    bridge?.dispose();
+    bridge = new RebirthMobileCombatBridge(controls, scene);
+  };
+  const detach = (): void => {
+    bridge?.dispose();
+    bridge = null;
+  };
+  // Phaser injects scene.events and scene.sys.events asynchronously. Do NOT
+  // subscribe before scene boot; receive hooks from the scene's create() and
+  // shutdown() methods instead, including every restart.
+  scene.setLifecycleHooks(attach, detach);
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: container,
@@ -43,26 +55,11 @@ export function mountRebirthAlpha(
     scene: [scene],
     render: { antialias: false },
   });
-  const attach = (): void => {
-    bridge?.dispose();
-    bridge = new RebirthMobileCombatBridge(controls, scene);
-  };
-  const detach = (): void => {
-    bridge?.dispose();
-    bridge = null;
-  };
-  // The scene is not booted when new Phaser.Game returns. scene.events is
-  // injected later; sys.events exists from the Scene constructor. Register on
-  // the stable emitter now or Alpha startup throws and leaves the HUD hidden.
-  // CREATE occurs again after scene.restart(); once() would leave controls dead.
-  scene.sys.events.on(Phaser.Scenes.Events.CREATE, attach);
-  scene.sys.events.on(Phaser.Scenes.Events.SHUTDOWN, detach);
   return {
     game,
     retry() { scene.retry(); },
     destroy() {
-      scene.sys.events.off(Phaser.Scenes.Events.CREATE, attach);
-      scene.sys.events.off(Phaser.Scenes.Events.SHUTDOWN, detach);
+      scene.setLifecycleHooks(() => {}, () => {});
       detach();
       game.destroy(true);
     },
