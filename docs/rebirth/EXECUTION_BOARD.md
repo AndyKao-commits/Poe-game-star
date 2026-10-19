@@ -19,13 +19,13 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - [x] Record initial engineering audit and task order.
 - [ ] Finish inspecting input/controller, game config, HUD, map interfaces, assets, save subsystem, existing test suites.
 - [x] Reviewed legacy combat damage, input controller and touch overlay; documented divergence from Rebirth.
-- [ ] Run local `npm ci`, `npm run typecheck`, `npm test`, `npm run build` where runner is available; record actual results.
+- [ ] Obtain PASS results for `npm ci`, `npm run typecheck`, `npm test`, `npm run build`; branch CI workflow added, results pending.
 
 ### M1: Mobile-first Rebirth shell
 - [x] Switch existing prototype scene to a Rebirth-specific modern alley map blueprint (art and battle logic still legacy placeholders).
 - [ ] Preserve working landscape orientation hints and safe-area touch controls; adjust for two active skills.
 - [ ] Integrate Rebirth basic attack cooldown/MP recovery and touch skill buttons; legacy attack timeline remains.
-- [ ] Unit tests for control state and viewport layout; mobile browser smoke tests.
+- [ ] Unit tests for control state and viewport layout; browser smoke tests and real-device mobile QA (desktop browser CI added; no real-device proof).
 
 ### M2: Combat vertical slice
 - [x] Implement independent player/enemy v0.7 stats and damage formula; added unit tests (NOT RUN).
@@ -99,3 +99,12 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - Checked GitHub Actions PR-triggered runs for last commit: none returned. This does NOT establish passing CI.
 - Validation: GitHub writes succeeded. Typecheck/unit/build/browser/physical-device tests NOT RUN; no claim of functional readiness. Existing legacy tests may require migration as Rebirth scene defaults change.
 - Next: execute TypeScript checks and combat regression tests; integrate Rebirth basic attack cadence and skills, then distinct enemy telegraphs and touch HUD.
+
+### 2026-10-19 — Cycle 5: QA-first gate and initial failure evidence
+- User instructed to STOP adding features until baseline validation. Hourly automation prompt changed accordingly.
+- Found existing Playwright smoke test `tests/e2e/smoke.spec.ts` still asserting legacy HP100/MP50; updated initial HUD, post-respawn UI and controller expectations to canonical Rebirth HP120/MP60. Commit `03267ef`.
+- Added `.github/workflows/rebirth-qa.yml` on the isolated Rebirth branch: Node22, npm ci, typecheck, unit, build, Chromium/WebKit Playwright smoke; uploads failure evidence. Commit `ec21e1e`. CI is a configured workflow, not proof that it ran.
+- Actual external evidence: Vercel Git preview for `ec21e1e` returned status **ERROR**, `lint_or_type_error`, `npm run build exited with 2`; see deployment `dpl_HpbAuDyUXshWp6Pxc6KounJRvJzb`. Exact compiler diagnostic NOT obtained: deployment events endpoint returned 404. Do not infer specific TS error.
+- GitHub combined commit status reported Vercel failure; GitHub Actions PR-filtered workflow lookup returned no runs (does not prove there were no push-triggered runs).
+- Local shell cannot reach GitHub (DNS failure); full checkout and npm ci not possible in this environment. Typecheck/unit/build/Playwright locally NOT RUN. iPhone Safari and Android Chrome real-device QA NOT RUN.
+- QA gate **BLOCKED / FAIL** on preview build. Next: obtain actual build logs or accessible CI diagnostics, fix exact type/build errors, rerun; do not claim browser/mobile readiness.
