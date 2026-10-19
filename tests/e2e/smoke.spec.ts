@@ -14,8 +14,8 @@ async function waitForGame(page: import('@playwright/test').Page): Promise<void>
 
 test('loads the playable prototype shell', async ({ page }) => {
   await waitForGame(page);
-  await expect(page.locator('[data-hp-text]')).toHaveText(/100\/100/);
-  await expect(page.locator('[data-mp-text]')).toHaveText(/50\/50/);
+  await expect(page.locator('[data-hp-text]')).toHaveText(/120\/100/);
+  await expect(page.locator('[data-mp-text]')).toHaveText(/60\/50/);
   await expect(page.locator('.hud-hints')).toContainText('移動');
   await expect(page.locator('[data-fps]')).toContainText('FPS');
   await expect(page.locator('[data-death]')).toBeHidden();
@@ -72,7 +72,7 @@ test('supports move, attack, death, and full encounter restart', async ({ page }
     await expect(page.locator('[data-death]')).toBeVisible();
     await page.locator('[data-restart]').click();
     await expect(page.locator('[data-death]')).toBeHidden();
-    await expect(page.locator('[data-hp-text]')).toHaveText(/100\/100/);
+    await expect(page.locator('[data-hp-text]')).toHaveText(/120\/100/);
 
     const after = await page.evaluate(() => {
       const game = window.__ASHEN_GAME__;
