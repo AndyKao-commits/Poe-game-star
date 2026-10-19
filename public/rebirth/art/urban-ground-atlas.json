@@ -1,0 +1,30 @@
+{
+  "id": "ENV-01",
+  "creator": "OpenAI original Rebirth pixel artwork",
+  "sourceFile": "art/rebirth/source/urban-ground-atlas.ora",
+  "created": "2026-10-19",
+  "frameWidth": 32,
+  "frameHeight": 32,
+  "columns": 4,
+  "rows": 4,
+  "tileNames": [
+    "asphalt-a",
+    "asphalt-b",
+    "asphalt-c",
+    "wet-asphalt",
+    "sidewalk-a",
+    "sidewalk-b",
+    "concrete",
+    "cracked-concrete",
+    "white-lane",
+    "amber-lane",
+    "curb-upper",
+    "curb-lower",
+    "drain",
+    "manhole",
+    "parking-dashes",
+    "crosswalk"
+  ],
+  "approved": false,
+  "reviewStatus": "CANDIDATE"
+}
