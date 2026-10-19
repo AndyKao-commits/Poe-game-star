@@ -21,6 +21,7 @@ Status: BLOCKED — v0.7.2 zero-placeholder / zero-legacy-reference requirement 
 - [ ] Build the actual Rebirth gameplay renderer and replace legacy tile renderer/isometric architecture with Rebirth-specific implementation built only from current contract.
 - [ ] Remove runtime imports of legacy combat defaults and enemy fallbacks; isolate or replace shared lifecycle/input systems without consulting old versions for design.
 - [ ] Clean out obsolete legacy files and test fixtures from Rebirth branch only after reference audit and successful checks. Preserve `main` and archive branches untouched.
+- [x] Replace legacy gameplay Playwright smoke assertions with release-gate-specific tests; browser execution still NOT RUN (commits `0411a3f`, `93dd9d8`).
 - [ ] Complete QA (typecheck, unit, build, browser, physical devices). No playable/release acceptance until both new art and QA pass.
 
 ## Implementation milestones (in order)
@@ -205,3 +206,9 @@ Status: BLOCKED — v0.7.2 zero-placeholder / zero-legacy-reference requirement 
 - This deliberately disables the legacy gameplay rather than passing it off as Rebirth. The actual Rebirth combat renderer, official art, touch controls and mobile gameplay remain NOT IMPLEMENTED; legacy Playwright smoke assertions for gameplay must be rewritten to match the release gate until actual gameplay exists.
 - Validation: GitHub writes PASS; local npm/typecheck/unit/build/browser/physical phone tests NOT RUN. Preview status to be checked; no production deployment.
 - Next: create Rebirth-only art production specification and final assets, then add a new gameplay scene only when complete assets exist; update QA to distinguish gate page from playable release.
+
+### 2026-10-19 — Cycle 12: align browser QA with the new release gate
+- Replaced `tests/e2e/smoke.spec.ts` assertions tied to the removed legacy active scene with two Rebirth-specific checks: only `RebirthEntryScene` active, release-blocking text present, no extra image textures, and viewport resize response. Commits `0411a3f`, `93dd9d8`.
+- Browser test source now matches the non-playable Rebirth-only bootstrap; **this does not imply playable combat is tested or present**. Gameplay acceptance tests must be authored separately when the Rebirth gameplay scene exists.
+- GitHub file writes PASS. Vercel combined status for `93dd9d8`: PENDING (https://vercel.com/tr19741007-3730s-projects/poe-game-star/4o89MNxYZC7VuEKT96XTprSe8ugY). npm ci/typecheck/unit/build/Playwright/mobile device execution: NOT RUN in this cycle.
+- Next: produce a detailed official Rebirth art specification and asset manifest, then implement purpose-made final sprites/tiles without reusing old art. Keep gate active until asset/QA approval.
