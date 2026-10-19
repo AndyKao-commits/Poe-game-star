@@ -145,8 +145,9 @@ describe('Rebirth first alley encounter simulation', () => {
     expect(state.events.filter(e => e.kind === 'player-hit')).toHaveLength(0);
   });
 
-  it('cannot attack after clearing the encounter', () => {
+  it('cannot attack when the player has fallen', () => {
     const fight = new RebirthAlleyEncounter(createPlayer({ x: 100, y: 140 }), []);
+    fight.player.hp = 0;
     const before = fight.player.mp;
     expect(fight.action('dash', 0).reason).toBe('dead');
     expect(fight.player.mp).toBe(before);
