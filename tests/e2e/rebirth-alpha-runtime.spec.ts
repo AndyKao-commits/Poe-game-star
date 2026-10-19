@@ -69,13 +69,15 @@ test.describe('Rebirth private Alpha actual Phaser boot', () => {
     await dispatch('touchStart', [{ ...moved, id: 1 }, { ...strike, id: 2 }]);
     await expect(page.locator('#attack')).toHaveClass(/pressed/);
     console.log('ALPHA_TOUCH_BEFORE_RELEASE', await page.evaluate(() => ({ pressed: document.getElementById('attack')?.className })));
-    await dispatch('touchEnd', [{ ...moved, id: 1 }]);
+    // CDP touchEnd's touchPoints specifies the touch to END, not the
+    // remaining touches. End the attack pointer (id 2), preserve joystick 1.
+    await dispatch('touchEnd', [{ ...strike, id: 2 }]);
     console.log('ALPHA_TOUCH_AFTER_RELEASE', await page.evaluate(() => ({ pressed: document.getElementById('attack')?.className })));
 
     console.log('MULTITOUCH_RELEASE_DIAGNOSTIC', await page.evaluate(() =>
       (window as Window & { __rebirthTouchEvents?: string[] }).__rebirthTouchEvents));
     await expect(page.locator('#attack')).not.toHaveClass(/pressed/);
-    await dispatch('touchEnd', []);
+    await dispatch('touchEnd', [{ ...moved, id: 1 }]);
     await expect.poll(() => page.locator('#stick-knob').evaluate(
       el => parseFloat((el as HTMLElement).style.left),
     )).toBeCloseTo(finger.x, 0);
