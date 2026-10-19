@@ -12,7 +12,7 @@ export interface AlleyEnemy extends CombatEnemy {
   reach: number;
   telegraphMs: number;
   recoveryMs: number;
-  phase: 'chase' | 'telegraph' | 'recovery';
+  phase: 'chase' | 'telegraph' | 'recovery' | 'stagger';
   phaseEndsAt: number;
 }
 export type AlleyEvent =
@@ -37,6 +37,9 @@ const MAX_STEP_MS = 50;
 export const PLAYER_HIT_IFRAMES_MS = 650;
 /** Dash protects the player during its opening motion. */
 export const DASH_IFRAMES_MS = 200;
+/** A successful hit briefly interrupts the enemy, without allowing infinite stunlock. */
+export const ENEMY_STAGGER_MS = 210;
+export const ENEMY_KNOCKBACK_UNITS = 12;
 
 function clampToBounds(point: Vec2, bounds: AlleyBounds): Vec2 {
   return {
@@ -97,6 +100,22 @@ export class RebirthAlleyEncounter {
     }
     const result = performAction(this.player, action, this.enemies, nowMs);
     if (!result.ok) return result;
+    if (result.targetId && result.damage) {
+      const target = this.enemies.find(enemy => enemy.id === result.targetId);
+      if (target && target.hp > 0) {
+        const gap = distance(target.position, this.player.position);
+        const direction = gap > 0.001
+          ? { x: (target.position.x - this.player.position.x) / gap,
+              y: (target.position.y - this.player.position.y) / gap }
+          : { x: this.player.facing.x, y: this.player.facing.y };
+        target.position = clampToBounds({
+          x: target.position.x + direction.x * ENEMY_KNOCKBACK_UNITS,
+          y: target.position.y + direction.y * ENEMY_KNOCKBACK_UNITS,
+        }, this.bounds);
+        target.phase = 'stagger';
+        target.phaseEndsAt = nowMs + ENEMY_STAGGER_MS;
+      }
+    }
     if (result.destination) {
       this.player.position = clampToBounds(result.destination, this.bounds);
       this.invulnerableUntilMs = Math.max(this.invulnerableUntilMs, nowMs + DASH_IFRAMES_MS);
@@ -140,6 +159,10 @@ export class RebirthAlleyEncounter {
   private advanceEnemy(enemy: AlleyEnemy, nowMs: number, deltaMs: number): void {
     if (enemy.hp <= 0) return;
     const gap = distance(enemy.position, this.player.position);
+    if (enemy.phase === 'stagger') {
+      if (nowMs >= enemy.phaseEndsAt) enemy.phase = 'chase';
+      else return;
+    }
     if (enemy.phase === 'recovery') {
       if (nowMs >= enemy.phaseEndsAt) enemy.phase = 'chase';
       else return;
