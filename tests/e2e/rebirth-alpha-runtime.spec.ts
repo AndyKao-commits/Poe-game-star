@@ -55,6 +55,8 @@ test.describe('Rebirth private Alpha actual Phaser boot', () => {
     const finger = { x: Math.round(base!.x + base!.width / 2), y: Math.round(base!.y + base!.height / 2) };
     const moved = { x: finger.x + 40, y: finger.y - 10 };
     const strike = { x: Math.round(attack!.x + attack!.width / 2), y: Math.round(attack!.y + attack!.height / 2) };
+    await page.evaluate(() => { for (const kind of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'touchcancel']) window.addEventListener(kind, (e) => { const t = e as TouchEvent; console.log('ALPHA_TOUCH_EVENT', kind, (e.target as HTMLElement)?.id, t.touches?.length, t.changedTouches?.length); }, true); });
+    page.on('console', msg => { if (msg.text().startsWith('ALPHA_TOUCH_EVENT')) console.log(msg.text()); });
     const dispatch = (type: string, points: Array<{ x: number; y: number; id: number }>) =>
       client.send('Input.dispatchTouchEvent', {
         type, touchPoints: points.map(p => ({ x: p.x, y: p.y, id: p.id })),
@@ -66,7 +68,10 @@ test.describe('Rebirth private Alpha actual Phaser boot', () => {
     )).toBeGreaterThan(finger.x + 10);
     await dispatch('touchStart', [{ ...moved, id: 1 }, { ...strike, id: 2 }]);
     await expect(page.locator('#attack')).toHaveClass(/pressed/);
+    console.log('ALPHA_TOUCH_BEFORE_RELEASE', await page.evaluate(() => ({ pressed: document.getElementById('attack')?.className })));
     await dispatch('touchEnd', [{ ...moved, id: 1 }]);
+    console.log('ALPHA_TOUCH_AFTER_RELEASE', await page.evaluate(() => ({ pressed: document.getElementById('attack')?.className })));
+
     console.log('MULTITOUCH_RELEASE_DIAGNOSTIC', await page.evaluate(() =>
       (window as Window & { __rebirthTouchEvents?: string[] }).__rebirthTouchEvents));
     await expect(page.locator('#attack')).not.toHaveClass(/pressed/);
