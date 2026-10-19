@@ -12,6 +12,7 @@ import type { Point } from './touchControls';
  */
 export class RebirthJoystickPointerAdapter {
   private disposed = false;
+  private fallbackPointerId: number | null = null;
   private readonly onDown = (event: PointerEvent): void => {
     if (this.disposed) return;
     const captured = this.controller.pointerDown(event.pointerId, this.point(event));
@@ -19,10 +20,9 @@ export class RebirthJoystickPointerAdapter {
     try {
       this.element.setPointerCapture(event.pointerId);
     } catch {
-      // Some browsers reject capture during synthetic / cancelled pointers.
-      this.controller.pointerUp(event.pointerId);
-      this.emit();
-      return;
+      // Some iOS embedded browsers reject capture; keep the gesture alive
+      // using window listeners instead of silently dropping all movement.
+      this.fallbackPointerId = event.pointerId;
     }
     event.preventDefault();
     this.emit();
@@ -38,11 +38,18 @@ export class RebirthJoystickPointerAdapter {
   private readonly onUp = (event: PointerEvent): void => {
     if (this.disposed || this.controller.snapshot().pointerId !== event.pointerId) return;
     this.controller.pointerUp(event.pointerId);
+    if (this.fallbackPointerId === event.pointerId) this.fallbackPointerId = null;
     this.releaseCapture(event.pointerId);
     event.preventDefault();
     this.emit();
   };
 
+  private readonly onWindowMove = (event: PointerEvent): void => {
+    if (event.pointerId === this.fallbackPointerId) this.onMove(event);
+  };
+  private readonly onWindowUp = (event: PointerEvent): void => {
+    if (event.pointerId === this.fallbackPointerId) this.onUp(event);
+  };
   private readonly onLostCapture = (event: PointerEvent): void => {
     if (this.controller.snapshot().pointerId !== event.pointerId) return;
     this.controller.reset();
@@ -67,6 +74,9 @@ export class RebirthJoystickPointerAdapter {
     element.addEventListener('pointerup', this.onUp);
     element.addEventListener('pointercancel', this.onUp);
     element.addEventListener('lostpointercapture', this.onLostCapture);
+    win.addEventListener('pointermove', this.onWindowMove);
+    win.addEventListener('pointerup', this.onWindowUp);
+    win.addEventListener('pointercancel', this.onWindowUp);
     win.addEventListener('blur', this.onBlur);
     win.addEventListener('orientationchange', this.onOrientation);
     doc.addEventListener('visibilitychange', this.onVisibility);
@@ -93,6 +103,7 @@ export class RebirthJoystickPointerAdapter {
     if (this.disposed) return;
     const id = this.controller.snapshot().pointerId;
     this.controller.setMode(mode);
+    this.fallbackPointerId = null;
     if (id !== null) this.releaseCapture(id);
     this.emit();
   }
@@ -101,6 +112,7 @@ export class RebirthJoystickPointerAdapter {
     if (this.disposed) return;
     const id = this.controller.snapshot().pointerId;
     this.controller.reset();
+    this.fallbackPointerId = null;
     if (id !== null) this.releaseCapture(id);
     this.emit();
   }
@@ -114,6 +126,9 @@ export class RebirthJoystickPointerAdapter {
     this.element.removeEventListener('pointerup', this.onUp);
     this.element.removeEventListener('pointercancel', this.onUp);
     this.element.removeEventListener('lostpointercapture', this.onLostCapture);
+    this.win.removeEventListener('pointermove', this.onWindowMove);
+    this.win.removeEventListener('pointerup', this.onWindowUp);
+    this.win.removeEventListener('pointercancel', this.onWindowUp);
     this.win.removeEventListener('blur', this.onBlur);
     this.win.removeEventListener('orientationchange', this.onOrientation);
     this.doc.removeEventListener('visibilitychange', this.onVisibility);
