@@ -501,3 +501,171 @@ body,
   font: inherit;
   letter-spacing: 0.06em;
 }
+
+
+/* ── Rebirth v0.7: modern Taiwanese urban fantasy HUD ─────────────
+   Non-destructive skin over existing DOM; safe-area and pointer routing remain.
+   Old gold/ruin UI belongs only to archived legacy branches. */
+:root {
+  --bg-deep: #07111b;
+  --bg-panel: rgba(7, 20, 33, 0.82);
+  --ink: #f3f7fc;
+  --muted: #9bb0c3;
+  --hp: #ff7469;
+  --mp: #53c7f7;
+  --accent: #73e6ee;
+  --border: rgba(110, 218, 236, 0.22);
+  --hud-font: system-ui, -apple-system, 'Noto Sans TC', 'Segoe UI', sans-serif;
+}
+
+html, body, #app {
+  background: radial-gradient(ellipse at 50% 35%, #172c3a 0%, #07111b 78%);
+}
+
+.hud-panel {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), inset 0 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.hud-stats {
+  top: calc(10px + var(--safe-top));
+  left: calc(12px + var(--safe-left));
+  width: clamp(208px, 25vw, 292px);
+  min-width: 0;
+  padding: 11px 13px 9px;
+}
+
+.hud-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 9px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: #f2f8ff;
+}
+
+.hud-title strong { font-weight: 800; }
+.hud-title-accent { color: var(--accent); font-weight: 650; }
+.hud-kicker {
+  color: #a4b9c9;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.hud-bar-row {
+  grid-template-columns: 28px minmax(0, 1fr) 54px;
+  gap: 7px;
+  margin-bottom: 5px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.hud-bar-row > span:last-child {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.hud-bar-track {
+  height: 9px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.hud-bar-fill { border-radius: inherit; }
+.hud-bar-fill.hp { background: linear-gradient(90deg, #d74251, #ff9276); }
+.hud-bar-fill.mp { background: linear-gradient(90deg, #347fd5, #5be2f3); }
+
+.hud-fps {
+  top: calc(10px + var(--safe-top));
+  right: calc(12px + var(--safe-right));
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+}
+
+.hud-hints {
+  bottom: calc(10px + var(--safe-bottom));
+  left: calc(12px + var(--safe-left));
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.touch-stick-base {
+  border-color: rgba(115, 230, 238, 0.6);
+  background: rgba(6, 22, 35, 0.4);
+  box-shadow: 0 0 0 7px rgba(115, 230, 238, 0.055);
+}
+
+.touch-stick-knob {
+  background: rgba(92, 208, 241, 0.5);
+  border-color: #9deff5;
+}
+
+.touch-attack {
+  background: linear-gradient(145deg, rgba(252, 107, 83, 0.84), rgba(161, 39, 64, 0.8));
+  border: 2px solid rgba(255, 210, 183, 0.8);
+  box-shadow: 0 0 0 5px rgba(255, 120, 94, 0.13), 0 6px 24px rgba(0, 0, 0, 0.3);
+  font-weight: 800;
+}
+
+.touch-attack.is-active {
+  background: linear-gradient(145deg, #ff9c75, #d94159);
+  transform: scale(0.96);
+}
+
+.touch-skill {
+  border-color: rgba(115, 230, 238, 0.5);
+  background: rgba(8, 31, 46, 0.82);
+}
+
+.touch-mode, .touch-hint {
+  border-radius: 10px;
+  background: rgba(7, 20, 33, 0.78);
+  border-color: var(--border);
+}
+
+.hud-death {
+  background: rgba(2, 9, 17, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.hud-death-card, .orient-card {
+  border-radius: 22px;
+  background: linear-gradient(155deg, rgba(22, 49, 67, 0.98), rgba(7, 18, 31, 0.98));
+  border: 1px solid rgba(115, 230, 238, 0.27);
+  box-shadow: 0 24px 65px rgba(0, 0, 0, 0.48);
+}
+
+.hud-death-title { color: #ff9a83; letter-spacing: 0.025em; }
+.hud-restart, .orient-start {
+  border-radius: 12px;
+  border: 1px solid rgba(115, 230, 238, 0.8);
+  background: rgba(45, 160, 190, 0.24);
+  color: #efffff;
+  font-weight: 700;
+  min-height: 44px;
+}
+
+.hud-restart:hover, .orient-start:hover { background: rgba(45, 160, 190, 0.38); }
+.orient-icon { color: #73e6ee; }
+.orient-title { letter-spacing: 0.015em; }
+
+@media (max-height: 440px) and (orientation: landscape) {
+  .hud-stats { padding: 7px 10px; width: 205px; }
+  .hud-title { margin-bottom: 5px; font-size: 11px; }
+  .hud-kicker { font-size: 9px; }
+  .hud-bar-row { margin-bottom: 3px; font-size: 10px; }
+  .hud-fps { font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-bar-fill, .hud-death, .touch-visual { transition: none !important; }
+}
