@@ -38,10 +38,10 @@ export class OrientationGate {
       <div class="orient-gate" data-orient hidden>
         <div class="orient-card">
           <div class="orient-icon" aria-hidden="true">↻</div>
-          <h2 class="orient-title">請橫向持機遊玩</h2>
-          <p class="orient-copy">Ashen Reliquary 為橫向沉浸式 ARPG。請旋轉裝置後繼續。</p>
-          <button type="button" class="orient-start" data-start>開始遊戲</button>
-          <p class="orient-note">若無法自動鎖定方向，請手動旋轉至橫向。</p>
+          <h2 class="orient-title">手機轉橫向，準備開打</h2>
+          <p class="orient-copy">霧川市的夜晚不太平。轉動手機，開始第一章「只是想買個宵夜」。</p>
+          <button type="button" class="orient-start" data-start>進入霧川市</button>
+          <p class="orient-note">iPhone 若無法自動旋轉，請先關閉直向鎖定。</p>
         </div>
       </div>
     `;
