@@ -15,6 +15,7 @@ test.describe('Rebirth private Alpha actual Phaser boot', () => {
     await expect(page.locator('#status-title')).toHaveText('資產已就緒，等待內測');
     await page.locator('#start').click();
     await expect(page.locator('#game canvas')).toBeVisible({ timeout: 15000 });
+    console.log('ALPHA_BOOT_DIAGNOSTIC', await page.locator('#status-title').textContent(), await page.locator('#status-message').textContent());
     await expect(page.locator('#controls')).toBeVisible();
     await expect(page.locator('#status-panel')).toBeHidden();
     await expect(page.locator('#attack')).toBeVisible();
