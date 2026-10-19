@@ -251,3 +251,20 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - Preview build for this commit FAILED: Vercel deployment `dpl_4SE5h2U8tnGjRJSkwBDh3uDLg4X7` reported `BUILD_UTILS_SPAWN_1`, `Command "npm c" exited with 1`. This is a confirmed Vercel install-command configuration error, not a confirmed source/test failure.
 - Updated Vercel project install command to `npm ci` through the connected Vercel project settings API. Setting update returned successfully; a subsequent fresh preview build is required to confirm correction. No manual deployment or production promotion performed.
 - QA: Vercel deployment FAIL before correction; setting update PASS; npm ci/typecheck/unit/build/Playwright NOT RUN locally, push CI result not accessible, physical devices NOT RUN. Next: verify the next preview deployment after `npm ci` correction, obtain full GitHub Actions logs, repair any genuine failures.
+
+## Sequential execution checklist (2026-10-19; Rebirth-only)
+- [ ] T01 — Obtain auditable GitHub Actions evidence for npm ci, runtime boundary guard, typecheck, Vitest, build, Playwright Chromium and WebKit. Acceptance: actual run URL, per-step outcomes and logs/artifact; CI configuration alone is NOT PASS.
+- [ ] T02 — Resolve all failures in T01; verify fresh green run at the exact feat/rebirth-v1 commit. Do not infer CI PASS from Vercel READY.
+- [ ] T03 — Verify Rebirth active runtime has zero legacy/temporary artwork or code dependencies, including browser network checks.
+- [ ] T04 — Produce purpose-made final Rebirth artwork per ART_PRODUCTION_SPEC; inspect and approve each delivered asset before integration. No placeholders.
+- [ ] T05 — Integrate Rebirth-owned alley scene, touch movement, attack, skills and enemies only with approved final art and passing prerequisites.
+- [ ] T06 — Add exploration, run boosts, persistent gear, safehouse and versioned save with unit/migration tests.
+- [ ] T07 — Integrate Chapter 1 narrative, boss, feedback and complete guided loop; repeat QA.
+- [ ] T08 — Verify on physical iPhone Safari and Android Chrome, recording devices, OS/browser versions and observed results.
+- All tasks are sequential gates. Never consult legacy files/branches or deploy production without approval.
+
+### 2026-10-19 — T01 cycle A: per-step CI evidence
+- Re-read GAME_CONTRACT v0.7.2 and EXECUTION_BOARD, verified the existing Rebirth workflow on feat/rebirth-v1 and latest prior board commit 2836597cb8002ec1bd1f00e8e4216d874271f543.
+- Updated .github/workflows/rebirth-qa.yml to assign stable step IDs and include each individual outcome (success/failure/skipped) in the GitHub Actions step summary and artifact. Commit 08b439bf628dc879988eed0fa50e850faa6d541b.
+- Environment probe: local Node v22.16.0, npm v10.9.2 available; git ls-remote failed with DNS error resolving github.com. Thus full checkout and local npm ci/typecheck/unit/build/Playwright NOT RUN.
+- CI run lookup via available GitHub connector remains limited to PR-triggered workflows; push run logs NOT VERIFIED. No claims of test pass. Physical mobile NOT RUN. Next T01 cycle: inspect push-run per-step report on GitHub Actions, or secure a permitted runnable checkout.
