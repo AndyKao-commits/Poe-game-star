@@ -99,7 +99,7 @@ export class RebirthMobileCombatBridge {
       let endedOnThisButton = false;
       for (let i = 0; i < touchEvent.changedTouches.length; i++) {
         const target = touchEvent.changedTouches.item(i)?.target;
-        if (target === button || (target instanceof Node && button.contains(target))) {
+        if (target === button || (typeof Node !== 'undefined' && target instanceof Node && button.contains(target))) {
           endedOnThisButton = true;
           break;
         }
