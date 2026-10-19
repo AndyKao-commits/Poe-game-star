@@ -15,6 +15,7 @@ Status: BLOCKED — v0.7.2 zero-placeholder / zero-legacy-reference requirement 
 ## New owner mandate — v0.7.2 (2026-10-19)
 - [x] Lock canonical contract against all placeholder art and legacy-game reference (commit `7e664fe`).
 - [x] Update hourly automation to prohibit consulting legacy and to prioritize removing runtime dependencies.
+- [x] Remove automatic placeholder generation from dev/build scripts and delete `scripts/generate-placeholders.mjs` on Rebirth branch (commits `f04fcc7`, `fa5a023`).
 - [ ] Replace `BootScene.ts` image/spritesheet loading of `/assets/tile-*.png`, `/assets/player.png`, `/assets/enemy.png`, `/assets/slash.png` with purpose-built **final** Rebirth artwork, approved against the Rebirth art specification. These are currently active legacy/placeholder visuals; do not describe the current build as compliant.
 - [ ] Replace legacy tile renderer, isometric rendering and sprite animation architecture with Rebirth-specific implementation built only from current contract.
 - [ ] Remove runtime imports of legacy combat defaults and enemy fallbacks; isolate or replace shared lifecycle/input systems without consulting old versions for design.
@@ -189,3 +190,9 @@ Status: BLOCKED — v0.7.2 zero-placeholder / zero-legacy-reference requirement 
 - Updated and re-enabled hourly automation with this strict rule. Historical branches are excluded from further development work.
 - Current Rebirth branch **does not yet meet the rule**: `BootScene.ts` actively loads `/assets/tile-floor.png`, `/assets/tile-wall.png`, `/assets/tile-obstacle.png`, `/assets/tile-void.png`, `/assets/player.png`, `/assets/enemy.png`, `/assets/slash.png`; the scene still uses older TileRenderer/WorldEntity architecture. These need genuine Rebirth replacements, not renamed old files.
 - Validation: policy and documentation GitHub commits only; asset replacement, build, unit, browser, physical-device QA NOT RUN/NOT COMPLETE. Release gate remains BLOCKED.
+
+### 2026-10-19 — Cycle 10: remove automatic placeholder generation
+- Per owner mandate v0.7.2, removed `generate:assets`, `predev`, `prebuild` from Rebirth `package.json` and updated project description. Commit `f04fcc7`.
+- Deleted `scripts/generate-placeholders.mjs` on Rebirth branch only. Commit `fa5a023`. Neither main nor archived branches modified.
+- Scope is **asset-generation pipeline only**. Existing static PNG files and `BootScene` references remain and violate v0.7.2; no compliant gameplay preview can be claimed. Next: replace active boot path with Rebirth-only implementation after approved purpose-made art exists; do not use temporary sprites or regenerate placeholders.
+- Validation: GitHub file writes PASS. npm ci/typecheck/unit/build/Playwright/real devices NOT RUN in this cycle. Existing preview status must be checked separately.
