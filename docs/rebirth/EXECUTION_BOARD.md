@@ -253,7 +253,7 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - QA: Vercel deployment FAIL before correction; setting update PASS; npm ci/typecheck/unit/build/Playwright NOT RUN locally, push CI result not accessible, physical devices NOT RUN. Next: verify the next preview deployment after `npm ci` correction, obtain full GitHub Actions logs, repair any genuine failures.
 
 ## Sequential execution checklist (2026-10-19; Rebirth-only)
-- [ ] T01 — Obtain auditable GitHub Actions evidence for npm ci, runtime boundary guard, typecheck, Vitest, build, Playwright Chromium and WebKit. Acceptance: actual run URL, per-step outcomes and logs/artifact; CI configuration alone is NOT PASS.
+- [x] T01 — Obtain auditable GitHub Actions evidence for npm ci, runtime boundary guard, typecheck, Vitest, build, Playwright Chromium and WebKit. Acceptance: actual run URL, per-step outcomes and logs/artifact; CI configuration alone is NOT PASS.
 - [ ] T02 — Resolve all failures in T01; verify fresh green run at the exact feat/rebirth-v1 commit. Do not infer CI PASS from Vercel READY.
 - [ ] T03 — Verify Rebirth active runtime has zero legacy/temporary artwork or code dependencies, including browser network checks.
 - [ ] T04 — Produce purpose-made final Rebirth artwork per ART_PRODUCTION_SPEC; inspect and approve each delivered asset before integration. No placeholders.
@@ -293,3 +293,11 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - PASS: `npm ci --no-audit --no-fund` (62 packages), `node scripts/check-rebirth-boundary.mjs` (3-file graph), `npm run typecheck`, `npm test` (28 files / 128 tests), `npm run build`, `npx playwright test tests/e2e/smoke.spec.ts --project=chromium --project=webkit --reporter=dot` (combined command completed successfully). Browser scope is non-playable gate smoke, not gameplay QA. The command log was truncated by the connector but the sequential set -e command exited 0.
 - Outstanding T01: obtain independent GitHub Actions push-run URL, individual step outcomes and artifact, ideally Node 22 with runner's npm. No iOS Safari/Android Chrome physical testing; G1-G5 still BLOCKED. Vite chunk size warning observed, non-fatal.
 - Next: collect CI evidence or continue Rebirth-only QA improvements; do not enable gameplay without official art and acceptance.
+
+### 2026-10-19 — T01 cycle C: authoritative GitHub Actions evidence obtained
+- Re-read GAME_CONTRACT v0.7.2 and current board; no legacy source or archived branches accessed.
+- Queried GitHub Actions public REST endpoint for Rebirth QA push runs on feat/rebirth-v1 from isolated Vercel Sandbox. Exact run ID `39204309682`, head SHA `ae48cdf4bb03e353acca009260bd75bcd51466f6`, status `completed`, conclusion `success`: https://github.com/AndyKao-commits/Poe-game-star/actions/runs/39204309682 .
+- Verified job `117903697097` conclusion success and individually inspected step outcomes: checkout PASS, setup Node 22 PASS, npm ci PASS, Rebirth runtime isolation PASS, TypeScript typecheck PASS, Vitest PASS, production build PASS, Chromium/WebKit browser installation PASS, Rebirth gate Playwright smoke PASS, summary PASS, QA evidence artifact upload PASS.
+- T01 acceptance met at SHA ae48cdf4. T02 has no CI failures at that SHA. A later board-only commit does not alter code, but its own CI run should be checked separately if strict HEAD-level acceptance is required.
+- Remaining T03: inspect current Rebirth runtime and network behavior against zero-legacy/zero-placeholder policy; T04 formal art assets remain not delivered. Physical iPhone Safari / Android Chrome NOT RUN; G1-G5 not accepted.
+- Next cycle: T03 focused active-runtime import and browser request audit. Do not enable gameplay or integrate provisional artwork.
