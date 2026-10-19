@@ -136,3 +136,10 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - Corrected to `/120\\/120/` and `/60\\/60/` (initial HUD and respawn). Commit `1e8e34fc204b617348bdeffd3561e2efceaba4ea`.
 - QA: source assertions verified by inspection PASS; npm ci/typecheck/unit/build/Playwright execution NOT RUN in this cycle. Prior commit `2006eb5` had external Vercel success; this new commit is not yet independently validated. Physical iPhone/Android NOT RUN.
 - Next: obtain CI run logs and execute Playwright smoke; no new gameplay features until QA gates pass.
+
+### 2026-10-19 — Cycle 10: verify smoke-fix commit external status
+- Read canonical GAME_CONTRACT and current EXECUTION_BOARD on `feat/rebirth-v1`; verified prior board commit `4f6c278a3317638923587dbf0d367a102a54e17e` through GitHub commit metadata.
+- GitHub combined status for smoke-fix commit `1e8e34fc204b617348bdeffd3561e2efceaba4ea`: Vercel `success`, https://vercel.com/tr19741007-3730s-projects/poe-game-star/23Hhg32ynehgrQvSTrhNvuATgW5k.
+- GitHub commit-workflow lookup returned `[]` for this SHA; this API only exposes PR-triggered runs and does not establish whether push-triggered QA passed.
+- Validation: external Vercel build status PASS; npm ci/typecheck/unit/build individually NOT VERIFIED; Playwright Chromium/WebKit NOT RUN/NOT VERIFIED; real-device iOS Safari/Android Chrome NOT RUN.
+- No game code changes or deployment initiated. Next: obtain full GitHub Actions push workflow logs or another executable runner and validate all QA stages before gameplay additions.
