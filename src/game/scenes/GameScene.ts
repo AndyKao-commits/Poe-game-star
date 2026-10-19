@@ -260,8 +260,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnEnemiesFromBlueprint(): void {
+    // First alley tutorial: three approved street-crime archetypes, not the boss.
+    const enemyTypes = ['fireBrawler', 'shockCaster', 'barrierGuard', 'fireBrawler', 'shockCaster'] as const;
     this.enemies = this.blueprint.enemySpawns.map(
-      (spawn) => new EnemyController(this, spawn, this.blueprint.map, this.feedback),
+      (spawn, index) => new EnemyController(
+        this, spawn, this.blueprint.map, this.feedback, 40, enemyTypes[index] ?? 'fireBrawler',
+      ),
     );
   }
 
