@@ -74,3 +74,18 @@ test('shows orientation guidance only in portrait and keeps text inside narrow v
   await expect.poll(async () => (await readGate()).hintVisible).toBe(true);
   await expect.poll(async () => (await readGate()).headingWithinViewport).toBe(true);
 });
+
+test('does not request legacy or placeholder artwork from the Rebirth entry', async ({ page }) => {
+  const forbiddenRequests: string[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    const path = url.pathname;
+    if (path.startsWith('/assets/') || path.startsWith('/legacy/') ||
+        /(?:placeholder|temporary|proxy-art)/i.test(path)) {
+      forbiddenRequests.push(path);
+    }
+  });
+  await waitForRebirthGate(page);
+  await page.waitForLoadState('networkidle');
+  expect(forbiddenRequests).toEqual([]);
+});
