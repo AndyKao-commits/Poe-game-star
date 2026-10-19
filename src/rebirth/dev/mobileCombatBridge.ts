@@ -89,6 +89,31 @@ export class RebirthMobileCombatBridge {
       if (![...this.actionOwners.values()].includes(name)) button.classList.remove('pressed');
       this.publish();
     };
+    // Some multi-touch WebKit/Chromium sequences deliver touchend without a
+    // matching pointerup for the action pointer (especially after capture).
+    // The changed touch retains its original target even when the finger
+    // finishes outside the button. Release only this action's owners.
+    const touchFinish = (event: Event): void => {
+      const touchEvent = event as TouchEvent;
+      if (!touchEvent.changedTouches) return;
+      let endedOnThisButton = false;
+      for (let i = 0; i < touchEvent.changedTouches.length; i++) {
+        const target = touchEvent.changedTouches.item(i)?.target;
+        if (target === button || (target instanceof Node && button.contains(target))) {
+          endedOnThisButton = true;
+          break;
+        }
+      }
+      if (!endedOnThisButton) return;
+      for (const [id, action] of this.actionOwners) {
+        if (action === name) {
+          this.actionOwners.delete(id);
+          this.attackOwners.delete(id);
+        }
+      }
+      button.classList.remove('pressed');
+      this.publish();
+    };
     const keyboard = (event: Event): void => {
       const click = event as MouseEvent;
       if (click.detail !== 0 || this.disposed) return;
@@ -105,6 +130,8 @@ export class RebirthMobileCombatBridge {
     // release on window even when the button never receives pointerup.
     this.listen(this.win, 'pointerup', up);
     this.listen(this.win, 'pointercancel', up);
+    this.listen(this.win, 'touchend', touchFinish);
+    this.listen(this.win, 'touchcancel', touchFinish);
     this.listen(button, 'click', keyboard);
   }
 
