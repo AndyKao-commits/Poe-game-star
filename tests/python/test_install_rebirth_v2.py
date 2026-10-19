@@ -52,5 +52,64 @@ class TestInstaller(unittest.TestCase):
                 self.assertEqual((root / paths[0]).read_bytes(), payloads[paths[0]])
 
 
+    def test_missing_member_is_rejected_before_any_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            paths = ['public/rebirth/art/aze-character.png', 'art/rebirth/source/aze-character.ora']
+            payloads = {p: f'fixture-{i}'.encode() for i, p in enumerate(paths)}
+            manifest = {
+                'CHAR-01': {'files': {p: hashlib.sha256(data).hexdigest() for p, data in payloads.items()}},
+                'ENV-01': {'files': {}},
+            }
+            (root / 'manifest.json').write_text(json.dumps(manifest))
+            archive = root / 'candidate.zip'
+            with zipfile.ZipFile(archive, 'w') as z:
+                z.writestr(paths[0], payloads[paths[0]])
+            with patch.object(installer, 'ROOT', root), patch.object(installer, 'MANIFEST', root / 'manifest.json'):
+                with patch('sys.argv', ['installer', str(archive)]):
+                    with self.assertRaisesRegex(ValueError, 'Missing required archive member'):
+                        installer.main()
+            self.assertFalse((root / 'public').exists())
+
+    def test_duplicate_member_is_rejected_before_any_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = 'public/rebirth/art/aze-character.png'
+            payload = b'original-v2'
+            manifest = {
+                'CHAR-01': {'files': {path: hashlib.sha256(payload).hexdigest()}},
+                'ENV-01': {'files': {}},
+            }
+            (root / 'manifest.json').write_text(json.dumps(manifest))
+            archive = root / 'candidate.zip'
+            with zipfile.ZipFile(archive, 'w') as z:
+                z.writestr(path, payload)
+                z.writestr(path, payload)
+            with patch.object(installer, 'ROOT', root), patch.object(installer, 'MANIFEST', root / 'manifest.json'):
+                with patch('sys.argv', ['installer', str(archive)]):
+                    with self.assertRaisesRegex(ValueError, 'Duplicate required ZIP member'):
+                        installer.main()
+            self.assertFalse((root / 'public').exists())
+
+    def test_oversized_member_is_rejected_before_any_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = 'public/rebirth/art/aze-character.png'
+            payload = b'x' * 2_000_001
+            manifest = {
+                'CHAR-01': {'files': {path: hashlib.sha256(payload).hexdigest()}},
+                'ENV-01': {'files': {}},
+            }
+            (root / 'manifest.json').write_text(json.dumps(manifest))
+            archive = root / 'candidate.zip'
+            with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:
+                z.writestr(path, payload)
+            with patch.object(installer, 'ROOT', root), patch.object(installer, 'MANIFEST', root / 'manifest.json'):
+                with patch('sys.argv', ['installer', str(archive)]):
+                    with self.assertRaisesRegex(ValueError, 'Invalid archive member'):
+                        installer.main()
+            self.assertFalse((root / 'public').exists())
+
+
 if __name__ == '__main__':
     unittest.main()
