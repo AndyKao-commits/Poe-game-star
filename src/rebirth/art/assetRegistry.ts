@@ -1,7 +1,7 @@
 /**
  * Rebirth-exclusive asset contract. Metadata only; no assets are loaded here.
- * Binary candidate files are still external to GitHub and MUST NOT be requested
- * by the release-gated entry scene until their source/export/metadata is checked in.
+ * Some candidates remain external to GitHub. Checked-in candidate art is
+ * still NOT approved for public runtime use without visual/device QA.
  */
 export const rebirthArtRegistry = {
   'CHAR-01': {
@@ -13,6 +13,21 @@ export const rebirthArtRegistry = {
     source: 'art/rebirth/source/aze-character.ora',
     image: '/rebirth/art/aze-character.png',
     metadata: '/rebirth/art/aze-character.json',
+    frameWidth: 32,
+    frameHeight: 48,
+    facing: ['south', 'west', 'east', 'north'],
+    states: ['idle', 'walk', 'attack', 'hurt'],
+    replaceable: true,
+  },
+  'CHAR-02': {
+    id: 'CHAR-02',
+    revision: 'v1',
+    usage: 'candidate-review',
+    ownerProvisionalApproval: false,
+    releaseApproved: false,
+    source: 'art/rebirth/source/fire-brawler-character.ora',
+    image: '/rebirth/art/fire-brawler-character.png',
+    metadata: '/rebirth/art/fire-brawler-character.json',
     frameWidth: 32,
     frameHeight: 48,
     facing: ['south', 'west', 'east', 'north'],
