@@ -132,6 +132,7 @@ export class RebirthMobileCombatBridge {
 
   private place(el: HTMLElement, x: number, y: number, size: number): void {
     el.style.position = 'absolute';
+    el.style.transform = 'translate(-50%, -50%)';
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
     el.style.width = `${size}px`;
