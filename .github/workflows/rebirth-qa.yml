@@ -54,6 +54,9 @@ jobs:
       - name: Private Alpha art gate browser checks (emulated, not physical phones)
         id: alpha_gate
         run: npx playwright test tests/e2e/rebirth-alpha-gate.spec.ts --project=chromium --project=webkit
+      - name: Real Phaser Alpha runtime boot and two-finger input (test-only art fixture)
+        id: alpha_runtime
+        run: npx playwright test tests/e2e/rebirth-alpha-runtime.spec.ts --project=chromium --project=webkit
       - name: Actual Chromium touch dispatch regression
         id: touch_gesture
         run: npx playwright test tests/e2e/rebirth-touch-gesture.spec.ts --project=chromium
@@ -74,6 +77,7 @@ jobs:
           INPUT_LAB_OUTCOME: ${{ steps.input_lab.outcome }}
           TOUCH_GESTURE_OUTCOME: ${{ steps.touch_gesture.outcome }}
           ALPHA_GATE_OUTCOME: ${{ steps.alpha_gate.outcome }}
+          ALPHA_RUNTIME_OUTCOME: ${{ steps.alpha_runtime.outcome }}
         run: |
           {
             echo "## Rebirth QA"
@@ -92,6 +96,7 @@ jobs:
             echo "- Playwright mobile input lab Chromium/WebKit: $INPUT_LAB_OUTCOME"
             echo "- Chromium real touch dispatch gesture: $TOUCH_GESTURE_OUTCOME"
             echo "- Private Alpha art gate Chromium/WebKit: $ALPHA_GATE_OUTCOME"
+            echo "- Phaser Alpha runtime boot and touch Chromium/WebKit: $ALPHA_RUNTIME_OUTCOME"
             echo "- Browser engines: desktop Chromium and WebKit (not physical mobile devices)"
             echo "- Physical iOS/Android tests: NOT RUN by this workflow"
           } | tee rebirth-qa-summary.md >> "$GITHUB_STEP_SUMMARY"
