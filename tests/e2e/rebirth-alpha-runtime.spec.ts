@@ -1,21 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Runtime integration test only. The original protagonist art is still outside
- * GitHub, so route a REAL, checked-in spritesheet as a test fixture. This does
- * not change the production assets or claim that a duplicated enemy is game art.
+ * Runtime integration test uses REAL checked-in CHAR-01 V2 and CHAR-02 V1
+ * sprite exports. Both remain private review candidates, not public release art.
  */
 test.describe('Rebirth private Alpha actual Phaser boot', () => {
   test.use({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true });
 
-  test.beforeEach(async ({ page }) => {
-    await page.route('**/rebirth/art/aze-character.*', async route => {
-      const source = route.request().url();
-      const target = source.replace('aze-character.', 'fire-brawler-character.');
-      const response = await route.fetch({ url: target });
-      await route.fulfill({ response });
-    });
-  });
 
   test('boots the real scene and attaches the three mobile combat actions', async ({ page }) => {
     const errors: string[] = [];
