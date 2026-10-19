@@ -55,7 +55,8 @@ Status: BLOCKED — v0.7.2 zero-placeholder / zero-legacy-reference requirement 
 
 ### M4: Story, art, performance and acceptance
 - [ ] Integrate first chapter scenes and localized Taiwanese dialogue.
-- [ ] Establish coherent urban art palette, animations, VFX, sound.
+- [x] Establish first-batch official art production specification and acceptance criteria (`docs/rebirth/ART_PRODUCTION_SPEC.md`, commit `bd7d4ab`); **no finished artwork delivered**.
+- [ ] Produce coherent final urban artwork, animations, VFX and sound.
 - [ ] iPhone Safari and Android Chrome real-device tests.
 - [ ] QA regressions, performance measurements, accessibility and save recovery.
 
@@ -212,3 +213,9 @@ Status: BLOCKED — v0.7.2 zero-placeholder / zero-legacy-reference requirement 
 - Browser test source now matches the non-playable Rebirth-only bootstrap; **this does not imply playable combat is tested or present**. Gameplay acceptance tests must be authored separately when the Rebirth gameplay scene exists.
 - GitHub file writes PASS. Vercel combined status for `93dd9d8`: PENDING (https://vercel.com/tr19741007-3730s-projects/poe-game-star/4o89MNxYZC7VuEKT96XTprSe8ugY). npm ci/typecheck/unit/build/Playwright/mobile device execution: NOT RUN in this cycle.
 - Next: produce a detailed official Rebirth art specification and asset manifest, then implement purpose-made final sprites/tiles without reusing old art. Keep gate active until asset/QA approval.
+
+### 2026-10-19 — Cycle 13: official art production specification
+- Created `docs/rebirth/ART_PRODUCTION_SPEC.md` (commit `bd7d4ab`) based solely on GAME_CONTRACT v0.7.2: orthographic urban visual direction, first-batch manifest (alley tiles, facades, street props, 阿澤, three enemy archetypes, combat VFX and UI icons), authoring/export naming, mobile readability and release gates.
+- No legacy source/art consulted; no placeholders created; no image or playable scene represented as complete. Technical sprite/tile sizes are provisional and subject to real device tests. Art direction document is a production specification, not evidence of approved finished art.
+- GitHub commit PASS. npm ci/typecheck/unit/build/Playwright/real-device checks NOT RUN for this documentation-only cycle. Gameplay activation remains BLOCKED.
+- Next bounded task: produce and review the first Rebirth-exclusive finished visual asset(s) to spec; do not wire incomplete art to runtime. Then implement a Rebirth-owned scene renderer when asset acceptance is met.
