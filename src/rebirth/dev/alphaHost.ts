@@ -5,6 +5,11 @@ import {
   RebirthMobileCombatBridge, type MobileCombatControls,
 } from './mobileCombatBridge';
 
+export interface AlphaHost {
+  game: Phaser.Game;
+  destroy(): void;
+}
+
 /**
  * Art-gated development-only host. Never imported by src/main.ts.
  * Requires actual approved assets to exist; never supplies placeholders.
