@@ -25,18 +25,25 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Install locked dependencies
+        id: install
         run: npm ci
       - name: Rebirth runtime isolation gate
+        id: boundary
         run: node scripts/check-rebirth-boundary.mjs
       - name: TypeScript typecheck
+        id: typecheck
         run: npm run typecheck
       - name: Vitest unit tests
+        id: unit
         run: npm test
       - name: Production build
+        id: build
         run: npm run build
       - name: Install Chromium and WebKit
+        id: browsers
         run: npx playwright install --with-deps chromium webkit
       - name: Browser smoke (desktop engines; NOT real phones)
+        id: smoke
         run: npx playwright test --project=chromium --project=webkit
       - name: Write QA run summary
         if: always()
@@ -44,6 +51,13 @@ jobs:
           JOB_STATUS: ${{ job.status }}
           COMMIT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          BOUNDARY_OUTCOME: ${{ steps.boundary.outcome }}
+          TYPECHECK_OUTCOME: ${{ steps.typecheck.outcome }}
+          UNIT_OUTCOME: ${{ steps.unit.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          BROWSERS_OUTCOME: ${{ steps.browsers.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
         run: |
           {
             echo "## Rebirth QA"
@@ -51,6 +65,13 @@ jobs:
             echo "- Commit: \`$COMMIT_SHA\`"
             echo "- Overall job status: $JOB_STATUS"
             echo "- Full per-step evidence: $RUN_URL"
+            echo "- npm ci: $INSTALL_OUTCOME"
+            echo "- Rebirth isolation guard: $BOUNDARY_OUTCOME"
+            echo "- TypeScript typecheck: $TYPECHECK_OUTCOME"
+            echo "- Vitest unit tests: $UNIT_OUTCOME"
+            echo "- Production build: $BUILD_OUTCOME"
+            echo "- Browser install: $BROWSERS_OUTCOME"
+            echo "- Playwright Chromium/WebKit: $SMOKE_OUTCOME"
             echo "- Browser engines: desktop Chromium and WebKit (not physical mobile devices)"
             echo "- Physical iOS/Android tests: NOT RUN by this workflow"
           } | tee rebirth-qa-summary.md >> "$GITHUB_STEP_SUMMARY"
