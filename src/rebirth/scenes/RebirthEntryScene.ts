@@ -8,6 +8,7 @@ import Phaser from 'phaser';
 export class RebirthEntryScene extends Phaser.Scene {
   private heading?: Phaser.GameObjects.Text;
   private detail?: Phaser.GameObjects.Text;
+  private orientationHint?: Phaser.GameObjects.Text;
 
   constructor() {
     super('RebirthEntryScene');
@@ -37,6 +38,13 @@ export class RebirthEntryScene extends Phaser.Scene {
       },
     ).setOrigin(0.5);
 
+    this.orientationHint = this.add.text(center, top + 84, '請將手機橫向放置，以獲得最佳遊玩視野', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '14px',
+      color: '#ffb65c',
+      align: 'center',
+    }).setOrigin(0.5);
+
     this.scale.on('resize', this.reposition, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off('resize', this.reposition, this);
@@ -47,7 +55,11 @@ export class RebirthEntryScene extends Phaser.Scene {
   private reposition(): void {
     const x = this.scale.width / 2;
     const y = this.scale.height / 2;
-    this.heading?.setPosition(x, y - 28);
-    this.detail?.setPosition(x, y + 22);
+    const portrait = this.scale.height > this.scale.width;
+    const textWidth = Math.max(120, this.scale.width - 32);
+    const headingSize = Math.max(14, Math.min(24, Math.floor(this.scale.width / 19)));
+    this.heading?.setFontSize(headingSize).setWordWrapWidth(textWidth).setPosition(x, y - (portrait ? 52 : 28));
+    this.detail?.setFontSize(portrait ? 14 : 16).setWordWrapWidth(textWidth).setPosition(x, y + (portrait ? 4 : 22));
+    this.orientationHint?.setVisible(portrait).setWordWrapWidth(textWidth).setPosition(x, y + 80);
   }
 }
