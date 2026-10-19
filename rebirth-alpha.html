@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#101a2a">
+<title>Rebirth · 第一章戰鬥內測</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;color:#f0f7fa;background:#08121f}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
+#app{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 45%,#203248 0%,#08121f 85%);overflow:hidden}
+#game{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+#game canvas{display:block;image-rendering:pixelated;max-width:100%;max-height:100%}
+#surface{position:absolute;inset:0;touch-action:none;z-index:2}
+#controls{position:absolute;inset:0;z-index:3;pointer-events:none}
+#stick-base,#stick-knob{position:absolute;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
+#stick-base{border:2px solid #9ed7e599;background:radial-gradient(circle,#4ce0e014,#1e435480);box-shadow:0 0 0 8px #4ce0e009,inset 0 0 18px #4ce0e01a}
+#stick-knob{background:radial-gradient(circle at 35% 28%,#c7fbff,#4ce0e0 65%,#167b9b);box-shadow:0 2px 14px #4ce0e04d}
+.action{position:absolute;transform:translate(-50%,-50%);border-radius:50%;border:2px solid #8ad1dd9e;background:linear-gradient(155deg,#345c78e8,#172a43f5);color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;font-weight:800;font-size:clamp(11px,2vw,15px);pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;box-shadow:0 4px 16px #0007,inset 0 1px #ffffff42;cursor:pointer}
+.action small{font-size:9px;font-weight:600;opacity:.82}
+.action:active,.action.pressed{background:linear-gradient(155deg,#f8bb68,#a94e44);border-color:#ffe4b3;transform:translate(-50%,-50%) scale(.92)}
+#attack{border-color:#ffc56c;background:linear-gradient(155deg,#b97736,#693b31)}
+#hud-top{position:absolute;top:env(safe-area-inset-top,0px);left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px);z-index:5;display:flex;justify-content:space-between;gap:8px;padding:8px 14px;pointer-events:none}
+#hud-top span{background:#091522ce;border:1px solid #4c738c7d;border-radius:8px;padding:5px 10px;font-size:11px;letter-spacing:.08em}
+#status-panel{position:absolute;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;padding:22px;background:#08121fe8}
+#status-card{width:min(560px,100%);padding:clamp(20px,5vw,38px);border:1px solid #4b7d9e9c;border-radius:20px;background:linear-gradient(150deg,#182e45,#0c192a);box-shadow:0 22px 90px #000a}
+#status-card h1{margin:4px 0 12px;font-size:clamp(22px,4vw,34px);line-height:1.2;letter-spacing:.03em}
+#status-card p{color:#b9d0e0;font-size:14px;line-height:1.7}
+#status-card .eyebrow{font-size:11px;color:#5be5e5;letter-spacing:.18em;font-weight:800}
+#asset-list{max-height:20vh;overflow:auto;font-size:12px;color:#ffbf7b;overflow-wrap:anywhere;line-height:1.65}
+#start{border:0;border-radius:10px;background:#4ce0e0;color:#061723;font-weight:900;font-size:15px;padding:12px 24px;cursor:pointer;min-height:44px}
+#start:disabled{opacity:.45;cursor:not-allowed}
+#retry{border:1px solid #7292a9;border-radius:10px;background:transparent;color:#e4f4ff;font-size:13px;padding:11px 17px;cursor:pointer}
+#buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+#orientation{position:absolute;inset:0;z-index:10;display:none;align-items:center;justify-content:center;padding:28px;background:#08121ff5;text-align:center;font-weight:700}
+@media(orientation:portrait){#orientation{display:flex}}
+@media(max-height:360px){#status-card{padding:16px 24px}#status-card p{margin:8px 0;font-size:12px}#status-card h1{font-size:23px}}
+</style>
+</head>
+<body>
+<main id="app">
+  <div id="game" aria-label="Rebirth 巷弄戰鬥畫面"></div>
+  <div id="surface" aria-label="左手搖桿操作區"></div>
+  <div id="controls" hidden>
+    <div id="stick-base" aria-hidden="true"></div><div id="stick-knob" aria-hidden="true"></div>
+    <button id="attack" class="action" type="button">普攻<small>長按連擊</small></button>
+    <button id="punch" class="action" type="button">衝拳<small>MP 15</small></button>
+    <button id="dash" class="action" type="button">瞬步<small>MP 10</small></button>
+  </div>
+  <div id="hud-top"><span>ASHEN RELIQUARY · REBIRTH</span><span>第一章 / 巷弄內測 · 非公開</span></div>
+  <section id="status-panel" role="status" aria-live="polite">
+    <div id="status-card">
+      <div class="eyebrow">CHAPTER 01 / INTERNAL ALPHA</div>
+      <h1 id="status-title">檢查新版美術資產…</h1>
+      <p id="status-message">只有通過資產檢查的原創角色與敵人，才會載入戰鬥場景。正式入口保持鎖定。</p>
+      <div id="asset-list"></div>
+      <div id="buttons"><button id="start" type="button" disabled>進入戰鬥</button><button id="retry" type="button">重新檢查</button></div>
+    </div>
+  </section>
+  <div id="orientation">請將手機橫向放置<br>以操作 Rebirth 戰鬥</div>
+</main>
+<script type="module" src="/src/rebirth/dev/alphaPage.ts"></script>
+</body>
+</html>
