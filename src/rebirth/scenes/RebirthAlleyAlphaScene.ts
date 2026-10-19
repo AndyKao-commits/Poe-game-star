@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { RebirthAlleySession } from '../dev/alleySession';
+import { alleyDialogueAt } from '../dev/alleyDialogue';
 import { advanceAlleyObjective, ALLEY_EXIT, ALLEY_EXIT_RADIUS, type AlleyObjectivePhase } from '../dev/alleyObjective';
 import { RebirthAlleyEncounter, type AlleySnapshot } from '../combat/alleyEncounter';
 import { type StickVector } from '../input/touchControls';
@@ -23,6 +24,8 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private exitIndicator: Phaser.GameObjects.Graphics | null = null;
   private objectiveLabel: Phaser.GameObjects.Text | null = null;
   private objectivePhase: AlleyObjectivePhase = 'fight';
+  private phaseStartedAt = 0;
+  private dialogueCaption: Phaser.GameObjects.Text | null = null;
   private dangerGraphics: Phaser.GameObjects.Graphics | null = null;
   private hitFlash: Phaser.GameObjects.Graphics | null = null;
   private outcomePanel: Phaser.GameObjects.Container | null = null;
@@ -67,6 +70,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.clockMs = 0;
     this.completed = false;
     this.objectivePhase = 'fight';
+    this.phaseStartedAt = 0;
     this.feedbackExpiresAt = 0;
     this.hitFlashExpiresAt = 0;
     this.outcomePanel = null;
@@ -112,6 +116,11 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       fontFamily: 'system-ui, sans-serif', fontSize: '12px', color: '#d7f7f1',
       backgroundColor: '#102333', padding: { x: 7, y: 3 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(105);
+    this.dialogueCaption = this.add.text(this.scale.width / 2, 72, '', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '13px', color: '#fff3d9',
+      backgroundColor: '#172635', padding: { x: 8, y: 5 },
+      wordWrap: { width: this.scale.width - 60 }, align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(110);
     this.hud = this.add.text(12, 10, '', {
       fontFamily: 'system-ui, sans-serif', fontSize: '13px',
       color: '#f0f7fa', backgroundColor: '#101a2a',
@@ -127,6 +136,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.playerBars = null;
       this.exitIndicator = null;
       this.objectiveLabel = null;
+      this.dialogueCaption = null;
       this.dangerGraphics = null;
       this.hitFlash = null;
       this.outcomePanel = null;
@@ -216,7 +226,11 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     if (this.objectivePhase === 'fight' && objective.phase === 'reach-exit') {
       this.showFeedback('敵人已擊退，前往巷口！');
     }
+    if (this.objectivePhase !== objective.phase) this.phaseStartedAt = this.clockMs;
     this.objectivePhase = objective.phase;
+    const cue = alleyDialogueAt(this.objectivePhase, this.clockMs - this.phaseStartedAt);
+    this.dialogueCaption?.setText(cue ? `${cue.speaker}：「${cue.text}」` : '');
+    this.dialogueCaption?.setVisible(Boolean(cue));
     this.objectiveLabel?.setText(objective.instruction);
     this.exitIndicator?.clear();
     if (objective.exitVisible) {
