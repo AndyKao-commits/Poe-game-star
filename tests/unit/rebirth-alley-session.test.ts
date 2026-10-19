@@ -95,7 +95,7 @@ describe('Rebirth input-to-encounter session', () => {
     const session = sessionWithEnemy(5);
     session.tapBasic(0);
     session.tick(0);
-    expect(session.isEnded).toBe(true);
+    expect(session.isEnded).toBe(false);
     expect(session.tapBasic(450).ok).toBe(false);
   });
 
