@@ -7,12 +7,10 @@ import {
 import { AttackTimeline, type AttackTimelineConfig } from '@core/combat/attackTimeline';
 import {
   applyDamage,
-  calculateDamage,
-  createPlayerStats,
-  ENEMY_CRIT_CHANCE,
   type CombatStats,
 } from '@core/combat/damage';
 import { knockbackDelta } from '@core/combat/feedback';
+import { calculateRebirthDamage, createRebirthPlayerStats, REBIRTH_PLAYER } from '../../rebirth/core/combat';
 import { Invulnerability, PLAYER_IFRAME_MS } from '@core/combat/invulnerability';
 import { moveWithCollision, type TileMapData } from '@core/collision/grid';
 import { createPlayerStateMachine } from '@core/entities/stateMachine';
@@ -25,7 +23,9 @@ import { WorldEntity } from '../world/WorldEntity';
 import type { CombatFeedbackSystem } from '../systems/CombatFeedback';
 import type { InputController } from '../input/InputController';
 
-const MOVE_SPEED = 3.2;
+// Rebirth uses the existing tile-space coordinate system (32px iso half-tile).
+// 150 world pixels/s maps to 4.6875 tile units/s for the prototype.
+const MOVE_SPEED = REBIRTH_PLAYER.movementSpeed / 32;
 
 export interface Attackable {
   alive: boolean;
@@ -58,7 +58,7 @@ export class PlayerController {
     attackConfig?: Partial<AttackTimelineConfig>,
   ) {
     this.spawn = { ...spawn };
-    this.stats = createPlayerStats();
+    this.stats = createRebirthPlayerStats();
     this.attackTimeline = new AttackTimeline({
       moveLockMs: attackConfig?.moveLockMs ?? 280,
       hitFrameMs: attackConfig?.hitFrameMs ?? 120,
@@ -228,16 +228,16 @@ export class PlayerController {
     if (this.lifecycle.isDead || this.iframes.active) {
       return { accepted: false, died: false, amount: 0, isCrit: false };
     }
-    const roll = calculateDamage({
-      baseAttack: attackerAttack,
-      defense: this.stats.defense,
-      critChance: ENEMY_CRIT_CHANCE,
+    const roll = calculateRebirthDamage({
+      attack: attackerAttack,
+      targetDefense: this.stats.defense,
+      critChance: 0,
     });
     const result = this.takeDamage(roll.amount, { attackerPos });
     if (result.accepted) {
       this.feedback.floatDamage({
         amount: roll.amount,
-        isCrit: roll.isCrit,
+        isCrit: roll.isCritical,
         world: { ...this.entity.position },
       });
     }
@@ -246,7 +246,9 @@ export class PlayerController {
 
   respawn(): void {
     const restored = this.lifecycle.respawn(this.spawn);
-    this.stats = restored.stats;
+    // Legacy PlayerLifecycle still creates 100/50 stats on respawn.
+    // Override the returned stats with the canonical Rebirth defaults.
+    this.stats = createRebirthPlayerStats();
     this.entity.position = restored.position;
     this.cooldown.reset();
     this.attackTimeline.reset();
