@@ -82,10 +82,14 @@ test('does not request legacy or placeholder artwork from the Rebirth entry', as
   page.on('request', (request) => {
     const url = new URL(request.url());
     const path = url.pathname;
+    // Vite legitimately serves bundled JavaScript under /assets/. Only block
+    // actual media/art requests, regardless of which URL directory serves them.
+    const isMediaRequest = ['image', 'media', 'font'].includes(request.resourceType());
+    const isArtFile = /\.(?:png|jpe?g|webp|gif|svg|avif|bmp|ktx2?|mp3|ogg|wav|mp4|webm)(?:$|\?)/i.test(url.pathname + url.search);
     if (path.startsWith('/legacy/') ||
         /(?:placeholder|temporary|proxy-art)/i.test(path) ||
-        (path.startsWith('/assets/') && /\.(?:png|jpe?g|webp|gif|svg|avif|bmp|ktx2?)$/i.test(path))) {
-      forbiddenRequests.push(path);
+        isMediaRequest || isArtFile) {
+      forbiddenRequests.push(`${request.resourceType()}: ${path}`);
     }
   });
   await waitForRebirthGate(page);
