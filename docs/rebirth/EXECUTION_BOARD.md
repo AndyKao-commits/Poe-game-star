@@ -129,3 +129,10 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - GitHub connector commit workflow lookup returned zero PR-triggered runs; push-triggered runs may not appear in this lookup.
 - QA: Vercel external build status PASS; npm ci/typecheck/unit tests/Playwright: NOT RUN or unverified individually; iOS Safari/Android Chrome real devices: NOT RUN.
 - Next: obtain full CI test logs for npm ci, typecheck, unit, build and Playwright; address any failures. Feature additions remain paused.
+
+### 2026-10-19 — Cycle 9: correct Playwright smoke expectations
+- Re-read canonical contract and execution board, confirmed target branch `feat/rebirth-v1`.
+- Inspected actual `tests/e2e/smoke.spec.ts` at branch head; it still asserted HUD `/120\\/100/` twice and `/60\\/50/` once, despite prior execution log claiming these were corrected. The source file is authoritative over earlier log statements.
+- Corrected to `/120\\/120/` and `/60\\/60/` (initial HUD and respawn). Commit `1e8e34fc204b617348bdeffd3561e2efceaba4ea`.
+- QA: source assertions verified by inspection PASS; npm ci/typecheck/unit/build/Playwright execution NOT RUN in this cycle. Prior commit `2006eb5` had external Vercel success; this new commit is not yet independently validated. Physical iPhone/Android NOT RUN.
+- Next: obtain CI run logs and execute Playwright smoke; no new gameplay features until QA gates pass.
