@@ -110,4 +110,17 @@ describe('Rebirth DOM pointer adapter', () => {
     expect(f.changes).toHaveBeenCalledTimes(count);
     expect(f.controller.snapshot().pointerId).toBeNull();
   });
+  it('keeps moving when pointer capture is unavailable (iOS embedded browser fallback)', () => {
+    const f = fixture();
+    f.element.setPointerCapture = () => { throw new Error('capture unsupported'); };
+    f.element.dispatchEvent(pointer('pointerdown', 21, 140, 160));
+    expect(f.controller.snapshot().pointerId).toBe(21);
+    f.win.dispatchEvent(pointer('pointermove', 21, 196, 160));
+    expect(f.controller.snapshot().stick.magnitude).toBeGreaterThan(0);
+    f.win.dispatchEvent(pointer('pointerup', 21, 196, 160));
+    expect(f.controller.snapshot().pointerId).toBeNull();
+    expect(f.controller.snapshot().stick.magnitude).toBe(0);
+    f.adapter.dispose();
+  });
+
 });
