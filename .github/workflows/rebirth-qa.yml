@@ -51,6 +51,9 @@ jobs:
       - name: Mobile landscape input lab browser checks (emulated, not physical phones)
         id: input_lab
         run: npx playwright test tests/e2e/rebirth-input-lab.spec.ts --project=chromium --project=webkit
+      - name: Private Alpha art gate browser checks (emulated, not physical phones)
+        id: alpha_gate
+        run: npx playwright test tests/e2e/rebirth-alpha-gate.spec.ts --project=chromium --project=webkit
       - name: Actual Chromium touch dispatch regression
         id: touch_gesture
         run: npx playwright test tests/e2e/rebirth-touch-gesture.spec.ts --project=chromium
@@ -70,6 +73,7 @@ jobs:
           SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
           INPUT_LAB_OUTCOME: ${{ steps.input_lab.outcome }}
           TOUCH_GESTURE_OUTCOME: ${{ steps.touch_gesture.outcome }}
+          ALPHA_GATE_OUTCOME: ${{ steps.alpha_gate.outcome }}
         run: |
           {
             echo "## Rebirth QA"
@@ -87,6 +91,7 @@ jobs:
             echo "- Playwright gate Chromium/WebKit: $SMOKE_OUTCOME"
             echo "- Playwright mobile input lab Chromium/WebKit: $INPUT_LAB_OUTCOME"
             echo "- Chromium real touch dispatch gesture: $TOUCH_GESTURE_OUTCOME"
+            echo "- Private Alpha art gate Chromium/WebKit: $ALPHA_GATE_OUTCOME"
             echo "- Browser engines: desktop Chromium and WebKit (not physical mobile devices)"
             echo "- Physical iOS/Android tests: NOT RUN by this workflow"
           } | tee rebirth-qa-summary.md >> "$GITHUB_STEP_SUMMARY"
