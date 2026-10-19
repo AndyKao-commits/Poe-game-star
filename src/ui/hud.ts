@@ -28,28 +28,29 @@ export class HudController {
   private mount(): void {
     this.root.innerHTML = `
       <div class="hud-panel hud-stats">
-        <div class="hud-title">Ashen Reliquary</div>
+        <div class="hud-title"><span class="hud-kicker">霧川市 · 深夜 23:40</span><strong>REBIRTH <span class="hud-title-accent">/ 正義公民</span></strong></div>
         <div class="hud-bar-row">
-          <span>HP</span>
+          <span>生命</span>
           <div class="hud-bar-track"><div class="hud-bar-fill hp" data-hp-fill></div></div>
-          <span data-hp-text>100/100</span>
+          <span data-hp-text>120/120</span>
         </div>
         <div class="hud-bar-row">
-          <span>MP</span>
+          <span>魔力</span>
           <div class="hud-bar-track"><div class="hud-bar-fill mp" data-mp-fill></div></div>
-          <span data-mp-text>50/50</span>
+          <span data-mp-text>60/60</span>
         </div>
       </div>
       <div class="hud-panel hud-hints">
+        <div>第一章｜只是想買個宵夜</div>
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移動</div>
         <div>滑鼠左鍵 扇形攻擊（朝向游標）</div>
       </div>
       <div class="hud-panel hud-fps"><span data-fps>FPS --</span></div>
       <div class="hud-death" data-death hidden>
         <div class="hud-death-card">
-          <div class="hud-death-title">You Died</div>
-          <p class="hud-death-copy">遺跡吞噬了你的氣息。</p>
-          <button type="button" data-restart class="hud-restart">重新開始</button>
+          <div class="hud-death-title">今晚先到這裡</div>
+          <p class="hud-death-copy">正義公民也需要休息。整頓一下，再出發。</p>
+          <button type="button" data-restart class="hud-restart">重新挑戰</button>
         </div>
       </div>
     `;
