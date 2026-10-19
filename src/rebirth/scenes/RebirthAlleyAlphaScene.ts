@@ -26,8 +26,16 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private clockMs = 0;
   private stick: StickVector = { x: 0, y: 0, magnitude: 0 };
   private completed = false;
+  private onCreated: (() => void) | null = null;
+  private onStopped: (() => void) | null = null;
 
   constructor() { super({ key: 'RebirthAlleyAlpha' }); }
+
+  /** Called before Phaser.Game is constructed; scene events are not ready yet. */
+  setLifecycleHooks(onCreated: () => void, onStopped: () => void): void {
+    this.onCreated = onCreated;
+    this.onStopped = onStopped;
+  }
 
   preload(): void {
     // These are planned *new Rebirth-only* art paths. Missing art must produce
@@ -92,6 +100,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       fontFamily: 'system-ui, sans-serif', fontSize: '15px', color: '#ffb65c',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.onStopped?.();
       this.resetInput();
       this.enemySprites.clear();
       this.enemyHealthBars.clear();
@@ -101,6 +110,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.feedback = null;
     });
     this.renderState(state);
+    this.onCreated?.();
   }
 
   /** Every ground tile is a frame from the original ENV-01 atlas, not geometry placeholders. */
