@@ -50,3 +50,27 @@ test('resizes the non-playable gate without loading temporary textures', async (
   });
   expect(assets).toEqual([]);
 });
+
+test('shows orientation guidance only in portrait and keeps text inside narrow viewports', async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await waitForRebirthGate(page);
+
+  const readGate = () => page.evaluate(() => {
+    const scene = window.__ASHEN_GAME__!.scene.getScene('RebirthEntryScene');
+    const texts = scene.children.list.filter((object) => 'text' in object) as
+      import('phaser').GameObjects.Text[];
+    const hint = texts.find((object) => object.text.includes('請將手機橫向放置'));
+    const heading = texts.find((object) => object.text.includes('ASHEN RELIQUARY: REBIRTH'));
+    return {
+      hintVisible: hint?.visible,
+      headingWithinViewport: heading
+        ? heading.getBounds().left >= 0 && heading.getBounds().right <= scene.scale.width
+        : false,
+    };
+  });
+
+  await expect.poll(async () => (await readGate()).hintVisible).toBe(false);
+  await page.setViewportSize({ width: 320, height: 640 });
+  await expect.poll(async () => (await readGate()).hintVisible).toBe(true);
+  await expect.poll(async () => (await readGate()).headingWithinViewport).toBe(true);
+});
