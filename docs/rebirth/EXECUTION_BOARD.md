@@ -285,3 +285,11 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
   - `npx playwright test tests/e2e/smoke.spec.ts --project=chromium --project=webkit --reporter=dot`: PASS, 8/8 desktop browser checks.
 - GitHub Actions push-run logs: NOT VERIFIED independently. Physical iPhone Safari/Android Chrome: NOT RUN. Rebirth gameplay and art acceptance gates G1–G5 remain BLOCKED. Sandbox QA PASS applies only to current non-playable gate.
 - Next task: verify GitHub Actions Node 22 execution and CI run artifacts; then plan Rebirth-only finished art review and implement gameplay only after art approval.
+
+### 2026-10-19 — T01 cycle B: Node 22 sandbox revalidation
+- Re-read GAME_CONTRACT v0.7.2 and current EXECUTION_BOARD. Fetched feat/rebirth-v1 HEAD `853b289de2e694f099879dc7b2a3008d02371f87` in isolated Vercel Sandbox `sbx_M5hhmEHGSvc67stBL4lwc01oADC0`; no historical branches or legacy implementation were consulted.
+- Installed isolated Node `v22.23.3` under `/tmp/rebirth-node22` without changing repository dependencies or production deployment. npm version `11.19.0` (not CI npm version).
+- Executed exact SHA in sandbox: command `cmd_88e61c79f5724aaca7cb3a5a35c0`, working directory `/vercel/Poe-game-star`, shell `set -e`, exit code `0`, 36.23 seconds.
+- PASS: `npm ci --no-audit --no-fund` (62 packages), `node scripts/check-rebirth-boundary.mjs` (3-file graph), `npm run typecheck`, `npm test` (28 files / 128 tests), `npm run build`, `npx playwright test tests/e2e/smoke.spec.ts --project=chromium --project=webkit --reporter=dot` (combined command completed successfully). Browser scope is non-playable gate smoke, not gameplay QA. The command log was truncated by the connector but the sequential set -e command exited 0.
+- Outstanding T01: obtain independent GitHub Actions push-run URL, individual step outcomes and artifact, ideally Node 22 with runner's npm. No iOS Safari/Android Chrome physical testing; G1-G5 still BLOCKED. Vite chunk size warning observed, non-fatal.
+- Next: collect CI evidence or continue Rebirth-only QA improvements; do not enable gameplay without official art and acceptance.
