@@ -8,6 +8,7 @@ import {
 export interface AlphaHost {
   game: Phaser.Game;
   destroy(): void;
+  retry(): void;
 }
 
 /**
@@ -54,6 +55,7 @@ export function mountRebirthAlpha(
   scene.events.on(Phaser.Scenes.Events.SHUTDOWN, detach);
   return {
     game,
+    retry() { scene.retry(); },
     destroy() {
       scene.events.off(Phaser.Scenes.Events.CREATE, attach);
       scene.events.off(Phaser.Scenes.Events.SHUTDOWN, detach);
