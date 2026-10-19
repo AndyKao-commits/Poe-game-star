@@ -245,10 +245,8 @@ export class PlayerController {
   }
 
   respawn(): void {
-    const restored = this.lifecycle.respawn(this.spawn);
-    // Legacy PlayerLifecycle still creates 100/50 stats on respawn.
-    // Override the returned stats with the canonical Rebirth defaults.
-    this.stats = createRebirthPlayerStats();
+    const restored = this.lifecycle.respawn(this.spawn, createRebirthPlayerStats());
+    this.stats = restored.stats;
     this.entity.position = restored.position;
     this.cooldown.reset();
     this.attackTimeline.reset();
