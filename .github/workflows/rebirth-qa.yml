@@ -36,13 +36,30 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
       - name: Browser smoke (desktop engines; NOT real phones)
         run: npx playwright test --project=chromium --project=webkit
-      - name: Upload Playwright evidence on failure
-        if: failure()
+      - name: Write QA run summary
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo "## Rebirth QA"
+            echo ""
+            echo "- Commit: \`$COMMIT_SHA\`"
+            echo "- Overall job status: $JOB_STATUS"
+            echo "- Full per-step evidence: $RUN_URL"
+            echo "- Browser engines: desktop Chromium and WebKit (not physical mobile devices)"
+            echo "- Physical iOS/Android tests: NOT RUN by this workflow"
+          } | tee rebirth-qa-summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload QA evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rebirth-playwright-evidence
+          name: rebirth-qa-evidence
           path: |
+            rebirth-qa-summary.md
             playwright-report/
             test-results/
-          if-no-files-found: ignore
+          if-no-files-found: warn
           retention-days: 7
