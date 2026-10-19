@@ -255,7 +255,7 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 ## Sequential execution checklist (2026-10-19; Rebirth-only)
 - [x] T01 — Obtain auditable GitHub Actions evidence for npm ci, runtime boundary guard, typecheck, Vitest, build, Playwright Chromium and WebKit. Acceptance: actual run URL, per-step outcomes and logs/artifact; CI configuration alone is NOT PASS.
 - [x] T02 — Resolve all failures in T01; verify fresh green run at the exact feat/rebirth-v1 commit. Do not infer CI PASS from Vercel READY.
-- [ ] T03 — Verify Rebirth active runtime has zero legacy/temporary artwork or code dependencies, including browser network checks.
+- [x] T03 — Verify Rebirth active runtime has zero legacy/temporary artwork or code dependencies, including browser network checks.
 - [ ] T04 — Produce purpose-made final Rebirth artwork per ART_PRODUCTION_SPEC; inspect and approve each delivered asset before integration. No placeholders.
 - [ ] T05 — Integrate Rebirth-owned alley scene, touch movement, attack, skills and enemies only with approved final art and passing prerequisites.
 - [ ] T06 — Add exploration, run boosts, persistent gear, safehouse and versioned save with unit/migration tests.
@@ -308,3 +308,12 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - No actionable failures at the validated SHA; T02 is COMPLETE without source modifications. Older canceled runs were superseded by later pushes due to concurrency, not treated as code failures.
 - Limitations: CI validates only the non-playable Rebirth gate, not gameplay or final art. Physical iOS Safari and Android Chrome remain NOT RUN. No production deployment or main merge.
 - Next: T03 runtime and browser-network zero-legacy/zero-placeholder audit.
+
+### 2026-10-19 — T03: runtime/network isolation verified
+- Re-read canonical GAME_CONTRACT v0.7.2 and current execution board. Scope restricted to Rebirth active entry path; did not read legacy implementation or old art.
+- Audited `scripts/check-rebirth-boundary.mjs`: statically follows allowed entry imports; current active graph has 3 files, and non-playable gate is enforced. Rebirth-only Playwright tests assert single entry scene, no Image/Sprite/TileSprite objects, and no legacy scene active.
+- Strengthened `tests/e2e/smoke.spec.ts` to reject any media/image/font network requests or recognized art/audio/video file requests regardless of asset directory, while allowing Vite JavaScript bundles under `/assets/`. Commit `189c23867dd4525d902bb221bd4a06d791961d51`.
+- Local sandbox at exact 189c238: `npm ci`, isolation check, typecheck, unit and build PASS, command `cmd_8201f6f3ebc840e5b893d5d139ec`, exit 0. Initial browser test in fresh sandbox failed only because Playwright browser executables were not installed; a follow-up installation was interrupted by sandbox shutdown. This is an environment prerequisite failure, not evidence of an app defect.
+- Independent GitHub Actions run for exact commit `189c23867dd4525d902bb221bd4a06d791961d51`: `39205719951`, completed SUCCESS, job SUCCESS, individual steps including Chromium/WebKit installation and updated browser smoke SUCCESS. https://github.com/AndyKao-commits/Poe-game-star/actions/runs/39205719951
+- T03 PASS for current **non-playable** entry. This is not proof that future art/gameplay scenes are clean; repeat guard and browser audits as runtime expands. Physical iOS/Android NOT RUN. No gameplay unlock, production deployment or main merge.
+- Next: T04 Rebirth-specific finished art production and review; no placeholder assets or old art.
