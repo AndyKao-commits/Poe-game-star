@@ -9,6 +9,7 @@ members first. Does not enable the game, modify metadata approvals or deploy.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import pathlib
@@ -20,9 +21,10 @@ MANIFEST = ROOT / "docs/rebirth/T04_CANDIDATE_MANIFEST.json"
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        print("Usage: python3 scripts/install-rebirth-v2.py rebirth_t04_v2.zip", file=sys.stderr)
-        return 2
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--check-only', action='store_true')
+    parser.add_argument('archive')
+    args = parser.parse_args()
 
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     expected = {
@@ -31,8 +33,11 @@ def main() -> int:
         for path, digest in manifest[asset_id]["files"].items()
     }
 
-    with zipfile.ZipFile(sys.argv[1]) as archive:
-        names = set(archive.namelist())
+    with zipfile.ZipFile(args.archive) as archive:
+        names = archive.namelist()
+        for name in expected:
+            if names.count(name) > 1:
+                raise ValueError(f'Duplicate required ZIP member: {name}')
         for name, digest in expected.items():
             if name not in names:
                 raise ValueError(f"Missing required archive member: {name}")
@@ -42,6 +47,10 @@ def main() -> int:
             data = archive.read(name)
             if hashlib.sha256(data).hexdigest() != digest:
                 raise ValueError(f"SHA-256 mismatch: {name}")
+
+        if args.check_only:
+            print('PASS: all six candidate SHA-256 hashes verified; no files written.')
+            return 0
 
         # Verify everything before changing any project files.
         for name in expected:
