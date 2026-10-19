@@ -121,3 +121,11 @@ Status: IN PROGRESS (Rebirth player/enemy stats integrated; touch skills and QA 
 - Vercel preview for `c5f11ca` reports **FAIL** (https://vercel.com/tr19741007-3730s-projects/poe-game-star/FqvoLu7A5DqHAWBk3FExKN79S76V). Browser tests were NOT RUN, because the preview build failed; fixing test assertions does not fix build errors.
 - Attempts to retrieve Vercel deployment events via the connector returned 404 even for confirmed deployment IDs; exact TypeScript diagnostic still unavailable. Local GitHub checkout blocked by DNS.
 - QA gate remains BLOCKED. Next: obtain compiler error text through Vercel build logs or another executable CI source, then fix exact errors; do not add features or claim tests passed.
+
+### 2026-10-19 — Cycle 8: TypeScript fix and external build verification
+- Confirmed `PlayerController.ts` already uses `roll.isCritical` (previous fix retained).
+- Fixed `createRebirthSkillState` parameter to `mp: number = REBIRTH_PLAYER.maxMp` to prevent literal type 60 inference. Commit `2006eb588efd78148c88e368d2130d8f99d9c9e5` on `feat/rebirth-v1`.
+- GitHub combined commit status for this exact SHA: Vercel `success` (https://vercel.com/tr19741007-3730s-projects/poe-game-star/H2LKvcn9wYBuf4ZdtL7HXRm3AicX). This is external build-status evidence, not proof that all required QA checks passed.
+- GitHub connector commit workflow lookup returned zero PR-triggered runs; push-triggered runs may not appear in this lookup.
+- QA: Vercel external build status PASS; npm ci/typecheck/unit tests/Playwright: NOT RUN or unverified individually; iOS Safari/Android Chrome real devices: NOT RUN.
+- Next: obtain full CI test logs for npm ci, typecheck, unit, build and Playwright; address any failures. Feature additions remain paused.
