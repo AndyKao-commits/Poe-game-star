@@ -1,4 +1,4 @@
-import { createGameConfig } from './game/config';
+import { createRebirthGameConfig } from './rebirth/config';
 import Phaser from 'phaser';
 
 declare global {
@@ -12,7 +12,7 @@ function boot(): void {
   if (!root) {
     throw new Error('Missing #game-root');
   }
-  const game = new Phaser.Game(createGameConfig(root));
+  const game = new Phaser.Game(createRebirthGameConfig(root));
   window.__ASHEN_GAME__ = game;
 }
 
