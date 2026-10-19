@@ -435,3 +435,9 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - Added `tests/unit/rebirth-alpha-combat.test.ts` at `f5dace6` (8 cases), fixed strict TypeScript discriminated action narrowing at `a81f2e5`.
 - Verified isolated Vercel sandbox at exact `a81f2e5`: `npm run typecheck` PASS; Vitest **34 files / 166 tests PASS**; boundary gate PASS; `npm run build` PASS.
 - This is a **combat domain implementation, not yet a playable game scene**. No legacy/proxy art used. Real iPhone joystick remains unverified despite passing browser tests. The release gate remains closed. Next: integrate domain with a Rebirth-only Phaser scene once complete original sprite/art set is available, then verify interactive battle and real mobile UI.
+
+### 2026-10-19 — T06 cycle R: first alley encounter state machine
+- Added `src/rebirth/combat/alleyEncounter.ts` commit `fbb9105`: domain-only first alley encounter, two fire-brawler records, joystick-based player movement, world bounds, capped delta on tab resume, enemy chase, 500ms windup, hit range recheck for dodging, 800ms recovery, HP reduction, event queue, defeat/clear flags. No Phaser scene registered and no placeholder/legacy art.
+- Added `tests/unit/rebirth-alley-encounter.test.ts` commit `b5dd65e`: 10 tests for spawn, movement/facing, frame clamp, chase, telegraph, dodge, enemy defeat once, dash world bounds, invalid time and defensive snapshots.
+- Isolated sandbox exact `b5dd65e`: `npm ci`, `npm run typecheck`, Vitest **35 files / 176 tests PASS**, release-boundary check PASS, production build PASS. Existing Vite main chunk size warning remains.
+- **Not yet implemented:** authored in-game sprites for complete encounter, Phaser world/prop collisions, graphical combat feedback, HUD and mobile-device acceptance. Formal gate stays closed. Next work should prioritize visual integration only when new approved art exists; otherwise implement and test an isolated input-to-encounter adapter.
