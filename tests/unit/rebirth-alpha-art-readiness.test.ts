@@ -19,9 +19,10 @@ function fakeFetch(
 }
 
 describe('Rebirth first Alpha art readiness', () => {
-  it('requires protagonist and enemy exports plus metadata', () => {
-    expect(REQUIRED_ALPHA_ART).toHaveLength(4);
+  it('requires protagonist, enemy and urban atlas exports plus metadata', () => {
+    expect(REQUIRED_ALPHA_ART).toHaveLength(6);
     expect(REQUIRED_ALPHA_ART).toContain('/rebirth/art/fire-brawler-character.json');
+    expect(REQUIRED_ALPHA_ART).toContain('/rebirth/art/urban-ground-atlas.png');
   });
   it('accepts all expected assets with correct MIME', async () => {
     expect(await verifyAlphaArt(fakeFetch())).toEqual({
