@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { RebirthAlleySession } from '../dev/alleySession';
 import { alleyDialogueAt } from '../dev/alleyDialogue';
+import { inspectAlleyClue } from '../dev/alleyClue';
 import { advanceAlleyObjective, ALLEY_EXIT, ALLEY_EXIT_RADIUS, type AlleyObjectivePhase } from '../dev/alleyObjective';
 import { RebirthAlleyEncounter, type AlleySnapshot } from '../combat/alleyEncounter';
 import { type StickVector } from '../input/touchControls';
@@ -25,6 +26,8 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private objectiveLabel: Phaser.GameObjects.Text | null = null;
   private objectivePhase: AlleyObjectivePhase = 'fight';
   private phaseStartedAt = 0;
+  private clueDiscovered = false;
+  private clueNote: Phaser.GameObjects.Text | null = null;
   private dialogueCaption: Phaser.GameObjects.Text | null = null;
   private dangerGraphics: Phaser.GameObjects.Graphics | null = null;
   private hitFlash: Phaser.GameObjects.Graphics | null = null;
@@ -71,6 +74,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.completed = false;
     this.objectivePhase = 'fight';
     this.phaseStartedAt = 0;
+    this.clueDiscovered = false;
     this.feedbackExpiresAt = 0;
     this.hitFlashExpiresAt = 0;
     this.outcomePanel = null;
@@ -116,6 +120,10 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       fontFamily: 'system-ui, sans-serif', fontSize: '12px', color: '#d7f7f1',
       backgroundColor: '#102333', padding: { x: 7, y: 3 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(105);
+    this.clueNote = this.add.text(this.scale.width / 2, this.scale.height - 42, '', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '11px', color: '#ffdf99',
+      backgroundColor: '#1b2c3c', padding: { x: 6, y: 3 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(106).setVisible(false);
     this.dialogueCaption = this.add.text(this.scale.width / 2, 72, '', {
       fontFamily: 'system-ui, sans-serif', fontSize: '13px', color: '#fff3d9',
       backgroundColor: '#172635', padding: { x: 8, y: 5 },
@@ -137,6 +145,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.exitIndicator = null;
       this.objectiveLabel = null;
       this.dialogueCaption = null;
+      this.clueNote = null;
       this.dangerGraphics = null;
       this.hitFlash = null;
       this.outcomePanel = null;
@@ -232,6 +241,13 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.dialogueCaption?.setText(cue ? `${cue.speaker}：「${cue.text}」` : '');
     this.dialogueCaption?.setVisible(Boolean(cue));
     this.objectiveLabel?.setText(objective.instruction);
+    const clue = inspectAlleyClue(result.state.player.position,
+      this.objectivePhase, this.clueDiscovered);
+    if (clue.justDiscovered) this.showFeedback('發現地下停車場的增幅器線索！');
+    this.clueDiscovered = clue.discovered;
+    // Inspecting the existing drain tile is optional and never blocks the exit.
+    this.clueNote?.setText(clue.hint ?? '');
+    this.clueNote?.setVisible(clue.discovered);
     this.exitIndicator?.clear();
     if (objective.exitVisible) {
       const pulse = 0.6 + 0.2 * Math.sin(this.clockMs / 200);
