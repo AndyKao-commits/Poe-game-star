@@ -2,7 +2,7 @@
 Updated: 2026-10-19
 Source of truth: [GAME_CONTRACT.md](./GAME_CONTRACT.md)
 Branch: feat/rebirth-v1
-Status: STARTED (engineering audit; no new gameplay shipped)
+Status: IN PROGRESS (isolated Rebirth combat rules implemented; not wired to gameplay)
 
 ## Verified baseline audit
 - Existing repository README identifies Vite + TypeScript + Phaser 3, Vitest and Playwright.
@@ -17,7 +17,7 @@ Status: STARTED (engineering audit; no new gameplay shipped)
 - [x] Create dedicated branch feat/rebirth-v1.
 - [x] Commit authoritative game contract.
 - [x] Record initial engineering audit and task order.
-- [ ] Inspect input/controller, game config, HUD, map interfaces, assets, save subsystem, existing test suites.
+- [ ] Finish inspecting input/controller, game config, HUD, map interfaces, assets, save subsystem, existing test suites.\n- [x] Reviewed legacy combat damage, input controller and touch overlay; documented divergence from Rebirth.
 - [ ] Run local `npm ci`, `npm run typecheck`, `npm test`, `npm run build` where runner is available; record actual results.
 
 ### M1: Mobile-first Rebirth shell
@@ -27,8 +27,8 @@ Status: STARTED (engineering audit; no new gameplay shipped)
 - [ ] Unit tests for control state and viewport layout; mobile browser smoke tests.
 
 ### M2: Combat vertical slice
-- [ ] Implement player v0.7 prototype stats and damage formula as independent, testable logic.
-- [ ] Implement dash and magical punch with cooldowns/MP.
+- [x] Implement independent player/enemy v0.7 stats and damage formula; added unit tests (NOT RUN).
+- [ ] Wire dash and magical punch to game scene (pure skill cooldown/MP gate implemented, not integrated).
 - [ ] Three enemy archetypes with telegraphs and fair damage windows.
 - [ ] Boss 阿彪 phase 1/2 and weak point; test thresholds and recovery.
 - [ ] No claim of balance until mobile playtests.
@@ -62,3 +62,11 @@ Status: STARTED (engineering audit; no new gameplay shipped)
 - Determined reuse candidates and risk: old scene still builds a ruin map; mobile shell exists but Rebirth gameplay is not implemented.
 - Added execution board; next task is detailed interface and test audit.
 - Validation: GitHub file reads and successful file commit only. Typecheck/unit/E2E/mobile QA: NOT RUN.
+
+### 2026-10-19 — Cycle 1: Rebirth combat core
+- Inspected existing `src/core/combat/damage.ts` and `tests/unit/damage.test.ts`: legacy player HP100/MP50/DEF5 and defense curve d/(d+100) conflict with Rebirth v0.7.
+- Inspected `src/game/input/InputController.ts` and `src/ui/touchControls.ts`: touch overlay still displays disabled placeholder Q/E/dodge buttons; Rebirth skills are NOT yet wired.
+- Added `src/rebirth/core/combat.ts` with isolated Rebirth player/enemy defaults, damage curve, skill cooldown/MP state and boss phase threshold. Commit: `2f8b623`.
+- Added `tests/unit/rebirth-combat.test.ts` covering core damage, skill gates, MP recovery and boss phases. Commit: `c0d246d`.
+- Tests/typecheck/build/mobile QA: NOT RUN in this cycle (GitHub connector supports file operations, not a local test runner). These tests are authored, not verified.
+- Next: run CI/local checks, then connect Rebirth input and first urban scene without changing the legacy scene in main.
