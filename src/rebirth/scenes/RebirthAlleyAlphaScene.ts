@@ -22,7 +22,6 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private feedback: Phaser.GameObjects.Text | null = null;
   private clockMs = 0;
   private stick: StickVector = { x: 0, y: 0, magnitude: 0 };
-  private basicHeld = false;
   private completed = false;
 
   constructor() { super({ key: 'RebirthAlleyAlpha' }); }
@@ -40,6 +39,10 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.session = new RebirthAlleySession(new RebirthAlleyEncounter());
+    this.clockMs = 0;
+    this.completed = false;
+    this.stick = { x: 0, y: 0, magnitude: 0 };
     const playerTexture = this.textures.get('rebirth-alpha-aze');
     const enemyTexture = this.textures.get('rebirth-alpha-brawler');
     if (playerTexture.key === '__MISSING' || enemyTexture.key === '__MISSING') {
@@ -80,7 +83,6 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
 
   setInput(stick: StickVector, basicHeld: boolean): void {
     this.stick = { ...stick };
-    this.basicHeld = basicHeld;
     this.session.setInput({ stick, basicHeld });
   }
 
@@ -98,7 +100,6 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
 
   resetInput(): void {
     this.stick = { x: 0, y: 0, magnitude: 0 };
-    this.basicHeld = false;
     this.session.resetInput();
   }
 
