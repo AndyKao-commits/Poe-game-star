@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { RebirthAlleySession } from '../dev/alleySession';
+import { advanceAlleyObjective, ALLEY_EXIT, ALLEY_EXIT_RADIUS, type AlleyObjectivePhase } from '../dev/alleyObjective';
 import { RebirthAlleyEncounter, type AlleySnapshot } from '../combat/alleyEncounter';
 import { type StickVector } from '../input/touchControls';
 import { animationFrame, validateSpriteSheetMetadata, type SpriteSheetMetadata } from '../art/animationContract';
@@ -19,6 +20,9 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private enemySprites = new Map<string, Phaser.GameObjects.Sprite>();
   private enemyHealthBars = new Map<string, Phaser.GameObjects.Graphics>();
   private playerBars: Phaser.GameObjects.Graphics | null = null;
+  private exitIndicator: Phaser.GameObjects.Graphics | null = null;
+  private objectiveLabel: Phaser.GameObjects.Text | null = null;
+  private objectivePhase: AlleyObjectivePhase = 'fight';
   private dangerGraphics: Phaser.GameObjects.Graphics | null = null;
   private hitFlash: Phaser.GameObjects.Graphics | null = null;
   private outcomePanel: Phaser.GameObjects.Container | null = null;
@@ -62,6 +66,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.session = new RebirthAlleySession(new RebirthAlleyEncounter());
     this.clockMs = 0;
     this.completed = false;
+    this.objectivePhase = 'fight';
     this.feedbackExpiresAt = 0;
     this.hitFlashExpiresAt = 0;
     this.outcomePanel = null;
@@ -102,6 +107,11 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.dangerGraphics = this.add.graphics().setDepth(85);
     this.hitFlash = this.add.graphics().setScrollFactor(0).setDepth(120);
     this.playerBars = this.add.graphics().setScrollFactor(0).setDepth(99);
+    this.exitIndicator = this.add.graphics().setDepth(70);
+    this.objectiveLabel = this.add.text(this.scale.width / 2, this.scale.height - 15, '', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '12px', color: '#d7f7f1',
+      backgroundColor: '#102333', padding: { x: 7, y: 3 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(105);
     this.hud = this.add.text(12, 10, '', {
       fontFamily: 'system-ui, sans-serif', fontSize: '13px',
       color: '#f0f7fa', backgroundColor: '#101a2a',
@@ -115,6 +125,8 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.enemySprites.clear();
       this.enemyHealthBars.clear();
       this.playerBars = null;
+      this.exitIndicator = null;
+      this.objectiveLabel = null;
       this.dangerGraphics = null;
       this.hitFlash = null;
       this.outcomePanel = null;
@@ -123,6 +135,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.feedback = null;
     });
     this.renderState(state);
+    this.objectiveLabel?.setText('擊退攔路混混（剩餘 2 人）');
     this.onCreated?.();
   }
 
@@ -195,10 +208,28 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     }
     const result = this.session.tick(this.clockMs);
     this.renderState(result.state);
-    if (result.state.cleared || result.state.defeated) {
+    const objective = advanceAlleyObjective(
+      this.objectivePhase, result.state.player.position,
+      result.state.enemies.filter(enemy => enemy.hp > 0).length,
+      result.state.player.hp,
+    );
+    if (this.objectivePhase === 'fight' && objective.phase === 'reach-exit') {
+      this.showFeedback('敵人已擊退，前往巷口！');
+    }
+    this.objectivePhase = objective.phase;
+    this.objectiveLabel?.setText(objective.instruction);
+    this.exitIndicator?.clear();
+    if (objective.exitVisible) {
+      const pulse = 0.6 + 0.2 * Math.sin(this.clockMs / 200);
+      this.exitIndicator?.lineStyle(3, 0x64e9c7, pulse)
+        .strokeCircle(ALLEY_EXIT.x, ALLEY_EXIT.y, ALLEY_EXIT_RADIUS);
+      this.exitIndicator?.fillStyle(0x46d9c0, 0.08)
+        .fillCircle(ALLEY_EXIT.x, ALLEY_EXIT.y, ALLEY_EXIT_RADIUS);
+    }
+    if (objective.phase === 'complete' || objective.phase === 'defeated') {
       this.completed = true;
-      this.showFeedback(result.state.cleared ? '巷弄戰鬥完成' : '角色倒下');
-      this.showOutcome(result.state.cleared);
+      this.showFeedback(objective.phase === 'complete' ? '成功離開巷弄' : '角色倒下');
+      this.showOutcome(objective.phase === 'complete');
       this.resetInput();
     }
   }
@@ -285,12 +316,12 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       .fillStyle(0x07111d, 0.86).fillRoundedRect(-150, -57, 300, 114, 10)
       .lineStyle(2, cleared ? 0x58d8be : 0xef7485, 0.95)
       .strokeRoundedRect(-150, -57, 300, 114, 10);
-    const title = this.add.text(0, -26, cleared ? '巷弄已清除' : '挑戰失敗', {
+    const title = this.add.text(0, -26, cleared ? '成功逃出巷弄' : '挑戰失敗', {
       fontFamily: 'system-ui, sans-serif', fontSize: '22px',
       color: cleared ? '#8df9d7' : '#ff8b9c', fontStyle: 'bold',
     }).setOrigin(0.5);
     const detail = this.add.text(0, 14,
-      cleared ? '阿澤暫時安全了' : '重新調整節奏，再試一次', {
+      cleared ? '阿澤暫時安全了，下一段旅程即將開始' : '重新調整節奏，再試一次', {
         fontFamily: 'system-ui, sans-serif', fontSize: '13px', color: '#e5f2f8',
       }).setOrigin(0.5);
     const instruction = this.add.text(0, 40, '點擊「重新挑戰」可再次進入', {
