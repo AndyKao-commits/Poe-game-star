@@ -101,6 +101,10 @@ export class RebirthMobileCombatBridge {
     this.listen(button, 'pointerup', up);
     this.listen(button, 'pointercancel', up);
     this.listen(button, 'lostpointercapture', up);
+    // Pointer capture is not guaranteed in iOS webviews and multi-touch CDP;
+    // release on window even when the button never receives pointerup.
+    this.listen(this.win, 'pointerup', up);
+    this.listen(this.win, 'pointercancel', up);
     this.listen(button, 'click', keyboard);
   }
 
