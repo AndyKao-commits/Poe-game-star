@@ -17,11 +17,12 @@ Status: IN PROGRESS (isolated Rebirth combat rules implemented; not wired to gam
 - [x] Create dedicated branch feat/rebirth-v1.
 - [x] Commit authoritative game contract.
 - [x] Record initial engineering audit and task order.
-- [ ] Finish inspecting input/controller, game config, HUD, map interfaces, assets, save subsystem, existing test suites.\n- [x] Reviewed legacy combat damage, input controller and touch overlay; documented divergence from Rebirth.
+- [ ] Finish inspecting input/controller, game config, HUD, map interfaces, assets, save subsystem, existing test suites.
+- [x] Reviewed legacy combat damage, input controller and touch overlay; documented divergence from Rebirth.
 - [ ] Run local `npm ci`, `npm run typecheck`, `npm test`, `npm run build` where runner is available; record actual results.
 
 ### M1: Mobile-first Rebirth shell
-- [ ] Add a Rebirth-specific urban alley scene or scene mode; remove ancient-ruin story elements from new gameplay without deleting legacy files.
+- [x] Switch existing prototype scene to a Rebirth-specific modern alley map blueprint (art and battle logic still legacy placeholders).
 - [ ] Preserve working landscape orientation hints and safe-area touch controls; adjust for two active skills.
 - [ ] Implement movement + hold-to-attack and basic cooldown/MP feedback.
 - [ ] Unit tests for control state and viewport layout; mobile browser smoke tests.
@@ -70,3 +71,12 @@ Status: IN PROGRESS (isolated Rebirth combat rules implemented; not wired to gam
 - Added `tests/unit/rebirth-combat.test.ts` covering core damage, skill gates, MP recovery and boss phases. Commit: `c0d246d`.
 - Tests/typecheck/build/mobile QA: NOT RUN in this cycle (GitHub connector supports file operations, not a local test runner). These tests are authored, not verified.
 - Next: run CI/local checks, then connect Rebirth input and first urban scene without changing the legacy scene in main.
+
+### 2026-10-19 — Cycle 2: first chapter urban alley map
+- Read GAME_CONTRACT and inspected current Rebirth execution board, legacy scene/config/map/collision and player/enemy controllers.
+- Added `src/rebirth/map/urbanAlley.ts`: contemporary Taiwan alley collision blueprint with shopfronts, roadside scooters, snack stall, parking entrance, five valid enemy spawn points. Commit `9375aae`.
+- Updated only the Rebirth branch `src/game/scenes/GameScene.ts` to instantiate the new alley instead of the legacy ruin map. Commit `045a2aa`.
+- Added `tests/unit/rebirth-urban-alley.test.ts` covering landmarks, spawn clearance and border collision. Commit `3e73d9a`.
+- Caveat: the existing tile textures and combat controllers are still legacy placeholders; this is NOT a finished modern-Taiwan art scene, and the new combat core is NOT connected yet.
+- Validation: GitHub commits successful; Vitest/typecheck/build/E2E/real-device QA NOT RUN. Do not claim this map is verified in a browser.
+- Next: run CI/typecheck and smoke test the alley; build dedicated Rebirth mobile input + two usable skill buttons, then integrate isolated combat stats/damage.
