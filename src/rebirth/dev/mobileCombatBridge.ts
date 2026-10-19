@@ -14,6 +14,7 @@ export interface MobileCombatSink {
   setInput(stick: StickVector, basicHeld: boolean): void;
   punch(): void;
   dash(): void;
+  basicTap(): void;
   resetInput(): void;
 }
 type ActionName = 'attack' | 'punch' | 'dash';
@@ -40,6 +41,10 @@ export class RebirthMobileCombatBridge {
     private readonly doc: Document = document,
   ) {
     controls.surface.style.touchAction = 'none';
+    for (const visual of [controls.joystickBase, controls.joystickKnob]) {
+      visual.style.pointerEvents = 'none';
+      visual.setAttribute('aria-hidden', 'true');
+    }
     for (const button of [controls.attack, controls.punch, controls.dash]) {
       button.style.touchAction = 'none';
     }
@@ -88,8 +93,7 @@ export class RebirthMobileCombatBridge {
       const click = event as MouseEvent;
       if (click.detail !== 0 || this.disposed) return;
       if (name === 'attack') {
-        this.sink.setInput(this.stick, true);
-        this.sink.setInput(this.stick, false);
+        this.sink.basicTap();
       } else if (name === 'punch') this.sink.punch();
       else this.sink.dash();
     };
