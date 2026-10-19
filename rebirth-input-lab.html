@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#07111b" />
+  <title>Rebirth｜手機操作實驗室</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #07111b; color: #eafaff; font: 14px system-ui, sans-serif; }
+    #surface { position: fixed; inset: 0; touch-action: none; user-select: none; -webkit-user-select: none; overflow: hidden; background: radial-gradient(circle at 50% 40%, #153344, #07111b 70%); }
+    #title { position: absolute; top: max(12px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left)); z-index: 2; pointer-events: none; }
+    #title strong { font-size: 15px; letter-spacing: .06em; }
+    #title small { display: block; color: #9dc3d0; margin-top: 5px; }
+    #hud { position: absolute; top: max(12px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); z-index: 3; display: flex; gap: 8px; align-items: center; }
+    #mode { background: #29445b; border: 1px solid #80b5cf; color: white; padding: 9px 12px; border-radius: 10px; touch-action: manipulation; }
+    #stick-base, #stick-knob { position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); }
+    #stick-base { border: 2px solid #77b4d1; background: #284d6580; }
+    #stick-knob { background: #90c6ddaa; border: 2px solid #d4f5ff; }
+    .action { position: absolute; transform: translate(-50%, -50%); border: 2px solid #94c6dd; background: #2e506a99; color: white; border-radius: 50%; display: grid; place-items: center; font-weight: 700; pointer-events: none; }
+    #avatar { position: absolute; left: 50%; top: 48%; width: 24px; height: 24px; border: 2px solid #d3f5ff; border-radius: 6px; background: #59a8d1; transform: translate(-50%, -50%); pointer-events: none; }
+    #status { position: absolute; bottom: max(6px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); color: #bed6e2; font: 11px ui-monospace, monospace; white-space: nowrap; pointer-events: none; }
+    #portrait { display: none; position: absolute; inset: 0; z-index: 5; background: #07111bee; align-items: center; justify-content: center; text-align: center; padding: 30px; }
+    @media (orientation: portrait) { #portrait { display: flex; } }
+  </style>
+</head>
+<body>
+  <main id="surface" aria-label="Rebirth 開發用手機觸控實驗室">
+    <div id="title"><strong>REBIRTH · INPUT LAB</strong><small>僅測試操作｜不是正式遊戲畫面</small></div>
+    <div id="hud"><button id="mode" type="button">固定搖桿</button></div>
+    <div id="avatar" aria-label="位置測試標記"></div>
+    <div id="stick-base"></div><div id="stick-knob"></div>
+    <div id="attack" class="action">攻擊</div>
+    <div id="skill1" class="action">技能 1</div>
+    <div id="skill2" class="action">技能 2</div>
+    <div id="status" aria-live="off">初始化中</div>
+    <div id="portrait">請將手機橫向放置，測試虛擬搖桿與按鈕。</div>
+  </main>
+  <script type="module" src="/src/rebirth/dev/inputLab.ts"></script>
+</body>
+</html>
