@@ -244,3 +244,10 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - Vercel commit status for 3b53e8c: PASS (https://vercel.com/tr19741007-3730s-projects/poe-game-star/3pXMzs7RAnsRSnqKhWByS5nq8wLs). GitHub commit-workflow lookup returned no PR-triggered runs; push CI result remains unavailable.
 - Full repo npm ci/typecheck/unit/build/Playwright: NOT RUN in this cycle. Physical iOS Safari/Android Chrome: NOT RUN. Release gate remains CLOSED; no finished art delivered.
 - Next: obtain actual push-triggered GitHub Actions run logs for boundary guard and full QA; fix failures before enabling gameplay.
+
+### 2026-10-19 — Cycle: Vercel install command correction and asset-request smoke coverage
+- Read GAME_CONTRACT v0.7.2 and the current board; verified `package-lock.json` exists on feat/rebirth-v1. Vercel project metadata confirms framework Vite and Node 22.x.
+- Added Rebirth entry Playwright smoke assertion that tracks and rejects requests for `/assets/`, `/legacy/` and placeholder/proxy art paths. Commit `0685daf4b3628f43d0fa08f0df566ad6d0917c97`. Test code committed but browser execution NOT RUN.
+- Preview build for this commit FAILED: Vercel deployment `dpl_4SE5h2U8tnGjRJSkwBDh3uDLg4X7` reported `BUILD_UTILS_SPAWN_1`, `Command "npm c" exited with 1`. This is a confirmed Vercel install-command configuration error, not a confirmed source/test failure.
+- Updated Vercel project install command to `npm ci` through the connected Vercel project settings API. Setting update returned successfully; a subsequent fresh preview build is required to confirm correction. No manual deployment or production promotion performed.
+- QA: Vercel deployment FAIL before correction; setting update PASS; npm ci/typecheck/unit/build/Playwright NOT RUN locally, push CI result not accessible, physical devices NOT RUN. Next: verify the next preview deployment after `npm ci` correction, obtain full GitHub Actions logs, repair any genuine failures.
