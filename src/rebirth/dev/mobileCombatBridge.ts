@@ -104,7 +104,23 @@ export class RebirthMobileCombatBridge {
           break;
         }
       }
-      if (!endedOnThisButton) return;
+      if (!endedOnThisButton) {
+        // CDP multi-touch and some embedded browsers retarget changedTouches
+        // to the surface instead of the original action button. Reconcile
+        // active fingers against the actual hitbox before leaving a held
+        // attack latched forever. Keep holding if a finger is still inside.
+        const rect = button.getBoundingClientRect();
+        let stillTouching = false;
+        for (let i = 0; i < touchEvent.touches.length; i++) {
+          const touch = touchEvent.touches.item(i);
+          if (touch && touch.clientX >= rect.left && touch.clientX <= rect.right &&
+              touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+            stillTouching = true;
+            break;
+          }
+        }
+        if (stillTouching) return;
+      }
       for (const [id, action] of this.actionOwners) {
         if (action === name) {
           this.actionOwners.delete(id);
