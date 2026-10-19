@@ -83,4 +83,20 @@ describe('Rebirth input-to-encounter session', () => {
     expect(() => session.tick(99)).toThrow();
     expect(() => session.trigger('dash', 99)).toThrow();
   });
+  it('keyboard tap deals damage immediately and shares basic cooldown', () => {
+    const session = sessionWithEnemy();
+    const hp = session.encounter.enemies[0].hp;
+    expect(session.tapBasic(0).ok).toBe(true);
+    expect(session.encounter.enemies[0].hp).toBeLessThan(hp);
+    expect(session.tapBasic(100).reason).toBe('cooldown');
+    expect(session.tapBasic(450).ok).toBe(true);
+  });
+  it('keyboard basic tap is disabled once the encounter ends', () => {
+    const session = sessionWithEnemy(5);
+    session.tapBasic(0);
+    session.tick(0);
+    expect(session.isEnded).toBe(true);
+    expect(session.tapBasic(450).ok).toBe(false);
+  });
+
 });
