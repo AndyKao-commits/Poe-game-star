@@ -16,5 +16,11 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        rebirthInputLab: path.resolve(__dirname, 'rebirth-input-lab.html'),
+      },
+    },
   },
 });
