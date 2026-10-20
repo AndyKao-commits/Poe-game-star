@@ -543,3 +543,8 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - Isolated sandbox at `0071cc90`: `npm ci` PASS, `npm run typecheck` PASS, Vitest **244/244 PASS (47 files)**, boundary check PASS, `npm run build` PASS. Playwright browser attempt **NOT RUN (browser executables absent in sandbox)**; runner returned missing Chromium/WebKit executable rather than an application assertion failure.
 - Workflow updated to run the new B2 browser regression on Chromium/WebKit; final result must be verified from GitHub Actions. Physical iPhone/Android: NOT RUN. No unapproved art, no legacy references, no `main` changes, no formal release-gate changes.
 - Deployment: hold public Alpha promotion until the new browser check is green. Next: inspect GitHub CI for B2 scroll regression; fix if needed, then verify public Alpha READY/HTTP before inviting mobile testing.
+
+### 2026-10-20 — B2 WebKit browser-driver compatibility correction
+- GitHub Actions `39364414440` for `cdfc6a0d`: npm ci, boundary, typecheck, 244 Vitest, Python installer, build, and existing Phaser Alpha runtime Chromium/WebKit PASS. New B2 browser regression: Chromium PASS, WebKit FAIL because Playwright's mobile WebKit driver rejects `mouse.wheel` before app scroll assertions; this is a test-driver limitation, not evidence of broken touch scrolling.
+- Updated the B2 browser regression: retain Chromium wheel-based scroll check; for WebKit validate the overflow container's programmatic scroll and the complete `touch-action: pan-y` ancestor chain. Real iPhone finger-swipe remains NOT RUN.
+- Re-run full CI before promotion. No public Alpha promotion from a failing browser run.

@@ -7,7 +7,7 @@ import { expect, test } from '@playwright/test';
 test.describe('B2 investigation landscape touch scrolling', () => {
   test.use({ viewport: { width: 932, height: 300 }, isMobile: true, hasTouch: true });
 
-  test('allows scrolling the card and restores gesture guard after leaving', async ({ page }) => {
+  test('allows scrolling the card and restores gesture guard after leaving', async ({ page, browserName }) => {
     await page.goto('/rebirth-alpha.html');
     const app = page.locator('#app');
     const card = page.locator('#parking-card');
@@ -40,12 +40,18 @@ test.describe('B2 investigation landscape touch scrolling', () => {
     }));
     expect(dimensions.scrollHeight).toBeGreaterThan(dimensions.clientHeight + 80);
 
-    // Wheel scrolling is cross-browser; touch-action assertions above guard
-    // against the iOS gesture suppression that wheel-only tests miss.
-    const box = await card.boundingBox();
-    expect(box).toBeTruthy();
-    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
-    await page.mouse.wheel(0, 550);
+    // Chromium mobile emulation accepts wheel input; Playwright's mobile
+    // WebKit driver explicitly rejects mouse.wheel. For WebKit, assert the
+    // native overflow container can scroll via scrollTop and that every
+    // ancestor permits pan-y. This does NOT claim a physical iPhone swipe.
+    if (browserName === 'webkit') {
+      await card.evaluate(el => { el.scrollTop = 550; });
+    } else {
+      const box = await card.boundingBox();
+      expect(box).toBeTruthy();
+      await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+      await page.mouse.wheel(0, 550);
+    }
     await expect.poll(() => card.evaluate(el => el.scrollTop)).toBeGreaterThan(20);
 
     await page.evaluate(() => {
