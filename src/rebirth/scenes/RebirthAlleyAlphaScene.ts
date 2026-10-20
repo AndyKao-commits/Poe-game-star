@@ -8,14 +8,14 @@ import { type StickVector } from '../input/touchControls';
 import { animationFrame, validateSpriteSheetMetadata, type FacingDirection, type SpriteSheetMetadata } from '../art/animationContract';
 import { attackVisualAt, type AttackVisualKind } from '../dev/attackVisual';
 import { dashVisualAt } from '../dev/dashVisual';
+import { REBIRTH_ALPHA_DIMENSIONS } from '../dev/alphaDimensions';
 
-// The original 480×270 composition was readable on desktop but undersized on
-// iPhone landscape. Keep the logical world unchanged and enlarge the complete
-// world layer through the camera so collision, touch coordinates and authored
-// map positions remain stable.
-const REBIRTH_WORLD_ZOOM = 2.4;
-const ACTOR_SPRITE_SCALE = 1 / 3;
-const GROUND_TILE_SCALE = 1 / 3;
+// One source of truth: 96×144 actor frames become 32×48 world units and
+// 96×96 ground frames become 32×32 world tiles. The FIT canvas handles the
+// phone's physical enlargement; the world camera must not enlarge it again.
+const REBIRTH_WORLD_ZOOM = REBIRTH_ALPHA_DIMENSIONS.cameraZoom;
+const ACTOR_SPRITE_SCALE = REBIRTH_ALPHA_DIMENSIONS.actorScale;
+const GROUND_TILE_SCALE = REBIRTH_ALPHA_DIMENSIONS.groundScale;
 
 /**
  * Chapter 1 alley scene integration for the *future approved art build*.
@@ -128,7 +128,10 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.cameras.main.setZoom(REBIRTH_WORLD_ZOOM);
     // Keep the original 480-unit combat arena centered within wide iPhone viewports.
     // The additional area uses real ENV-01 atlas tiles rather than empty bars.
-    this.cameras.main.setScroll(-(this.scale.width - 480) / 2, 0);
+    this.cameras.main.setScroll(
+      -(this.scale.width - REBIRTH_ALPHA_DIMENSIONS.logicalViewport.width) / 2,
+      0,
+    );
     this.renderOriginalGround();
     // World-space HUD is screen-fixed. Keep a minimum notch clearance even
     // when iOS Safari reports zero safe-area inset in landscape browser tabs.
@@ -204,8 +207,14 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
 
   /** Every ground tile is a frame from the original ENV-01 atlas, not geometry placeholders. */
   private renderOriginalGround(): void {
-    const firstTile = Math.floor((480 - this.scale.width) / 2 / 32) - 1;
-    const lastTile = Math.ceil((480 + this.scale.width) / 2 / 32) + 1;
+    const firstTile = Math.floor(
+      (REBIRTH_ALPHA_DIMENSIONS.logicalViewport.width - this.scale.width) /
+        2 / REBIRTH_ALPHA_DIMENSIONS.worldTile,
+    ) - 1;
+    const lastTile = Math.ceil(
+      (REBIRTH_ALPHA_DIMENSIONS.logicalViewport.width + this.scale.width) /
+        2 / REBIRTH_ALPHA_DIMENSIONS.worldTile,
+    ) + 1;
     for (let y = 0; y < 9; y++) {
       for (let x = firstTile; x < lastTile; x++) {
         // Original asphalt/pavement variations; painted lane lines and drains
@@ -214,7 +223,11 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
         const frame = isSidewalk
           ? 4 + ((x * 3 + y) % 4)
           : (x * 7 + y * 3) % 4;
-        this.add.image(x * 32, y * 32, 'rebirth-alpha-ground', frame)
+        this.add.image(
+          x * REBIRTH_ALPHA_DIMENSIONS.worldTile,
+          y * REBIRTH_ALPHA_DIMENSIONS.worldTile,
+          'rebirth-alpha-ground', frame,
+        )
           .setOrigin(0).setScale(GROUND_TILE_SCALE).setDepth(-100);
       }
     }
@@ -222,7 +235,11 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       [1, 5, 8], [1, 6, 8], [8, 5, 9], [8, 6, 9],
       [11, 2, 10], [12, 2, 10], [2, 7, 12], [13, 7, 13],
     ] as const) {
-      this.add.image(x * 32, y * 32, 'rebirth-alpha-ground', frame)
+      this.add.image(
+        x * REBIRTH_ALPHA_DIMENSIONS.worldTile,
+        y * REBIRTH_ALPHA_DIMENSIONS.worldTile,
+        'rebirth-alpha-ground', frame,
+      )
         .setOrigin(0).setScale(GROUND_TILE_SCALE).setDepth(-99);
     }
   }
