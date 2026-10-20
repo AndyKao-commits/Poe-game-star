@@ -7,8 +7,8 @@
 <title>Rebirth · 第一章戰鬥內測</title>
 <style>
 :root{font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;color:#f0f7fa;background:#08121f}
-*{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
-#app{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 45%,#203248 0%,#08121f 85%);overflow:hidden}
+*{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;touch-action:none;-webkit-text-size-adjust:100%}
+#app{position:fixed;inset:0;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;background:radial-gradient(ellipse at 50% 45%,#203248 0%,#08121f 85%);overflow:hidden}
 #game{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 #game canvas{display:block;image-rendering:pixelated;max-width:100%;max-height:100%}
 #surface{position:absolute;inset:0;touch-action:none;z-index:2}
@@ -49,12 +49,12 @@
     <button id="punch" class="action" type="button">衝拳<small>MP 15</small></button>
     <button id="dash" class="action" type="button">瞬步<small>MP 10</small></button>
   </div>
-  <div id="hud-top"><span>ASHEN RELIQUARY · REBIRTH</span><span>第一章 / 巷弄內測 · 非公開</span><button id="restart-run" type="button" hidden aria-label="重新挑戰第一關">重新挑戰</button></div>
+  <div id="hud-top"><span>ASHEN RELIQUARY · REBIRTH</span><span>第一章 / 公開遊玩測試版</span><button id="restart-run" type="button" hidden aria-label="重新挑戰第一關">重新挑戰</button></div>
   <section id="status-panel" role="status" aria-live="polite">
     <div id="status-card">
-      <div class="eyebrow">CHAPTER 01 / INTERNAL ALPHA</div>
+      <div class="eyebrow">CHAPTER 01 / PLAYTEST</div>
       <h1 id="status-title">檢查新版美術資產…</h1>
-      <p id="status-message">只有通過資產檢查的原創角色與敵人，才會載入戰鬥場景。正式入口保持鎖定。</p>
+      <p id="status-message">只有通過資產檢查的原創角色與敵人，才會載入戰鬥場景。目前為公開測試版本。</p>
       <div id="asset-list"></div>
       <div id="buttons"><button id="start" type="button" disabled>進入戰鬥</button><button id="retry" type="button">重新檢查</button></div>
     </div>
