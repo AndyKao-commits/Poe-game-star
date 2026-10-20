@@ -33,7 +33,7 @@ describe('Chapter 1 alley objective and post-combat exploration', () => {
     expect(advanceAlleyObjective('defeated', ALLEY_EXIT, 0, 120).phase).toBe('defeated');
   });
 
-  it('allows joystick movement after clearing the fight, but blocks combat skills', () => {
+  it('allows joystick movement and air combat after clearing the fight', () => {
     const encounter = new RebirthAlleyEncounter(createPlayer({ x: 100, y: 140 }), []);
     const session = new RebirthAlleySession(encounter);
     session.tick(0);
@@ -42,8 +42,8 @@ describe('Chapter 1 alley objective and post-combat exploration', () => {
     expect(result.state.cleared).toBe(true);
     expect(result.state.player.position.x).toBeGreaterThan(100);
     expect(session.isEnded).toBe(false);
-    expect(session.trigger('punch', 50).ok).toBe(false);
-    expect(session.tapBasic(50).ok).toBe(false);
+    expect(session.trigger('punch', 50).ok).toBe(true);
+    expect(session.tapBasic(50).reason).toBe('cooldown');
     expect(session.tick(100).state.player.position.x).toBeGreaterThan(result.state.player.position.x);
   });
 
