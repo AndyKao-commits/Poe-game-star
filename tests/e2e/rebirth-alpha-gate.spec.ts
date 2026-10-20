@@ -33,7 +33,7 @@ test.describe('Rebirth private Alpha art gate', () => {
       });
     });
     await page.goto('/rebirth-alpha.html');
-    await expect(page.locator('#status-title')).toHaveText('資產已就緒，等待內測');
+    await expect(page.locator('#status-title')).toHaveText('資產已就緒，準備遊玩');
     await expect(page.locator('#start')).toBeEnabled();
     // Deliberately do not click: MIME is not actual art validation.
     await expect(page.locator('#game canvas')).toHaveCount(0);
