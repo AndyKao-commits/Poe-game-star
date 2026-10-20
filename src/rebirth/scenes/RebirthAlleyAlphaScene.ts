@@ -99,6 +99,9 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     }
     this.cameras.main.setBackgroundColor('#101a2a');
     this.cameras.main.setRoundPixels(true);
+    // Keep the original 480-unit combat arena centered within wide iPhone viewports.
+    // The additional area uses real ENV-01 atlas tiles rather than empty bars.
+    this.cameras.main.setScroll(-(this.scale.width - 480) / 2, 0);
     this.renderOriginalGround();
     const state = this.session.encounter.snapshot();
     this.playerSprite = this.add.sprite(
@@ -160,8 +163,10 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
 
   /** Every ground tile is a frame from the original ENV-01 atlas, not geometry placeholders. */
   private renderOriginalGround(): void {
+    const firstTile = Math.floor((480 - this.scale.width) / 2 / 32) - 1;
+    const lastTile = Math.ceil((480 + this.scale.width) / 2 / 32) + 1;
     for (let y = 0; y < 9; y++) {
-      for (let x = 0; x < 15; x++) {
+      for (let x = firstTile; x < lastTile; x++) {
         // Original asphalt/pavement variations; painted lane lines and drains
         // are reserved for actual atlas frames, never generated shapes.
         const isSidewalk = y < 2 || y >= 7;
