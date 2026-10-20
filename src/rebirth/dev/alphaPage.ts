@@ -1,5 +1,6 @@
 import { verifyAlphaArt } from '../art/alphaReadiness';
 import type { AlphaHost } from './alphaHost';
+import { advanceGarage, garageView, initialGarageState, type GarageState } from './parkingInvestigation';
 
 const panel = document.getElementById('status-panel') as HTMLElement | null;
 const title = document.getElementById('status-title') as HTMLElement | null;
@@ -8,16 +9,50 @@ const assetList = document.getElementById('asset-list') as HTMLElement | null;
 const start = document.getElementById('start') as HTMLButtonElement | null;
 const retry = document.getElementById('retry') as HTMLButtonElement | null;
 const restartRun = document.getElementById('restart-run') as HTMLButtonElement | null;
+const nextChapter = document.getElementById('next-chapter') as HTMLButtonElement | null;
+const parkingPanel = document.getElementById('parking-panel') as HTMLElement | null;
+const parkingTitle = document.getElementById('parking-title') as HTMLElement | null;
+const parkingStory = document.getElementById('parking-story') as HTMLElement | null;
+const parkingEvidence = document.getElementById('parking-evidence') as HTMLElement | null;
+const parkingActions = document.getElementById('parking-actions') as HTMLElement | null;
+const parkingRetry = document.getElementById('parking-retry') as HTMLButtonElement | null;
 const gameContainer = document.getElementById('game') as HTMLElement | null;
 const controlsPanel = document.getElementById('controls') as HTMLElement | null;
 
-if (!panel || !title || !message || !assetList || !start || !retry || !restartRun || !gameContainer || !controlsPanel) {
+if (!panel || !title || !message || !assetList || !start || !retry || !restartRun || !nextChapter || !parkingPanel || !parkingTitle || !parkingStory || !parkingEvidence || !parkingActions || !parkingRetry || !gameContainer || !controlsPanel) {
   throw new Error('Rebirth Alpha page markup incomplete');
 }
 
 let mounted: AlphaHost | null = null;
 let checking = false;
 let assetsReady = false;
+let garage: GarageState = initialGarageState();
+
+function renderGarage(): void {
+  const view = garageView(garage);
+  parkingTitle!.textContent = view.title;
+  parkingStory!.textContent = view.story;
+  parkingEvidence!.textContent = garage.evidence.length ? '已取得線索：' + garage.evidence.join('、') : '尚未取得停車場線索';
+  parkingActions!.replaceChildren();
+  for (const choice of view.actions) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = choice.label;
+    button.addEventListener('click', () => { garage = advanceGarage(garage, choice.id); renderGarage(); });
+    parkingActions!.append(button);
+  }
+  if (garage.complete) parkingStory!.textContent += ' 已記錄工坊入口；下一段實景關卡仍在開發。';
+}
+
+function restartBattle(): void {
+  if (!mounted) return;
+  garage = initialGarageState();
+  parkingPanel!.hidden = true;
+  nextChapter!.hidden = true;
+  controlsPanel!.hidden = false;
+  mounted.retry();
+}
+
 
 async function check(): Promise<void> {
   if (checking || mounted) return;
@@ -78,6 +113,7 @@ start.addEventListener('click', async () => {
       punch: get('punch') as HTMLButtonElement,
       dash: get('dash') as HTMLButtonElement,
     });
+    mounted.onVictory(() => { nextChapter!.hidden = false; });
     document.getElementById('app')?.classList.add('playing');
     controlsPanel!.hidden = false;
     restartRun!.hidden = false;
@@ -93,10 +129,14 @@ start.addEventListener('click', async () => {
   }
 });
 retry.addEventListener('click', () => { void check(); });
-restartRun.addEventListener('click', () => {
-  if (!mounted) return;
-  // Reuse the scene lifecycle hooks so the mobile input bridge reattaches.
-  mounted.retry();
+restartRun.addEventListener('click', restartBattle);
+parkingRetry.addEventListener('click', restartBattle);
+nextChapter.addEventListener('click', () => {
+  if (!mounted || nextChapter!.hidden) return;
+  controlsPanel!.hidden = true;
+  parkingPanel!.hidden = false;
+  garage = initialGarageState();
+  renderGarage();
 });
 window.addEventListener('pagehide', () => {
   mounted?.destroy();
