@@ -59,22 +59,21 @@ describe('Rebirth input-to-encounter session', () => {
     expect(result.ok).toBe(true);
     expect(session.encounter.player.position.x).toBe(200);
   });
-  it('empty target does not consume mana or suppress later attacks', () => {
+  it('empty target still emits a successful air attack and later attacks work', () => {
     const session = sessionWithEnemy();
     session.encounter.enemies[0].position = { x: 440, y: 200 };
     session.setInput({ stick: idle, basicHeld: true });
-    expect(session.tick(0).actions[0].reason).toBe('no-target');
+    expect(session.tick(0).actions[0]).toEqual({ ok: true, action: 'basic' });
     session.encounter.enemies[0].position = { x: 120, y: 140 };
-    expect(session.tick(50).actions[0].ok).toBe(true);
+    expect(session.tick(550).actions[0].ok).toBe(true);
   });
-  it('keeps movement active when final enemy is defeated but rejects further skills', () => {
+  it('keeps movement active and still allows air skills after final enemy is defeated', () => {
     const session = sessionWithEnemy(10);
     session.setInput({ stick: idle, basicHeld: true });
     const state = session.tick(0);
     expect(state.state.cleared).toBe(true);
     expect(session.isEnded).toBe(false);
-    expect(session.trigger('punch', 50).ok).toBe(false);
-    expect(session.tick(50).actions).toHaveLength(0);
+    expect(session.trigger('punch', 50)).toEqual({ ok: true, action: 'punch' });
   });
   it('rejects malformed stick and nonmonotonic clocks', () => {
     const session = sessionWithEnemy();
@@ -91,12 +90,12 @@ describe('Rebirth input-to-encounter session', () => {
     expect(session.tapBasic(100).reason).toBe('cooldown');
     expect(session.tapBasic(450).ok).toBe(true);
   });
-  it('keyboard basic tap is disabled after clearing enemies', () => {
+  it('keyboard basic tap remains an available air attack after clearing enemies', () => {
     const session = sessionWithEnemy(5);
     session.tapBasic(0);
     session.tick(0);
     expect(session.isEnded).toBe(false);
-    expect(session.tapBasic(450).ok).toBe(false);
+    expect(session.tapBasic(450)).toEqual({ ok: true, action: 'basic' });
   });
 
 });
