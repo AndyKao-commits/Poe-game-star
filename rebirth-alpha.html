@@ -26,6 +26,14 @@
 #app.playing #hud-top{justify-content:flex-end;padding:6px max(12px,env(safe-area-inset-right,0px)) 0 12px}
 #app.playing #hud-top span{display:none}
 #hud-top span{background:#091522ce;border:1px solid #4c738c7d;border-radius:8px;padding:5px 10px;font-size:11px;letter-spacing:.08em}
+#next-chapter{pointer-events:auto;min-height:36px;border:1px solid #69dbc3;border-radius:9px;background:#144e4c;color:#e8fff7;padding:7px 12px;font-weight:800;font-size:12px;touch-action:manipulation}
+#parking-panel{position:absolute;inset:0;z-index:11;display:flex;align-items:center;justify-content:center;padding:18px max(18px,env(safe-area-inset-right,0px)) 18px max(18px,env(safe-area-inset-left,0px));background:#06111df0;overflow:auto;touch-action:pan-y}
+#parking-card{width:min(610px,100%);max-height:100%;overflow:auto;padding:clamp(15px,3vw,25px);border:1px solid #6dbdb4;border-radius:16px;background:#10273a;box-shadow:0 12px 40px #0008}
+#parking-card h2{font-size:clamp(20px,3vw,26px);margin:4px 0 8px}
+#parking-story{font-size:clamp(13px,2vw,16px);line-height:1.6;margin:5px 0 10px;color:#e1eff3}
+#parking-evidence{font-size:12px;color:#f4d38b}
+#parking-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}
+#parking-actions button,#parking-retry{border:1px solid #76cfc7;border-radius:10px;background:#174c50;color:#f2ffff;padding:10px 13px;min-height:42px;font-weight:750;touch-action:manipulation}
 #status-panel{position:absolute;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;padding:22px;background:#08121fe8}
 #status-card{width:min(560px,100%);padding:clamp(20px,5vw,38px);border:1px solid #4b7d9e9c;border-radius:20px;background:linear-gradient(150deg,#182e45,#0c192a);box-shadow:0 22px 90px #000a}
 #status-card h1{margin:4px 0 12px;font-size:clamp(22px,4vw,34px);line-height:1.2;letter-spacing:.03em}
@@ -51,7 +59,7 @@
     <button id="punch" class="action" type="button">衝拳<small>MP 15</small></button>
     <button id="dash" class="action" type="button">瞬步<small>MP 10</small></button>
   </div>
-  <div id="hud-top"><span>ASHEN RELIQUARY · REBIRTH</span><span>第一章 / 公開遊玩測試版</span><button id="restart-run" type="button" hidden aria-label="重新挑戰第一關">重新挑戰</button></div>
+  <div id="hud-top"><span>ASHEN RELIQUARY · REBIRTH</span><span>第一章 / 公開遊玩測試版</span><button id="next-chapter" type="button" hidden>前往 B2 停車場</button><button id="restart-run" type="button" hidden aria-label="重新挑戰第一關">重新挑戰</button></div>
   <section id="status-panel" role="status" aria-live="polite">
     <div id="status-card">
       <div class="eyebrow">CHAPTER 01 / PLAYTEST</div>
@@ -61,6 +69,7 @@
       <div id="buttons"><button id="start" type="button" disabled>進入戰鬥</button><button id="retry" type="button">重新檢查</button></div>
     </div>
   </section>
+  <section id="parking-panel" hidden role="dialog" aria-modal="true" aria-labelledby="parking-title"><div id="parking-card"><div class="eyebrow">CHAPTER 01 / B2 INVESTIGATION</div><h2 id="parking-title"></h2><p id="parking-story"></p><div id="parking-evidence"></div><div id="parking-actions"></div><button id="parking-retry" type="button">重新挑戰巷弄</button></div></section>
   <div id="orientation">請將手機橫向放置<br>以操作 Rebirth 戰鬥</div>
 </main>
 <script type="module" src="/src/rebirth/dev/alphaPage.ts"></script>
