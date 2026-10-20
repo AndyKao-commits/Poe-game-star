@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advanceGarage, garageView, initialGarageState } from '../../src/rebirth/dev/parkingInvestigation';
+import { advanceGarage, garageOutcome, garageView, initialGarageState } from '../../src/rebirth/dev/parkingInvestigation';
 
 describe('Chapter 1 B2 parking investigation', () => {
   it('records optional seal evidence before following victims to workshop', () => {
@@ -74,5 +74,55 @@ describe('B2 optional electrical panel interaction', () => {
     expect(garageView(state).story).toContain('仍在供電');
     expect(advanceGarage(state, 'enter').complete).toBe(true);
     expect(initialGarageState()).toEqual({ step: 'entrance', evidence: [], complete: false });
+  });
+});
+
+describe('B2 electronic lock puzzle and infiltration grades', () => {
+  it('awards A only for safe isolation and silent entry with the recovered seal', () => {
+    let state = advanceGarage(initialGarageState(), 'inspect-seal');
+    state = advanceGarage(state, 'listen');
+    state = advanceGarage(state, 'inspect-panel');
+    state = advanceGarage(state, 'isolate-test');
+    state = advanceGarage(state, 'follow-cable');
+    state = advanceGarage(state, 'inspect-lock');
+    expect(garageView(state).actions.map(a => a.id)).toContain('decode-label');
+    state = advanceGarage(state, 'decode-label');
+    expect(state.complete).toBe(true);
+    expect(state.quietEntry).toBe(true);
+    expect(state.evidence).toContain('電子鎖的維護識別碼');
+    expect(garageOutcome(state)?.rank).toBe('A');
+    expect(garageView(state).actions).toHaveLength(0);
+  });
+
+  it('prevents silent entry without seal and produces a C alarm outcome', () => {
+    let state = advanceGarage(initialGarageState(), 'listen');
+    state = advanceGarage(state, 'follow-cable');
+    state = advanceGarage(state, 'inspect-lock');
+    expect(garageView(state).actions.map(a => a.id)).not.toContain('decode-label');
+    expect(() => advanceGarage(state, 'decode-label')).toThrow('Invalid garage investigation action');
+    state = advanceGarage(state, 'force-door');
+    expect(garageOutcome(state)?.rank).toBe('C');
+    expect(garageOutcome(state)?.summary).toContain('警報');
+  });
+
+  it('gives B for one precaution and supports returning from the lock', () => {
+    let state = advanceGarage(initialGarageState(), 'inspect-seal');
+    state = advanceGarage(state, 'listen');
+    state = advanceGarage(state, 'follow-cable');
+    state = advanceGarage(state, 'inspect-lock');
+    state = advanceGarage(state, 'return-workshop');
+    expect(state.complete).toBe(false);
+    state = advanceGarage(state, 'inspect-lock');
+    state = advanceGarage(state, 'decode-label');
+    expect(garageOutcome(state)?.rank).toBe('B');
+    expect(garageOutcome(initialGarageState())).toBeNull();
+  });
+
+  it('does not mutate completed outcomes on repeated choices', () => {
+    let state = advanceGarage(initialGarageState(), 'listen');
+    state = advanceGarage(state, 'follow-cable');
+    state = advanceGarage(state, 'enter');
+    expect(garageOutcome(state)?.rank).toBe('C');
+    expect(advanceGarage(state, 'inspect-lock')).toEqual(state);
   });
 });
