@@ -25,9 +25,8 @@ export interface SessionActionEvent {
  * this session does not render proxies or bypass the release gate.
  *
  * Hold-to-attack is sampled on each tick (one attempt per tick maximum).
- * Failed no-target attempts do not lock the attack button; a target moving into
- * range is immediately attackable. A successful hit is governed by the combat
- * core's own 450ms cooldown.
+ * No-target attacks are valid whiffs: they still emit an action event and obey
+ * the combat core cooldown, while only contact with a living target deals damage.
  */
 export class RebirthAlleySession {
   private stick: StickVector = { ...IDLE };
