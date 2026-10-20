@@ -56,7 +56,8 @@ export class RebirthAlleySession {
     this.assertTime(nowMs);
     if (this.ended) return { ok: false, action: 'basic', reason: 'dead' };
     const result = this.encounter.action('basic', nowMs);
-    if (result.ok) this.nextBasicAttemptAt = nowMs + HOLD_REPEAT_MS;\n    this.pendingActions.push({ action: 'basic', result });
+    if (result.ok) this.nextBasicAttemptAt = nowMs + HOLD_REPEAT_MS;
+    this.pendingActions.push({ action: 'basic', result });
     return result;
   }
 
