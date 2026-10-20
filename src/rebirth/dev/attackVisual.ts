@@ -7,6 +7,12 @@ export interface AttackVisual {
   frameIndex: number;
   progress: number;
   strength: number;
+  /** 0–1 silhouette displacement for a readable wind-up / follow-through. */
+  lunge: number;
+  /** Trail opacity peaks during the strike rather than on the first frame. */
+  trailAlpha: number;
+  /** Angular position of the leading slash edge, radians relative to facing. */
+  sweepAngle: number;
 }
 export function attackVisualAt(kind: AttackVisualKind, elapsedMs: number): AttackVisual | null {
   if (!Number.isFinite(elapsedMs) || elapsedMs < 0) return null;
@@ -17,5 +23,8 @@ export function attackVisualAt(kind: AttackVisualKind, elapsedMs: number): Attac
     frameIndex: Math.min(2, Math.floor(progress * 3)),
     progress,
     strength: kind === 'punch' ? 1.5 : 1,
+    lunge: Math.sin(Math.PI * progress) * (kind === 'punch' ? 1 : 0.75),
+    trailAlpha: Math.min(1, progress * 7) * Math.min(1, (1 - progress) * 4),
+    sweepAngle: -1.35 + progress * 2.7,
   };
 }
