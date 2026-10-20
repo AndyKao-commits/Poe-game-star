@@ -82,7 +82,7 @@ test.describe('Rebirth private Alpha actual Phaser boot', () => {
     }
     await expect(page.locator('#attack')).not.toHaveClass(/pressed/);
     await expect.poll(() => page.evaluate(() => window.visualViewport?.scale ?? 1)).toBe(initialScale);
-    expect(await page.evaluate(() => getComputedStyle(document.documentElement).touchAction)).toBe('none');
+    expect(await page.evaluate(() => getComputedStyle(document.getElementById('app')!).touchAction)).toBe('none');
     await client.detach();
   });
 
