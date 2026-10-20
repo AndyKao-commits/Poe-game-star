@@ -221,7 +221,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   basicTap(): void {
     if (this.completed) return;
     const result = this.session.tapBasic(this.clockMs);
-    if (result.ok) this.showFeedback('命中！');
+    if (result.ok) this.showFeedback(result.damage ? '命中！' : '揮拳！');
     else this.showFeedback(this.reasonText(result.reason));
   }
 
@@ -258,6 +258,15 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.hitFlash?.fillStyle(0xf34f67, 0.13).fillRect(0, 0, this.scale.width, this.scale.height);
     }
     const result = this.session.tick(this.clockMs);
+    const actionEvents = this.session.consumeActions();
+    // Tap and one-shot skills are emitted outside the simulation tick;
+    // replay them into the visual event stream without changing damage.
+    for (const event of actionEvents) {
+      if (event.result.ok) result.state.events.push({
+        kind: 'attack', action: event.action,
+        targetId: event.result.targetId, damage: event.result.damage,
+      });
+    }
     this.renderState(result.state);
     const objective = advanceAlleyObjective(
       this.objectivePhase, result.state.player.position,
