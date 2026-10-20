@@ -7,10 +7,11 @@ const message = document.getElementById('status-message') as HTMLElement | null;
 const assetList = document.getElementById('asset-list') as HTMLElement | null;
 const start = document.getElementById('start') as HTMLButtonElement | null;
 const retry = document.getElementById('retry') as HTMLButtonElement | null;
+const restartRun = document.getElementById('restart-run') as HTMLButtonElement | null;
 const gameContainer = document.getElementById('game') as HTMLElement | null;
 const controlsPanel = document.getElementById('controls') as HTMLElement | null;
 
-if (!panel || !title || !message || !assetList || !start || !retry || !gameContainer || !controlsPanel) {
+if (!panel || !title || !message || !assetList || !start || !retry || !restartRun || !gameContainer || !controlsPanel) {
   throw new Error('Rebirth Alpha page markup incomplete');
 }
 
@@ -78,6 +79,7 @@ start.addEventListener('click', async () => {
       dash: get('dash') as HTMLButtonElement,
     });
     controlsPanel!.hidden = false;
+    restartRun!.hidden = false;
     panel!.hidden = true;
   } catch (error) {
     title!.textContent = '戰鬥初始化失敗';
@@ -85,9 +87,15 @@ start.addEventListener('click', async () => {
     start!.disabled = false;
     mounted?.destroy();
     mounted = null;
+    restartRun!.hidden = true;
   }
 });
 retry.addEventListener('click', () => { void check(); });
+restartRun.addEventListener('click', () => {
+  if (!mounted) return;
+  // Reuse the scene lifecycle hooks so the mobile input bridge reattaches.
+  mounted.retry();
+});
 window.addEventListener('pagehide', () => {
   mounted?.destroy();
   mounted = null;
