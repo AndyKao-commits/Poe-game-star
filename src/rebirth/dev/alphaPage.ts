@@ -1,6 +1,6 @@
 import { verifyAlphaArt } from '../art/alphaReadiness';
 import type { AlphaHost } from './alphaHost';
-import { advanceGarage, garageView, initialGarageState, type GarageState } from './parkingInvestigation';
+import { advanceGarage, garageOutcome, garageView, initialGarageState, type GarageState } from './parkingInvestigation';
 
 const panel = document.getElementById('status-panel') as HTMLElement | null;
 const title = document.getElementById('status-title') as HTMLElement | null;
@@ -41,7 +41,12 @@ function renderGarage(): void {
     button.addEventListener('click', () => { garage = advanceGarage(garage, choice.id); renderGarage(); });
     parkingActions!.append(button);
   }
-  if (garage.complete) parkingStory!.textContent += ' 已記錄工坊入口；下一段實景關卡仍在開發。';
+  const outcome = garageOutcome(garage);
+  if (outcome) {
+    parkingTitle!.textContent = `調查結算 · 評級 ${outcome.rank}`;
+    parkingStory!.textContent = outcome.summary + ' 已記錄工坊入口；下一段實景關卡仍在開發。';
+    parkingEvidence!.textContent = '本次證據：' + (garage.evidence.length ? garage.evidence.join('、') : '未蒐集證據');
+  }
 }
 
 function restartBattle(): void {
