@@ -53,12 +53,13 @@ export function stepParkingRoam(
     y: direction.y * WALK_SPEED * Math.min(deltaMs, 50) / 1000,
   });
   const facing = length > 0.08 ? direction : state.facing;
-  return {
+  const next: ParkingRoamState = {
     ...state,
     position: moved,
     facing,
     nearbyLandmark: nearestGarageLandmark(blueprint, moved),
   };
+  return input.interact ? interactParkingRoam(next, blueprint) : next;
 }
 
 const INTERACTION_BY_LANDMARK: Readonly<Record<GarageLandmarkId, GarageAction>> = {
