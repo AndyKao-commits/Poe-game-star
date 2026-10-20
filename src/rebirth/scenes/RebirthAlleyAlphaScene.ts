@@ -37,6 +37,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private strikeStartedAt = -1;
   private strikeKind: AttackVisualKind = 'basic';
   private strikeFacing: FacingDirection = 'east';
+  private strikeImpact: { x: number; y: number; startedAt: number } | null = null;
   private outcomePanel: Phaser.GameObjects.Container | null = null;
   private feedbackExpiresAt = 0;
   private hitFlashExpiresAt = 0;
@@ -89,6 +90,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.feedbackExpiresAt = 0;
     this.hitFlashExpiresAt = 0;
     this.strikeStartedAt = -1;
+    this.strikeImpact = null;
     this.outcomePanel = null;
     this.stick = { x: 0, y: 0, magnitude: 0 };
     const playerTexture = this.textures.get('rebirth-alpha-aze');
@@ -175,6 +177,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.hitFlash = null;
       this.swingGraphics = null;
       this.strikeStartedAt = -1;
+      this.strikeImpact = null;
       this.outcomePanel = null;
       this.playerSprite = null;
       this.hud = null;
@@ -310,11 +313,19 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.strikeFacing = Math.abs(vector.x) > Math.abs(vector.y)
         ? vector.x >= 0 ? 'east' : 'west'
         : vector.y >= 0 ? 'south' : 'north';
+      if (target && event.damage && event.damage > 0) {
+        this.strikeImpact = { x: target.position.x, y: target.position.y - 16, startedAt: this.clockMs };
+      }
     }
     const strike = this.strikeStartedAt >= 0
       ? attackVisualAt(this.strikeKind, this.clockMs - this.strikeStartedAt)
       : null;
-    this.playerSprite.setPosition(player.position.x, player.position.y);
+    const facingVector = this.strikeFacing === 'east' ? { x: 1, y: 0 }
+      : this.strikeFacing === 'west' ? { x: -1, y: 0 }
+        : this.strikeFacing === 'south' ? { x: 0, y: 1 } : { x: 0, y: -1 };
+    const push = strike ? 11 * strike.lunge : 0;
+    this.playerSprite.setPosition(player.position.x + facingVector.x * push,
+      player.position.y + facingVector.y * push);
     if (this.playerMetadata) {
       const facing = Math.abs(player.facing.x) > Math.abs(player.facing.y)
         ? player.facing.x >= 0 ? 'east' : 'west'
@@ -326,24 +337,55 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     }
     this.swingGraphics?.clear();
     if (strike && this.swingGraphics) {
-      // A geometric magic trail complements the ORIGINAL attack sprite frames;
-      // it is not a replacement actor or borrowed animation asset.
+      // Large layered crescent, leading blade, trailing afterimage and impact
+      // burst. Drawn in world space using the original protagonist's animation.
       const angle = this.strikeFacing === 'east' ? 0
         : this.strikeFacing === 'west' ? Math.PI
           : this.strikeFacing === 'south' ? Math.PI / 2 : -Math.PI / 2;
-      const sweep = -0.95 + strike.progress * 1.9;
-      const radius = 33 * strike.strength;
-      const alpha = Math.max(0.12, 1 - strike.progress);
-      this.swingGraphics.lineStyle(9 * strike.strength, 0x4de4e5, alpha * 0.2);
+      const cx = player.position.x + facingVector.x * 10;
+      const cy = player.position.y - 16 + facingVector.y * 10;
+      const radius = 43 * strike.strength;
+      const alpha = strike.trailAlpha;
+      const lead = angle + strike.sweepAngle;
+      const trailStart = lead - 1.35;
+      // Broad afterimage gives the eye a clear path to follow.
+      for (let layer = 0; layer < 3; layer++) {
+        const r = radius - layer * 8;
+        this.swingGraphics.lineStyle((14 - layer * 3) * strike.strength,
+          layer === 0 ? 0x2cb7f5 : layer === 1 ? 0x59f1e3 : 0xffffff,
+          alpha * (0.26 + layer * 0.14));
+        this.swingGraphics.beginPath();
+        this.swingGraphics.arc(cx, cy, r, trailStart, lead, false);
+        this.swingGraphics.strokePath();
+      }
+      // White leading edge: the sweep visibly travels across the character.
+      this.swingGraphics.lineStyle(5.5 * strike.strength, 0xffffff, alpha);
       this.swingGraphics.beginPath();
-      this.swingGraphics.arc(player.position.x, player.position.y - 15, radius,
-        angle + sweep - 0.48, angle + sweep + 0.48);
+      this.swingGraphics.arc(cx, cy, radius, lead - 0.28, lead + 0.12, false);
       this.swingGraphics.strokePath();
-      this.swingGraphics.lineStyle(3.5 * strike.strength, 0xd7fff1, alpha);
-      this.swingGraphics.beginPath();
-      this.swingGraphics.arc(player.position.x, player.position.y - 15, radius,
-        angle + sweep - 0.48, angle + sweep + 0.48);
-      this.swingGraphics.strokePath();
+      const tipX = cx + Math.cos(lead) * radius;
+      const tipY = cy + Math.sin(lead) * radius;
+      this.swingGraphics.fillStyle(0xffffff, alpha).fillCircle(tipX, tipY, 5 * strike.strength);
+      this.swingGraphics.fillStyle(0x55e9fb, alpha * 0.65)
+        .fillCircle(tipX, tipY, 9 * strike.strength);
+    }
+    if (this.strikeImpact && this.swingGraphics) {
+      const age = this.clockMs - this.strikeImpact.startedAt;
+      if (age >= 210) this.strikeImpact = null;
+      else {
+        const t = age / 210;
+        const { x, y } = this.strikeImpact;
+        this.swingGraphics.lineStyle(4 * (1 - t) + 1, 0xffe7ac, 1 - t)
+          .strokeCircle(x, y, 8 + 25 * t);
+        this.swingGraphics.lineStyle(2, 0xffffff, (1 - t) * 0.85);
+        for (let i = 0; i < 6; i++) {
+          const theta = i * Math.PI / 3;
+          const r = 9 + 20 * t;
+          this.swingGraphics.lineBetween(
+            x + Math.cos(theta) * r, y + Math.sin(theta) * r,
+            x + Math.cos(theta) * (r + 8), y + Math.sin(theta) * (r + 8));
+        }
+      }
     }
     this.dangerGraphics?.clear();
     for (const enemy of state.enemies) {
