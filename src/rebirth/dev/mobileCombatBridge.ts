@@ -79,7 +79,10 @@ export class RebirthMobileCombatBridge {
     const stopNativeGesture = (event: Event): void => {
       if (isCombatTarget(event.target) && event.cancelable) event.preventDefault();
     };
-    for (const type of ['touchstart', 'touchmove', 'gesturestart', 'gesturechange', 'gestureend', 'dblclick']) {
+    // Preventing touchstart on the joystick surface can suppress the subsequent
+    // pointerdown stream in iOS Safari. touch-action:none already blocks zoom;
+    // the joystick adapter handles touchmove itself as a resilient fallback.
+    for (const type of ['touchmove', 'gesturestart', 'gesturechange', 'gestureend', 'dblclick']) {
       this.doc.addEventListener(type, stopNativeGesture, { capture: true, passive: false });
       this.listeners.push(() => this.doc.removeEventListener(type, stopNativeGesture, true));
     }
