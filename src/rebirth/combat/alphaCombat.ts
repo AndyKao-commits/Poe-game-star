@@ -101,7 +101,7 @@ export function performAction(
   }
   const strikeRule = action === 'basic' ? COMBAT_RULES.basic : COMBAT_RULES.punch;
   const target = nearestTarget(actor.position, enemies, strikeRule.range);
-  if (!target) return { ok: false, action, reason: 'no-target' };
+  // A whiff is still a successful attack: consume cooldown/MP and animate.\n  // Only actual target contact applies damage.\n  if (!target) {\n    actor.mp -= rule.mp;\n    actor.readyAt[action] = nowMs + rule.cooldown;\n    if (rule.mp > 0) actor.lastCastAt = nowMs;\n    return { ok: true, action };\n  }
   const damage = damageFor(actor.attack, strikeRule.multiplier, target.defense);
   target.hp = Math.max(0, target.hp - damage);
   actor.mp -= rule.mp;
