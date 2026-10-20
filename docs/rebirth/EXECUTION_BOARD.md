@@ -509,3 +509,14 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - **Prior complete CI:** [39301206401](https://github.com/AndyKao-commits/Poe-game-star/actions/runs/39301206401) SUCCESS including Phaser, browser and mobile emulation; does **not** cover newly added replay button.
 - **Known gaps:** No verified owner-accessible private Alpha URL, no physical iPhone Safari touch/safe-area/visual acceptance, no formal candidate-art owner approval. Production entry stays gated, main untouched.
 - **Next P0:** finish latest replay browser CI and repair if failing; establish approved private testing entry and iPhone test checklist; run complete fight → clue → exit → retry browser flow; update board after results. Avoid tiny consecutive pushes that cancel CI.
+
+
+### 2026-10-20 — B2 parking garage narrative exploration vertical slice
+- Public playable Alpha remains a separately approved test entry; formal release gate and main remain untouched.
+- Alley success now emits a real Phaser victory event. A new B2 transition control appears only after reaching the alley exit, not on defeat.
+- The parking garage threshold uses an original text-first investigation panel (no unapproved garage imagery). Two routes: inspect a damaged amplifier seal or listen first; trace a cable to an illegal workshop entrance. Evidence is carried in chapter-local state and cleared on retry.
+- This is an interactive story investigation, **NOT a rendered parking-garage world map or workshop level**. Garage scene art and further combat remain to be produced.
+- Implementation: `src/rebirth/dev/parkingInvestigation.ts`, `src/rebirth/dev/alphaPage.ts`, `src/rebirth/dev/alphaHost.ts`, `src/rebirth/scenes/RebirthAlleyAlphaScene.ts`, `rebirth-alpha.html`.
+- Automated domain tests: `tests/unit/rebirth-parking-investigation.test.ts` (optional evidence, alternate route, invalid skips, replay reset).
+- Local sandbox validation: npm ci, TypeScript, Vitest, boundary guard, Vite production build PASS. Physical iPhone validation of new B2 panel NOT RUN. Browser CI subject to GitHub workflow completion.
+- Next: purpose-made original B2 parking tiles/props and navigable garage scene, then workshop entry and enemy archetypes; verify phone UI and game progression without placeholder art.
