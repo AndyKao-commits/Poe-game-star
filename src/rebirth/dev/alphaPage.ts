@@ -32,8 +32,8 @@ async function check(): Promise<void> {
     const result = await verifyAlphaArt();
     assetsReady = result.ready;
     if (result.ready) {
-      title!.textContent = '資產已就緒，等待內測';
-      message!.textContent = '技術檢查通過不代表美術驗收。此頁僅供開發者在核准後進行手機戰鬥測試。';
+      title!.textContent = '資產已就緒，準備遊玩';
+      message!.textContent = '目前是公開遊玩測試版；手機橫向遊玩，歡迎回報操作與畫面問題。';
       start!.disabled = false;
     } else {
       title!.textContent = '戰鬥尚未開放';
