@@ -80,7 +80,7 @@ export class RebirthJoystickPointerAdapter {
     if (this.disposed || this.fallbackTouchId === null) return;
     const touch = Array.from(event.touches).find(t => t.identifier === this.fallbackTouchId);
     if (!touch) return;
-    const id = -RebirthJoystickPointerAdapter.TOUCH_POINTER_OFFSET - this.fallbackTouchId;
+    const id = RebirthJoystickPointerAdapter.TOUCH_POINTER_OFFSET + Math.abs(this.fallbackTouchId);
     const active = this.controller.snapshot().pointerId;
     if (active === null && this.fallbackTouchStart) {
       this.controller.pointerDown(id, this.fallbackTouchStart);
@@ -94,7 +94,7 @@ export class RebirthJoystickPointerAdapter {
     if (this.disposed || this.fallbackTouchId === null) return;
     const ended = Array.from(event.changedTouches).some(t => t.identifier === this.fallbackTouchId);
     if (!ended) return;
-    const id = -RebirthJoystickPointerAdapter.TOUCH_POINTER_OFFSET - this.fallbackTouchId;
+    const id = RebirthJoystickPointerAdapter.TOUCH_POINTER_OFFSET + Math.abs(this.fallbackTouchId);
     if (this.controller.snapshot().pointerId === id) {
       this.controller.pointerUp(id);
       this.emit();
