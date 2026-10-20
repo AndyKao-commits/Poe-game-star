@@ -77,9 +77,10 @@ export function touchControlLayout(
     safeInsets.bottom >= viewportHeight) {
     throw new Error('Invalid Rebirth viewport or safe insets');
   }
-  const margin = 20;
-  const radius = Math.min(56, Math.max(28, viewportHeight * 0.13));
-  const actionRadius = Math.min(32, Math.max(20, viewportHeight * 0.065));
+  // Short Safari landscape viewports still need finger-sized hit targets.
+  const margin = Math.max(12, Math.min(20, viewportHeight * 0.045));
+  const radius = Math.min(56, Math.max(36, viewportHeight * 0.15));
+  const actionRadius = Math.min(38, Math.max(27, viewportHeight * 0.09));
   const bottom = viewportHeight - safeInsets.bottom - margin;
   const right = viewportWidth - safeInsets.right - margin;
   return {
