@@ -44,6 +44,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private completed = false;
   private onCreated: (() => void) | null = null;
   private onStopped: (() => void) | null = null;
+  private onVictory: (() => void) | null = null;
 
   constructor() { super({ key: 'RebirthAlleyAlpha' }); }
 
@@ -51,6 +52,10 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   setLifecycleHooks(onCreated: () => void, onStopped: () => void): void {
     this.onCreated = onCreated;
     this.onStopped = onStopped;
+  }
+
+  setVictoryHook(onVictory: () => void): void {
+    this.onVictory = onVictory;
   }
 
   preload(): void {
@@ -276,6 +281,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.showFeedback(objective.phase === 'complete' ? '成功離開巷弄' : '角色倒下');
       this.showOutcome(objective.phase === 'complete');
       this.resetInput();
+      if (objective.phase === 'complete') this.onVictory?.();
     }
   }
 
