@@ -54,9 +54,9 @@ export class RebirthAlleySession {
   /** Keyboard/switch-accessible basic tap executes immediately, not between frames. */
   tapBasic(nowMs: number): CombatResult {
     this.assertTime(nowMs);
-    if (this.ended || this.encounter.enemies.every(enemy => enemy.hp <= 0)) return { ok: false, action: 'basic', reason: 'no-target' };
+    if (this.ended) return { ok: false, action: 'basic', reason: 'dead' };
     const result = this.encounter.action('basic', nowMs);
-    if (result.ok) this.nextBasicAttemptAt = nowMs + HOLD_REPEAT_MS;
+    if (result.ok) this.nextBasicAttemptAt = nowMs + HOLD_REPEAT_MS;\n    this.pendingActions.push({ action: 'basic', result });
     return result;
   }
 
@@ -66,7 +66,7 @@ export class RebirthAlleySession {
    */
   trigger(action: 'punch' | 'dash', nowMs: number): CombatResult {
     this.assertTime(nowMs);
-    if (this.ended || this.encounter.enemies.every(enemy => enemy.hp <= 0)) return { ok: false, action, reason: 'no-target' };
+    if (this.ended) return { ok: false, action, reason: 'dead' };
     const result = this.encounter.action(action, nowMs);
     this.pendingActions.push({ action, result });
     return result;
@@ -75,7 +75,7 @@ export class RebirthAlleySession {
   tick(nowMs: number): SessionStep {
     this.assertTime(nowMs);
     const actions: CombatResult[] = [];
-    if (!this.ended && this.encounter.enemies.some(enemy => enemy.hp > 0) && this.basicHeld && nowMs >= this.nextBasicAttemptAt) {
+    if (!this.ended && this.basicHeld && nowMs >= this.nextBasicAttemptAt) {
       for (let attempt = 0; attempt < MAX_ACTIONS_PER_TICK; attempt++) {
         const result = this.encounter.action('basic', nowMs);
         actions.push(result);
