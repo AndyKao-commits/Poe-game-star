@@ -6,7 +6,6 @@ import { inspectAlleyClue, ALLEY_CLUE_POSITION } from '../../src/rebirth/dev/all
 import { createPlayer } from '../../src/rebirth/combat/alphaCombat';
 
 const idle = { x: 0, y: 0, magnitude: 0 };
-const east = { x: 1, y: 0, magnitude: 1 };
 
 describe('Chapter 1 alley acceptance: independent gameplay domain integration', () => {
   it('combat victory opens exit, optional evidence persists, and reaching exit completes', () => {
