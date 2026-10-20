@@ -534,3 +534,12 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - Added four deterministic unit tests for evidence prerequisites, quiet entry, alarm, and replay-safe completed state.
 - Sandbox: `npm ci`, `npm run typecheck`, Vitest (46 files / 241 tests), boundary checker, `npm run build`: PASS. Browser CI and physical iPhone QA: awaiting independent verification.
 - No new artwork, no legacy references, no changes to `main`. Garage remains a narrative investigation; free-roaming parking art and combat are not yet implemented.
+
+### 2026-10-20 — B2 short-landscape investigation scroll / mobile input isolation
+- Found a mobile usability conflict: the full-screen combat surface and its ancestors used `touch-action: none`, so the B2 narrative card could overflow on short landscape viewports while finger panning was suppressed by ancestors.
+- `rebirth-alpha.html`: document ancestors now permit vertical panning, but `#app` still blocks native gestures during combat. `#app.investigating` and `#parking-card` permit vertical touch scrolling only while the B2 panel is open.
+- `alphaPage.ts`: explicitly adds/removes investigation mode when opening B2 or retrying the alley. Combat gesture guard remains active on replay.
+- `tests/e2e/rebirth-garage-scroll.spec.ts`: short 932x300 landscape overflow, computed touch-action ancestry, wheel scroll, and gesture-guard restoration. Existing rapid-tap test now asserts gesture protection on `#app`.
+- Isolated sandbox at `0071cc90`: `npm ci` PASS, `npm run typecheck` PASS, Vitest **244/244 PASS (47 files)**, boundary check PASS, `npm run build` PASS. Playwright browser attempt **NOT RUN (browser executables absent in sandbox)**; runner returned missing Chromium/WebKit executable rather than an application assertion failure.
+- Workflow updated to run the new B2 browser regression on Chromium/WebKit; final result must be verified from GitHub Actions. Physical iPhone/Android: NOT RUN. No unapproved art, no legacy references, no `main` changes, no formal release-gate changes.
+- Deployment: hold public Alpha promotion until the new browser check is green. Next: inspect GitHub CI for B2 scroll regression; fix if needed, then verify public Alpha READY/HTTP before inviting mobile testing.
