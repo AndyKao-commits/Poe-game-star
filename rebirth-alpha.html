@@ -21,6 +21,8 @@
 .action:active,.action.pressed{background:linear-gradient(155deg,#f8bb68,#a94e44);border-color:#ffe4b3;transform:translate(-50%,-50%) scale(.92)}
 #attack{border-color:#ffc56c;background:linear-gradient(155deg,#b97736,#693b31)}
 #hud-top{position:absolute;top:env(safe-area-inset-top,0px);left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px);z-index:5;display:flex;justify-content:space-between;gap:8px;padding:8px 14px;pointer-events:none}
+#restart-run{pointer-events:auto;min-height:36px;border:1px solid #87bdca;border-radius:9px;background:#102b3ddd;color:#e4fbff;padding:7px 12px;font-weight:700;font-size:12px;touch-action:manipulation;cursor:pointer}
+#restart-run:focus-visible{outline:3px solid #4ce0e0;outline-offset:2px}
 #hud-top span{background:#091522ce;border:1px solid #4c738c7d;border-radius:8px;padding:5px 10px;font-size:11px;letter-spacing:.08em}
 #status-panel{position:absolute;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;padding:22px;background:#08121fe8}
 #status-card{width:min(560px,100%);padding:clamp(20px,5vw,38px);border:1px solid #4b7d9e9c;border-radius:20px;background:linear-gradient(150deg,#182e45,#0c192a);box-shadow:0 22px 90px #000a}
@@ -47,7 +49,7 @@
     <button id="punch" class="action" type="button">衝拳<small>MP 15</small></button>
     <button id="dash" class="action" type="button">瞬步<small>MP 10</small></button>
   </div>
-  <div id="hud-top"><span>ASHEN RELIQUARY · REBIRTH</span><span>第一章 / 巷弄內測 · 非公開</span></div>
+  <div id="hud-top"><span>ASHEN RELIQUARY · REBIRTH</span><span>第一章 / 巷弄內測 · 非公開</span><button id="restart-run" type="button" hidden aria-label="重新挑戰第一關">重新挑戰</button></div>
   <section id="status-panel" role="status" aria-live="polite">
     <div id="status-card">
       <div class="eyebrow">CHAPTER 01 / INTERNAL ALPHA</div>
