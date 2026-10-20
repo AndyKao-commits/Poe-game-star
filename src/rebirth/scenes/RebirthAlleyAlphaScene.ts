@@ -8,6 +8,13 @@ import { type StickVector } from '../input/touchControls';
 import { animationFrame, validateSpriteSheetMetadata, type FacingDirection, type SpriteSheetMetadata } from '../art/animationContract';
 import { attackVisualAt, type AttackVisualKind } from '../dev/attackVisual';
 
+// The original 480×270 composition was readable on desktop but undersized on
+// iPhone landscape. Keep the logical world unchanged and enlarge the complete
+// world layer through the camera so collision, touch coordinates and authored
+// map positions remain stable.
+const REBIRTH_WORLD_ZOOM = 1.25;
+const ACTOR_SPRITE_SCALE = 2;
+
 /**
  * Chapter 1 alley scene integration for the *future approved art build*.
  *
@@ -113,6 +120,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     }
     this.cameras.main.setBackgroundColor('#101a2a');
     this.cameras.main.setRoundPixels(true);
+    this.cameras.main.setZoom(REBIRTH_WORLD_ZOOM);
     // Keep the original 480-unit combat arena centered within wide iPhone viewports.
     // The additional area uses real ENV-01 atlas tiles rather than empty bars.
     this.cameras.main.setScroll(-(this.scale.width - 480) / 2, 0);
@@ -130,13 +138,13 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.playerSprite = this.add.sprite(
       state.player.position.x, state.player.position.y,
       'rebirth-alpha-aze', 0,
-    ).setOrigin(0.5, 0.83).setScale(2);
+    ).setOrigin(0.5, 0.83).setScale(ACTOR_SPRITE_SCALE);
     for (const enemy of state.enemies) {
       this.enemyHealthBars.set(enemy.id, this.add.graphics().setDepth(90));
       this.enemySprites.set(enemy.id, this.add.sprite(
         enemy.position.x, enemy.position.y,
         'rebirth-alpha-brawler', 0,
-      ).setOrigin(0.5, 0.83).setScale(2));
+      ).setOrigin(0.5, 0.83).setScale(ACTOR_SPRITE_SCALE));
     }
     this.dangerGraphics = this.add.graphics().setDepth(85);
     this.swingGraphics = this.add.graphics().setDepth(88);
