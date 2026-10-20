@@ -45,6 +45,27 @@ test.describe('Rebirth private Alpha actual Phaser boot', () => {
     expect(errors).toEqual([]);
   });
 
+  test('rapid attack taps do not trigger native page zoom or leave attack held', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Chromium CDP touch dispatch required');
+    await page.goto('/rebirth-alpha.html');
+    await page.locator('#start').click();
+    await expect(page.locator('#attack')).toBeVisible();
+    const attack = await page.locator('#attack').boundingBox();
+    expect(attack).toBeTruthy();
+    const point = { x: Math.round(attack!.x + attack!.width / 2),
+      y: Math.round(attack!.y + attack!.height / 2), id: 1 };
+    const client = await page.context().newCDPSession(page);
+    const initialScale = await page.evaluate(() => window.visualViewport?.scale ?? 1);
+    for (let i = 0; i < 5; i++) {
+      await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+      await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [point] });
+    }
+    await expect(page.locator('#attack')).not.toHaveClass(/pressed/);
+    await expect.poll(() => page.evaluate(() => window.visualViewport?.scale ?? 1)).toBe(initialScale);
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).touchAction)).toBe('none');
+    await client.detach();
+  });
+
   test('steers the joystick with a physical-style touch sequence while attacking', async ({ page, browserName }) => {
     test.skip(browserName !== 'chromium', 'Chromium CDP dispatchTouchEvent required');
     await page.goto('/rebirth-alpha.html');
