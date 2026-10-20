@@ -48,6 +48,7 @@ export class RebirthMobileCombatBridge {
     for (const button of [controls.attack, controls.punch, controls.dash]) {
       button.style.touchAction = 'none';
     }
+    this.installSafariGestureGuard();
     this.installAction('attack', controls.attack);
     this.installAction('punch', controls.punch);
     this.installAction('dash', controls.dash);
@@ -58,6 +59,30 @@ export class RebirthMobileCombatBridge {
       if (doc.visibilityState === 'hidden') this.reset();
     });
     this.layout();
+  }
+
+  /** iOS Safari may interpret rapid attack taps as double-tap-to-zoom despite
+   * touch-action:none on a child button. Cancel native gestures only over the
+   * live game surface / combat controls, leaving page and retry UI accessible.
+   * Non-passive capture is essential: pointerdown.preventDefault alone is not
+   * sufficient on older Safari versions.
+   */
+  private installSafariGestureGuard(): void {
+    const isCombatTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof Node)) return false;
+      return target === this.controls.surface ||
+        this.controls.surface.contains(target) ||
+        [this.controls.attack, this.controls.punch, this.controls.dash].some(
+          button => button === target || button.contains(target),
+        );
+    };
+    const stopNativeGesture = (event: Event): void => {
+      if (isCombatTarget(event.target) && event.cancelable) event.preventDefault();
+    };
+    for (const type of ['touchstart', 'touchmove', 'gesturestart', 'gesturechange', 'gestureend', 'dblclick']) {
+      this.doc.addEventListener(type, stopNativeGesture, { capture: true, passive: false });
+      this.listeners.push(() => this.doc.removeEventListener(type, stopNativeGesture, true));
+    }
   }
 
   private listen(target: EventTarget, type: string, handler: EventListener): void {
