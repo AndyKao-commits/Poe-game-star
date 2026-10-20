@@ -527,3 +527,10 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - Isolated sandbox at parent `f6812fe` with this change: npm ci PASS; TypeScript PASS; Vitest **237/237 PASS (46 files)**; release-boundary PASS; Vite build PASS. Large Phaser chunk advisory persists.
 - Browser CI for this commit and physical iPhone B2 interaction: NOT RUN at the time of commit preparation. Main and formal release gate remain untouched.
 - Next: browser UI verification for B2 action buttons, then original B2 art and navigable world map.
+
+### 2026-10-20 — B2 garage electronic lock investigation
+- Extended Rebirth-only `parkingInvestigation.ts` with an optional electronic-lock branch. A recovered B2 seal unlocks a silent entry; forcing the door raises an alarm. Isolation of the illegal amplifier test circuit and quiet entry determine A/B/C investigation outcomes.
+- Updated the public Alpha investigation UI to display the earned grade, consequence and evidence at completion; replay still resets the run.
+- Added four deterministic unit tests for evidence prerequisites, quiet entry, alarm, and replay-safe completed state.
+- Sandbox: `npm ci`, `npm run typecheck`, Vitest (46 files / 241 tests), boundary checker, `npm run build`: PASS. Browser CI and physical iPhone QA: awaiting independent verification.
+- No new artwork, no legacy references, no changes to `main`. Garage remains a narrative investigation; free-roaming parking art and combat are not yet implemented.
