@@ -21,9 +21,27 @@ test.describe('Rebirth private Alpha actual Phaser boot', () => {
     await expect(page.locator('#attack')).toBeVisible();
     await expect(page.locator('#punch')).toBeVisible();
     await expect(page.locator('#dash')).toBeVisible();
+    await expect(page.locator('#restart-run')).toBeVisible();
     await expect.poll(() => page.locator('#stick-base').evaluate(
       el => (el as HTMLElement).style.width,
     )).not.toBe('');
+    expect(errors).toEqual([]);
+  });
+
+  test('replays the real Phaser scene without losing mobile controls', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto('/rebirth-alpha.html');
+    await expect(page.locator('#restart-run')).toBeHidden();
+    await page.locator('#start').click();
+    await expect(page.locator('#controls')).toBeVisible();
+    await expect(page.locator('#restart-run')).toBeVisible();
+    await expect(page.locator('#stick-base')).toHaveCSS('width', /[1-9]/);
+    await page.locator('#restart-run').click();
+    await expect(page.locator('#game canvas')).toBeVisible();
+    await expect(page.locator('#controls')).toBeVisible();
+    await expect(page.locator('#attack')).toBeVisible();
+    await expect(page.locator('#stick-base')).toHaveCSS('width', /[1-9]/);
     expect(errors).toEqual([]);
   });
 
