@@ -13,7 +13,7 @@ describe('Committed Rebirth CHAR-02 original art', () => {
     expect(bytes.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'))).toBe(true);
     const width = bytes.readUInt32BE(16);
     const height = bytes.readUInt32BE(20);
-    expect({ width, height }).toEqual({ width: 288, height: 192 });
+    expect({ width, height }).toEqual({ width: 864, height: 576 });
     const meta = JSON.parse(readFileSync(jsonPath, 'utf8')) as SpriteSheetMetadata;
     expect(() => validateSpriteSheetMetadata(meta, width, height)).not.toThrow();
   });

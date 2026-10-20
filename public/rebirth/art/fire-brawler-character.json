@@ -3,8 +3,8 @@
   "creator": "Original Rebirth pixel-art implementation",
   "sourceFile": "art/rebirth/source/fire-brawler-character.ora",
   "created": "2026-10-19",
-  "frameWidth": 32,
-  "frameHeight": 48,
+  "frameWidth": 96,
+  "frameHeight": 144,
   "columns": 9,
   "rows": 4,
   "animations": {

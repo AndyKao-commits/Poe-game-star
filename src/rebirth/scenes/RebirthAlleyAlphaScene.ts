@@ -12,8 +12,9 @@ import { attackVisualAt, type AttackVisualKind } from '../dev/attackVisual';
 // iPhone landscape. Keep the logical world unchanged and enlarge the complete
 // world layer through the camera so collision, touch coordinates and authored
 // map positions remain stable.
-const REBIRTH_WORLD_ZOOM = 1.25;
-const ACTOR_SPRITE_SCALE = 2;
+const REBIRTH_WORLD_ZOOM = 2.4;
+const ACTOR_SPRITE_SCALE = 1 / 3;
+const GROUND_TILE_SCALE = 1 / 3;
 
 /**
  * Chapter 1 alley scene integration for the *future approved art build*.
@@ -75,13 +76,13 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     // These are planned *new Rebirth-only* art paths. Missing art must produce
     // an explicit loader failure, never fallback to legacy/temporary textures.
     this.load.spritesheet('rebirth-alpha-aze', '/rebirth/art/aze-character.png', {
-      frameWidth: 32, frameHeight: 48,
+      frameWidth: 96, frameHeight: 144,
     });
     this.load.spritesheet('rebirth-alpha-brawler', '/rebirth/art/fire-brawler-character.png', {
-      frameWidth: 32, frameHeight: 48,
+      frameWidth: 96, frameHeight: 144,
     });
     this.load.spritesheet('rebirth-alpha-ground', '/rebirth/art/urban-ground-atlas.png', {
-      frameWidth: 32, frameHeight: 32,
+      frameWidth: 96, frameHeight: 96,
     });
     this.load.json('rebirth-alpha-aze-meta', '/rebirth/art/aze-character.json');
     this.load.json('rebirth-alpha-brawler-meta', '/rebirth/art/fire-brawler-character.json');
@@ -209,7 +210,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
           ? 4 + ((x * 3 + y) % 4)
           : (x * 7 + y * 3) % 4;
         this.add.image(x * 32, y * 32, 'rebirth-alpha-ground', frame)
-          .setOrigin(0).setDepth(-100);
+          .setOrigin(0).setScale(GROUND_TILE_SCALE).setDepth(-100);
       }
     }
     for (const [x, y, frame] of [
@@ -217,7 +218,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       [11, 2, 10], [12, 2, 10], [2, 7, 12], [13, 7, 13],
     ] as const) {
       this.add.image(x * 32, y * 32, 'rebirth-alpha-ground', frame)
-        .setOrigin(0).setDepth(-99);
+        .setOrigin(0).setScale(GROUND_TILE_SCALE).setDepth(-99);
     }
   }
 

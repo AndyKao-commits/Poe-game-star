@@ -13,14 +13,14 @@ const imageDimensions = (name: string) => {
 describe('Real reviewed V2 candidate assets committed to GitHub', () => {
   it('ships 36 original protagonist animation frames', () => {
     const size = imageDimensions('aze-character.png');
-    expect(size).toEqual({ width: 288, height: 192 });
+    expect(size).toEqual({ width: 864, height: 576 });
     const metadata = JSON.parse(readFileSync(path('aze-character.json'), 'utf8')) as SpriteSheetMetadata;
     expect(() => validateSpriteSheetMetadata(metadata, size.width, size.height)).not.toThrow();
   });
 
   it('ships all 16 original urban ground tiles', () => {
     const size = imageDimensions('urban-ground-atlas.png');
-    expect(size).toEqual({ width: 128, height: 128 });
+    expect(size).toEqual({ width: 384, height: 384 });
     const metadata = JSON.parse(readFileSync(path('urban-ground-atlas.json'), 'utf8')) as {
       frameWidth: number; frameHeight: number;
     };

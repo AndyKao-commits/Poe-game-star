@@ -14,30 +14,30 @@ function validMetadata(): SpriteSheetMetadata {
       hurt: [start + 8],
     };
   }
-  return { frameWidth: 32, frameHeight: 48, animations };
+  return { frameWidth: 96, frameHeight: 144, animations };
 }
 
 describe('Rebirth V2 sprite sheet contract', () => {
   it('accepts the 9x4 four-facing sheet', () => {
-    expect(() => validateSpriteSheetMetadata(validMetadata(), 288, 192)).not.toThrow();
+    expect(() => validateSpriteSheetMetadata(validMetadata(), 864, 576)).not.toThrow();
   });
   it('rejects mismatched PNG dimensions', () => {
-    expect(() => validateSpriteSheetMetadata(validMetadata(), 287, 192)).toThrow('dimensions');
+    expect(() => validateSpriteSheetMetadata(validMetadata(), 863, 576)).toThrow('dimensions');
   });
   it('rejects missing directional animations', () => {
     const metadata = validMetadata();
     metadata.animations.north.walk = [];
-    expect(() => validateSpriteSheetMetadata(metadata, 288, 192)).toThrow('north/walk');
+    expect(() => validateSpriteSheetMetadata(metadata, 864, 576)).toThrow('north/walk');
   });
   it('rejects reused animation frames', () => {
     const metadata = validMetadata();
     metadata.animations.east.hurt = [0];
-    expect(() => validateSpriteSheetMetadata(metadata, 288, 192)).toThrow('assigned twice');
+    expect(() => validateSpriteSheetMetadata(metadata, 864, 576)).toThrow('assigned twice');
   });
   it('rejects out-of-range indices', () => {
     const metadata = validMetadata();
     metadata.animations.south.attack[1] = 36;
-    expect(() => validateSpriteSheetMetadata(metadata, 288, 192)).toThrow('outside sheet');
+    expect(() => validateSpriteSheetMetadata(metadata, 864, 576)).toThrow('outside sheet');
   });
   it('plays and loops using metadata instead of hardcoded rows', () => {
     const metadata = validMetadata();

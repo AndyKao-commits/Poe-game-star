@@ -7,13 +7,13 @@
     "revision": "v2",
     "ownerProvisionalApproval": true,
     "releaseApproved": false,
-    "frameWidth": 32,
-    "frameHeight": 48,
+    "frameWidth": 96,
+    "frameHeight": 144,
     "columns": 9,
     "rows": 4,
     "files": {
-      "public/rebirth/art/aze-character.json": "92978dc512aeb8bc810b0676433093400a7cc75f4ffe1a3c7d96865b939531ab",
-      "public/rebirth/art/aze-character.png": "1bbf63a32e139d0aa7b10910f98a4b10b09308815dae3d00cfc99a7cacf0ed43",
+      "public/rebirth/art/aze-character.json": "2299052ee9bfaed808bdc2f84d26fb09992458e58f91e47d52c6bdd449ae5115",
+      "public/rebirth/art/aze-character.png": "20a7208a6870fa7b490fcf87e974d3c949eb109573eb7f802ae7f382674ba7a6",
       "art/rebirth/source/aze-character.ora": "83ff5c6fc62a5df0e7c55a098559b71c691d5aadda14ebf189e4d0099938aacd"
     }
   },
@@ -21,13 +21,13 @@
     "revision": "v1",
     "ownerProvisionalApproval": false,
     "releaseApproved": false,
-    "frameWidth": 32,
-    "frameHeight": 32,
+    "frameWidth": 96,
+    "frameHeight": 96,
     "columns": 4,
     "rows": 4,
     "files": {
-      "public/rebirth/art/urban-ground-atlas.json": "45c07f808ce2cd320f33c061f4e5e7db0840e22fc8e9bd9c8b148f69e1337552",
-      "public/rebirth/art/urban-ground-atlas.png": "ec6de39b5f29ee4a6cf627308cd0b95bd44e296141d97fb1699e0cfcf0462955",
+      "public/rebirth/art/urban-ground-atlas.json": "2cf5e216f493671b00a0c3206be88c6114f87dcaf62134b3d2547c77887c0f5a",
+      "public/rebirth/art/urban-ground-atlas.png": "f02bac1bf61163163df99e46d92f67a4c2435fb969ab446628135bed9b6a267d",
       "art/rebirth/source/urban-ground-atlas.ora": "f2d2a8503ffcc268fae08c86892b1789379bd043caece06f21ee53ac466c484b"
     }
   }
