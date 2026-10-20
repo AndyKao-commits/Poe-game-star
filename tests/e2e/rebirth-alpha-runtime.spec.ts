@@ -51,6 +51,9 @@ test.describe('Rebirth private Alpha actual Phaser boot', () => {
     await expect(page.locator('#start')).toBeEnabled();
     await page.locator('#start').click();
     await expect(page.locator('#stick-base')).toHaveCSS('width', /[1-9]/);
+    // Replay first: exercise actual scene SHUTDOWN/CREATE and input bridge reattachment.
+    await page.locator('#restart-run').click();
+    await expect(page.locator('#stick-base')).toHaveCSS('width', /[1-9]/);
     const base = await page.locator('#stick-base').boundingBox();
     const attack = await page.locator('#attack').boundingBox();
     expect(base).toBeTruthy();
