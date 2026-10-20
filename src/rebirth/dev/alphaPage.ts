@@ -78,6 +78,7 @@ start.addEventListener('click', async () => {
       punch: get('punch') as HTMLButtonElement,
       dash: get('dash') as HTMLButtonElement,
     });
+    document.getElementById('app')?.classList.add('playing');
     controlsPanel!.hidden = false;
     restartRun!.hidden = false;
     panel!.hidden = true;
@@ -87,6 +88,7 @@ start.addEventListener('click', async () => {
     start!.disabled = false;
     mounted?.destroy();
     mounted = null;
+    document.getElementById('app')?.classList.remove('playing');
     restartRun!.hidden = true;
   }
 });
