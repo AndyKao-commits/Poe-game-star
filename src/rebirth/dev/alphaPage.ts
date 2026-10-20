@@ -53,6 +53,7 @@ function restartBattle(): void {
   if (!mounted) return;
   garage = initialGarageState();
   parkingPanel!.hidden = true;
+  document.getElementById('app')?.classList.remove('investigating');
   nextChapter!.hidden = true;
   controlsPanel!.hidden = false;
   mounted.retry();
@@ -140,6 +141,7 @@ nextChapter.addEventListener('click', () => {
   if (!mounted || nextChapter!.hidden) return;
   controlsPanel!.hidden = true;
   parkingPanel!.hidden = false;
+  document.getElementById('app')?.classList.add('investigating');
   garage = initialGarageState();
   renderGarage();
 });
