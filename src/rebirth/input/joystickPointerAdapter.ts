@@ -13,8 +13,17 @@ import type { Point } from './touchControls';
 export class RebirthJoystickPointerAdapter {
   private disposed = false;
   private fallbackPointerId: number | null = null;
+  private fallbackTouchId: number | null = null;
+  private fallbackTouchStart: Point | null = null;
+  private static readonly TOUCH_POINTER_OFFSET = 1000000;
   private readonly onDown = (event: PointerEvent): void => {
     if (this.disposed) return;
+    // Native pointer events take priority over the touch fallback.
+    if (this.fallbackTouchId !== null) {
+      this.controller.reset();
+      this.fallbackTouchId = null;
+      this.fallbackTouchStart = null;
+    }
     const captured = this.controller.pointerDown(event.pointerId, this.point(event));
     if (!captured) return;
     try {
@@ -56,6 +65,48 @@ export class RebirthJoystickPointerAdapter {
     this.emit();
   };
 
+  // On some iOS Safari builds, native gesture prevention suppresses the
+  // pointer event stream. Keep the starting touch until the first move, then
+  // activate only if no pointerdown has claimed the stick. No double input.
+  private readonly onTouchStart = (event: TouchEvent): void => {
+    if (this.disposed || this.controller.snapshot().pointerId !== null ||
+        this.fallbackTouchId !== null) return;
+    const touch = event.changedTouches.item(0);
+    if (!touch) return;
+    this.fallbackTouchId = touch.identifier;
+    this.fallbackTouchStart = this.touchPoint(touch);
+  };
+  private readonly onTouchMove = (event: TouchEvent): void => {
+    if (this.disposed || this.fallbackTouchId === null) return;
+    const touch = Array.from(event.touches).find(t => t.identifier === this.fallbackTouchId);
+    if (!touch) return;
+    const id = -RebirthJoystickPointerAdapter.TOUCH_POINTER_OFFSET - this.fallbackTouchId;
+    const active = this.controller.snapshot().pointerId;
+    if (active === null && this.fallbackTouchStart) {
+      this.controller.pointerDown(id, this.fallbackTouchStart);
+    }
+    if (this.controller.snapshot().pointerId !== id) return;
+    this.controller.pointerMove(id, this.touchPoint(touch));
+    if (event.cancelable) event.preventDefault();
+    this.emit();
+  };
+  private readonly onTouchEnd = (event: TouchEvent): void => {
+    if (this.disposed || this.fallbackTouchId === null) return;
+    const ended = Array.from(event.changedTouches).some(t => t.identifier === this.fallbackTouchId);
+    if (!ended) return;
+    const id = -RebirthJoystickPointerAdapter.TOUCH_POINTER_OFFSET - this.fallbackTouchId;
+    if (this.controller.snapshot().pointerId === id) {
+      this.controller.pointerUp(id);
+      this.emit();
+    }
+    this.fallbackTouchId = null;
+    this.fallbackTouchStart = null;
+  };
+  private touchPoint(touch: Touch): Point {
+    const rect = this.element.getBoundingClientRect();
+    return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+  }
+
   private readonly onBlur = (): void => this.reset();
   private readonly onVisibility = (): void => {
     if (this.doc.visibilityState === 'hidden') this.reset();
@@ -69,6 +120,10 @@ export class RebirthJoystickPointerAdapter {
     private readonly win: Window = window,
     private readonly doc: Document = document,
   ) {
+    element.addEventListener('touchstart', this.onTouchStart, { passive: true });
+    element.addEventListener('touchmove', this.onTouchMove, { passive: false });
+    element.addEventListener('touchend', this.onTouchEnd);
+    element.addEventListener('touchcancel', this.onTouchEnd);
     element.addEventListener('pointerdown', this.onDown);
     element.addEventListener('pointermove', this.onMove);
     element.addEventListener('pointerup', this.onUp);
@@ -104,6 +159,8 @@ export class RebirthJoystickPointerAdapter {
     const id = this.controller.snapshot().pointerId;
     this.controller.setMode(mode);
     this.fallbackPointerId = null;
+    this.fallbackTouchId = null;
+    this.fallbackTouchStart = null;
     if (id !== null) this.releaseCapture(id);
     this.emit();
   }
@@ -121,6 +178,10 @@ export class RebirthJoystickPointerAdapter {
     if (this.disposed) return;
     this.reset();
     this.disposed = true;
+    this.element.removeEventListener('touchstart', this.onTouchStart);
+    this.element.removeEventListener('touchmove', this.onTouchMove);
+    this.element.removeEventListener('touchend', this.onTouchEnd);
+    this.element.removeEventListener('touchcancel', this.onTouchEnd);
     this.element.removeEventListener('pointerdown', this.onDown);
     this.element.removeEventListener('pointermove', this.onMove);
     this.element.removeEventListener('pointerup', this.onUp);
