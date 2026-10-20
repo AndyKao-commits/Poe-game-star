@@ -28,6 +28,26 @@ test.describe('Rebirth private Alpha actual Phaser boot', () => {
     expect(errors).toEqual([]);
   });
 
+  test('fills extra-wide iPhone landscape without side bars or overlapping splash HUD', async ({ page }) => {
+    await page.setViewportSize({ width: 932, height: 300 });
+    await page.goto('/rebirth-alpha.html');
+    await page.locator('#start').click();
+    await expect(page.locator('#game canvas')).toBeVisible();
+    await expect(page.locator('#app')).toHaveClass(/playing/);
+    const sizes = await page.evaluate(() => {
+      const game = document.getElementById('game')!.getBoundingClientRect();
+      const canvas = document.querySelector('#game canvas')!.getBoundingClientRect();
+      const title = document.querySelector('#hud-top span')!;
+      return { gameWidth: game.width, canvasWidth: canvas.width, canvasHeight: canvas.height,
+        gameHeight: game.height, titleDisplay: getComputedStyle(title).display };
+    });
+    expect(sizes.canvasWidth).toBeGreaterThanOrEqual(sizes.gameWidth - 2);
+    expect(sizes.canvasHeight).toBeGreaterThanOrEqual(sizes.gameHeight - 2);
+    expect(sizes.titleDisplay).toBe('none');
+    await expect(page.locator('#attack')).toBeVisible();
+    await expect(page.locator('#restart-run')).toBeVisible();
+  });
+
   test('replays the real Phaser scene without losing mobile controls', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
