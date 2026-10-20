@@ -46,11 +46,13 @@ describe('Rebirth Alpha combat core', () => {
     expect(actor.mp).toBe(50);
     expect(performAction(actor, 'dash', [], 2001).reason).toBe('cooldown');
   });
-  it('failed actions do not spend mana or cooldown', () => {
+  it('air attacks spend their normal resources but do not deal damage', () => {
     const actor = createPlayer();
-    expect(performAction(actor, 'punch', [], 0).reason).toBe('no-target');
-    expect(actor.mp).toBe(60);
-    expect(actor.readyAt.punch).toBe(0);
+    expect(performAction(actor, 'punch', [], 0)).toEqual({ ok: true, action: 'punch' });
+    expect(actor.mp).toBe(45);
+    expect(actor.readyAt.punch).toBe(COMBAT_RULES.punch.cooldown);
+    expect(performAction(actor, 'punch', [], 1).reason).toBe('cooldown');
+    expect(performAction(actor, 'basic', [], 0)).toEqual({ ok: true, action: 'basic' });
     actor.mp = 0;
     expect(performAction(actor, 'dash', [], 0).reason).toBe('mana');
     actor.hp = 0;
