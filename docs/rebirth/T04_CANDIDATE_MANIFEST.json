@@ -12,8 +12,8 @@
     "columns": 9,
     "rows": 4,
     "files": {
-      "public/rebirth/art/aze-character.json": "2299052ee9bfaed808bdc2f84d26fb09992458e58f91e47d52c6bdd449ae5115",
-      "public/rebirth/art/aze-character.png": "20a7208a6870fa7b490fcf87e974d3c949eb109573eb7f802ae7f382674ba7a6",
+      "public/rebirth/art/aze-character.json": "84b5f6f966df38555ae4c4b000cbc0b2616dc48782819d9dd0797b582fb8779e",
+      "public/rebirth/art/aze-character.png": "eff79aeebf5a5281a0835ba4e5be64a605a489be8c4093aa54e8cae11e8b6478",
       "art/rebirth/source/aze-character.ora": "83ff5c6fc62a5df0e7c55a098559b71c691d5aadda14ebf189e4d0099938aacd"
     }
   },
