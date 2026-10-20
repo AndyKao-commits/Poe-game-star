@@ -498,3 +498,14 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - Implemented `fa47917` in `RebirthAlleyAlphaScene`: enemy strike telegraph radius with time-progressive warning, brief red damage flash and camera shake, expiring feedback labels, explicit victory/defeat overlay with replay instructions. Uses only original game runtime drawing for combat effects, not substituted character art. Release entry remains isolated.
 - Isolated sandbox at `fa47917` passed TypeScript, Vitest, release boundary, Vite build. GitHub browser CI run `39265795441` started; result must be verified before claiming this latest scene revision passed browser QA.
 - Remaining: actual physical iPhone landscape and simultaneous input test, owner visual approval of candidate art, richer world interaction and encounter progression. No public release or gate unlock.
+
+
+### 2026-10-20 — T06 cycle Z: independent external research log + actual Alpha replay UX
+
+- **Research recorded:** `docs/rebirth/REFERENCE_RESEARCH_LOG.md` at `b294e21`. Inspected external ADOLF-S-POKE README, generated index page and cloud-save documentation **only to identify general design principles**. Explicitly prohibits copying/importing its code, assets, data, layouts, game content or save schemas. All implementation stays original, Phaser-based and subject to Rebirth GDD.
+- **Playable Alpha UX improvement:** `rebirth-alpha.html` now exposes a visible, accessible `#restart-run` button while playing (`48afbf8`). `alphaPage.ts` wires it to the already-original `AlphaHost.retry()` lifecycle (`017c0f5`). `tests/e2e/rebirth-alpha-runtime.spec.ts` adds a Chromium/WebKit real-Phaser replay regression (`b5c0e0d`).
+- **Isolated sandbox QA at `b5c0e0d`:** npm ci PASS, TypeScript PASS, **225 Vitest tests PASS**, release boundary PASS, Vite production build PASS. Large Phaser chunk warning remains; not a build failure.
+- **Browser CI:** [39348918478](https://github.com/AndyKao-commits/Poe-game-star/actions/runs/39348918478) real Phaser boot/two-finger step **PASS**; full workflow was **IN PROGRESS** when this board entry was prepared. Browser replay test final status must be checked before claiming full green.
+- **Prior complete CI:** [39301206401](https://github.com/AndyKao-commits/Poe-game-star/actions/runs/39301206401) SUCCESS including Phaser, browser and mobile emulation; does **not** cover newly added replay button.
+- **Known gaps:** No verified owner-accessible private Alpha URL, no physical iPhone Safari touch/safe-area/visual acceptance, no formal candidate-art owner approval. Production entry stays gated, main untouched.
+- **Next P0:** finish latest replay browser CI and repair if failing; establish approved private testing entry and iPhone test checklist; run complete fight → clue → exit → retry browser flow; update board after results. Avoid tiny consecutive pushes that cancel CI.
