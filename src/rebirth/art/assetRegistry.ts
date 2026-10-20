@@ -6,7 +6,7 @@
 export const rebirthArtRegistry = {
   'CHAR-01': {
     id: 'CHAR-01',
-    revision: 'v3-highres',
+    revision: 'v4-template-derived',
     usage: 'provisional-development',
     ownerProvisionalApproval: true,
     releaseApproved: false,

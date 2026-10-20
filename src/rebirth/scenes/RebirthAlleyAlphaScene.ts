@@ -7,6 +7,7 @@ import { RebirthAlleyEncounter, type AlleySnapshot } from '../combat/alleyEncoun
 import { type StickVector } from '../input/touchControls';
 import { animationFrame, validateSpriteSheetMetadata, type FacingDirection, type SpriteSheetMetadata } from '../art/animationContract';
 import { attackVisualAt, type AttackVisualKind } from '../dev/attackVisual';
+import { dashVisualAt } from '../dev/dashVisual';
 
 // The original 480×270 composition was readable on desktop but undersized on
 // iPhone landscape. Keep the logical world unchanged and enlarge the complete
@@ -46,6 +47,8 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private strikeKind: AttackVisualKind = 'basic';
   private strikeFacing: FacingDirection = 'east';
   private strikeImpact: { x: number; y: number; startedAt: number } | null = null;
+  private dashStartedAt = -1;
+  private dashFacing: FacingDirection = 'east';
   private outcomePanel: Phaser.GameObjects.Container | null = null;
   private feedbackExpiresAt = 0;
   private hitFlashExpiresAt = 0;
@@ -99,6 +102,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.hitFlashExpiresAt = 0;
     this.strikeStartedAt = -1;
     this.strikeImpact = null;
+    this.dashStartedAt = -1;
     this.outcomePanel = null;
     this.stick = { x: 0, y: 0, magnitude: 0 };
     const playerTexture = this.textures.get('rebirth-alpha-aze');
@@ -187,6 +191,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.swingGraphics = null;
       this.strikeStartedAt = -1;
       this.strikeImpact = null;
+      this.dashStartedAt = -1;
       this.outcomePanel = null;
       this.playerSprite = null;
       this.hud = null;
@@ -275,6 +280,13 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
         kind: 'attack', action: event.action,
         targetId: event.result.targetId, damage: event.result.damage,
       });
+      if (event.action === 'dash' && event.result.ok) {
+        const facing = this.session.encounter.player.facing;
+        this.dashFacing = Math.abs(facing.x) > Math.abs(facing.y)
+          ? facing.x >= 0 ? 'east' : 'west'
+          : facing.y >= 0 ? 'south' : 'north';
+        this.dashStartedAt = this.clockMs;
+      }
     }
     this.renderState(result.state);
     const objective = advanceAlleyObjective(
@@ -338,12 +350,16 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     const strike = this.strikeStartedAt >= 0
       ? attackVisualAt(this.strikeKind, this.clockMs - this.strikeStartedAt)
       : null;
+    const dash = this.dashStartedAt >= 0
+      ? dashVisualAt(this.clockMs - this.dashStartedAt)
+      : null;
     const facingVector = this.strikeFacing === 'east' ? { x: 1, y: 0 }
       : this.strikeFacing === 'west' ? { x: -1, y: 0 }
         : this.strikeFacing === 'south' ? { x: 0, y: 1 } : { x: 0, y: -1 };
     const push = strike ? 11 * strike.lunge : 0;
     this.playerSprite.setPosition(player.position.x + facingVector.x * push,
       player.position.y + facingVector.y * push);
+    this.playerSprite.setAlpha(dash ? 0.82 : 1);
     if (this.playerMetadata) {
       const facing = Math.abs(player.facing.x) > Math.abs(player.facing.y)
         ? player.facing.x >= 0 ? 'east' : 'west'
@@ -354,6 +370,25 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
         : animationFrame(this.playerMetadata, facing, motion, this.clockMs, 150));
     }
     this.swingGraphics?.clear();
+    if (dash && this.swingGraphics) {
+      const dashVector = this.dashFacing === 'east' ? { x: 1, y: 0 }
+        : this.dashFacing === 'west' ? { x: -1, y: 0 }
+          : this.dashFacing === 'south' ? { x: 0, y: 1 } : { x: 0, y: -1 };
+      const baseX = player.position.x - dashVector.x * 8;
+      const baseY = player.position.y - dashVector.y * 8 - 16;
+      for (let i = 1; i <= 3; i++) {
+        const amount = dash.trailLength * i / 3;
+        this.swingGraphics.fillStyle(0x6ce9e2, dash.alpha * (0.24 - i * 0.045))
+          .fillCircle(baseX - dashVector.x * amount, baseY - dashVector.y * amount, 7 - i);
+      }
+      this.swingGraphics.lineStyle(3, 0x8df9d7, dash.alpha * 0.65)
+        .lineBetween(
+          baseX - dashVector.x * dash.trailLength,
+          baseY - dashVector.y * dash.trailLength,
+          baseX + dashVector.x * 9,
+          baseY + dashVector.y * 9,
+        );
+    }
     if (strike && this.swingGraphics) {
       // Large layered crescent, leading blade, trailing afterimage and impact
       // burst. Drawn in world space using the original protagonist's animation.
