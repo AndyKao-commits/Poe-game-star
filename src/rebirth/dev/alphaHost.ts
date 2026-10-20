@@ -11,6 +11,7 @@ export interface AlphaHost {
   game: Phaser.Game;
   destroy(): void;
   retry(): void;
+  onVictory(callback: () => void): void;
 }
 
 /**
@@ -61,6 +62,7 @@ export function mountRebirthAlpha(
   return {
     game,
     retry() { scene.retry(); },
+    onVictory(callback) { scene.setVictoryHook(callback); },
     destroy() {
       scene.setLifecycleHooks(() => {}, () => {});
       detach();
