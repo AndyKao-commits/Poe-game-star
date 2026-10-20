@@ -33,3 +33,46 @@ describe('Chapter 1 B2 parking investigation', () => {
     expect(start.evidence).toHaveLength(0);
   });
 });
+
+describe('B2 optional electrical panel interaction', () => {
+  it('isolates only the amplifier test circuit and keeps ventilation on', () => {
+    let state = advanceGarage(initialGarageState(), 'listen');
+    expect(garageView(state).actions.map(a => a.id)).toContain('inspect-panel');
+    state = advanceGarage(state, 'inspect-panel');
+    expect(garageView(state).story).toContain('C：緊急排風');
+    state = advanceGarage(state, 'isolate-test');
+    expect(state.step).toBe('voices');
+    expect(state.evidence).toContain('已隔離非法增幅器測試迴路');
+    expect(garageView(state).actions.map(a => a.id)).not.toContain('inspect-panel');
+    expect(garageView(state).story).toContain('緊急排風仍正常運轉');
+    state = advanceGarage(state, 'follow-cable');
+    expect(garageView(state).story).toContain('警報逐漸減弱');
+    expect(advanceGarage(state, 'enter').complete).toBe(true);
+  });
+
+  it('intercepts unsafe ventilation cut without losing clues or locking progression', () => {
+    let state = advanceGarage(initialGarageState(), 'inspect-seal');
+    state = advanceGarage(state, 'listen');
+    state = advanceGarage(state, 'inspect-panel');
+    const evidenceBefore = state.evidence;
+    state = advanceGarage(state, 'cut-ventilation');
+    expect(state.step).toBe('power');
+    expect(state.evidence).toEqual(evidenceBefore);
+    expect(garageView(state).story).toContain('沒有切斷 C 迴路');
+    state = advanceGarage(state, 'isolate-test');
+    expect(state.warning).toBeUndefined();
+    expect(state.evidence).toHaveLength(2);
+    expect(() => advanceGarage(state, 'cut-ventilation')).toThrow('Invalid garage investigation action');
+  });
+
+  it('can leave the panel and finish the original direct route without optional evidence', () => {
+    let state = advanceGarage(initialGarageState(), 'listen');
+    state = advanceGarage(state, 'inspect-panel');
+    state = advanceGarage(state, 'leave-panel');
+    expect(state.evidence).toEqual([]);
+    state = advanceGarage(state, 'follow-cable');
+    expect(garageView(state).story).toContain('仍在供電');
+    expect(advanceGarage(state, 'enter').complete).toBe(true);
+    expect(initialGarageState()).toEqual({ step: 'entrance', evidence: [], complete: false });
+  });
+});

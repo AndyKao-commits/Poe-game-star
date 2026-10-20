@@ -520,3 +520,10 @@ All work stays on feat/rebirth-v1. No main merge, production deploy, legacy insp
 - Automated domain tests: `tests/unit/rebirth-parking-investigation.test.ts` (optional evidence, alternate route, invalid skips, replay reset).
 - Local sandbox validation: npm ci, TypeScript, Vitest, boundary guard, Vite production build PASS. Physical iPhone validation of new B2 panel NOT RUN. Browser CI subject to GitHub workflow completion.
 - Next: purpose-made original B2 parking tiles/props and navigable garage scene, then workshop entry and enemy archetypes; verify phone UI and game progression without placeholder art.
+
+### 2026-10-20 — B2 power distribution investigation interaction (cycle 6)
+- Added an optional, deterministic electrical-panel interaction to the B2 text-first investigation. Three labeled circuits (A lighting, B illegal amplifier test, C emergency ventilation) require choosing B to isolate illegal testing without interrupting ventilation. Unsafe C selection is intercepted in dialogue, never damages victims, and allows a safe retry; skipping the panel still preserves the existing route.
+- Files: `src/rebirth/dev/parkingInvestigation.ts`, `tests/unit/rebirth-parking-investigation.test.ts`. No new art or legacy assets; no physical B2 world scene is claimed.
+- Isolated sandbox at parent `f6812fe` with this change: npm ci PASS; TypeScript PASS; Vitest **237/237 PASS (46 files)**; release-boundary PASS; Vite build PASS. Large Phaser chunk advisory persists.
+- Browser CI for this commit and physical iPhone B2 interaction: NOT RUN at the time of commit preparation. Main and formal release gate remain untouched.
+- Next: browser UI verification for B2 action buttons, then original B2 art and navigable world map.
