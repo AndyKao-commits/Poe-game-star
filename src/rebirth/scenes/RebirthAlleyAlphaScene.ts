@@ -5,7 +5,8 @@ import { inspectAlleyClue } from '../dev/alleyClue';
 import { advanceAlleyObjective, ALLEY_EXIT, ALLEY_EXIT_RADIUS, type AlleyObjectivePhase } from '../dev/alleyObjective';
 import { RebirthAlleyEncounter, type AlleySnapshot } from '../combat/alleyEncounter';
 import { type StickVector } from '../input/touchControls';
-import { animationFrame, validateSpriteSheetMetadata, type SpriteSheetMetadata } from '../art/animationContract';
+import { animationFrame, validateSpriteSheetMetadata, type FacingDirection, type SpriteSheetMetadata } from '../art/animationContract';
+import { attackVisualAt, type AttackVisualKind } from '../dev/attackVisual';
 
 /**
  * Chapter 1 alley scene integration for the *future approved art build*.
@@ -32,6 +33,10 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private dialogueCaption: Phaser.GameObjects.Text | null = null;
   private dangerGraphics: Phaser.GameObjects.Graphics | null = null;
   private hitFlash: Phaser.GameObjects.Graphics | null = null;
+  private swingGraphics: Phaser.GameObjects.Graphics | null = null;
+  private strikeStartedAt = -1;
+  private strikeKind: AttackVisualKind = 'basic';
+  private strikeFacing: FacingDirection = 'east';
   private outcomePanel: Phaser.GameObjects.Container | null = null;
   private feedbackExpiresAt = 0;
   private hitFlashExpiresAt = 0;
@@ -83,6 +88,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.clueDiscovered = false;
     this.feedbackExpiresAt = 0;
     this.hitFlashExpiresAt = 0;
+    this.strikeStartedAt = -1;
     this.outcomePanel = null;
     this.stick = { x: 0, y: 0, magnitude: 0 };
     const playerTexture = this.textures.get('rebirth-alpha-aze');
@@ -131,6 +137,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       ).setOrigin(0.5, 0.83).setScale(2));
     }
     this.dangerGraphics = this.add.graphics().setDepth(85);
+    this.swingGraphics = this.add.graphics().setDepth(88);
     this.hitFlash = this.add.graphics().setScrollFactor(0).setDepth(120);
     this.playerBars = this.add.graphics().setScrollFactor(0).setDepth(99);
     this.exitIndicator = this.add.graphics().setDepth(70);
@@ -166,6 +173,8 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       this.clueNote = null;
       this.dangerGraphics = null;
       this.hitFlash = null;
+      this.swingGraphics = null;
+      this.strikeStartedAt = -1;
       this.outcomePanel = null;
       this.playerSprite = null;
       this.hud = null;
@@ -288,15 +297,53 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private renderState(state: AlleySnapshot): void {
     if (!this.playerSprite) return;
     const player = state.player;
+    // Consume authoritative hit events before choosing this frame's pose.
+    // The combat core continues to own all hit detection, cooldowns and damage.
+    for (const event of state.events) {
+      if (event.kind !== 'attack' || (event.action !== 'basic' && event.action !== 'punch')) continue;
+      this.strikeKind = event.action;
+      this.strikeStartedAt = this.clockMs;
+      const target = state.enemies.find(enemy => enemy.id === event.targetId);
+      const vector = target
+        ? { x: target.position.x - player.position.x, y: target.position.y - player.position.y }
+        : player.facing;
+      this.strikeFacing = Math.abs(vector.x) > Math.abs(vector.y)
+        ? vector.x >= 0 ? 'east' : 'west'
+        : vector.y >= 0 ? 'south' : 'north';
+    }
+    const strike = this.strikeStartedAt >= 0
+      ? attackVisualAt(this.strikeKind, this.clockMs - this.strikeStartedAt)
+      : null;
     this.playerSprite.setPosition(player.position.x, player.position.y);
     if (this.playerMetadata) {
       const facing = Math.abs(player.facing.x) > Math.abs(player.facing.y)
         ? player.facing.x >= 0 ? 'east' : 'west'
         : player.facing.y >= 0 ? 'south' : 'north';
       const motion = this.stick.magnitude > 0.16 ? 'walk' : 'idle';
-      this.playerSprite.setFrame(animationFrame(
-        this.playerMetadata, facing, motion, this.clockMs, 150,
-      ));
+      this.playerSprite.setFrame(strike
+        ? this.playerMetadata.animations[this.strikeFacing].attack[strike.frameIndex]
+        : animationFrame(this.playerMetadata, facing, motion, this.clockMs, 150));
+    }
+    this.swingGraphics?.clear();
+    if (strike && this.swingGraphics) {
+      // A geometric magic trail complements the ORIGINAL attack sprite frames;
+      // it is not a replacement actor or borrowed animation asset.
+      const angle = this.strikeFacing === 'east' ? 0
+        : this.strikeFacing === 'west' ? Math.PI
+          : this.strikeFacing === 'south' ? Math.PI / 2 : -Math.PI / 2;
+      const sweep = -0.95 + strike.progress * 1.9;
+      const radius = 33 * strike.strength;
+      const alpha = Math.max(0.12, 1 - strike.progress);
+      this.swingGraphics.lineStyle(9 * strike.strength, 0x4de4e5, alpha * 0.2);
+      this.swingGraphics.beginPath();
+      this.swingGraphics.arc(player.position.x, player.position.y - 15, radius,
+        angle + sweep - 0.48, angle + sweep + 0.48);
+      this.swingGraphics.strokePath();
+      this.swingGraphics.lineStyle(3.5 * strike.strength, 0xd7fff1, alpha);
+      this.swingGraphics.beginPath();
+      this.swingGraphics.arc(player.position.x, player.position.y - 15, radius,
+        angle + sweep - 0.48, angle + sweep + 0.48);
+      this.swingGraphics.strokePath();
     }
     this.dangerGraphics?.clear();
     for (const enemy of state.enemies) {
