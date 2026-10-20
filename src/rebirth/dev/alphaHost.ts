@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { alphaViewport } from './alphaViewport';
 export { REQUIRED_ALPHA_ART, verifyAlphaArt } from '../art/alphaReadiness';
 import { verifyAlphaArt } from '../art/alphaReadiness';
 import { RebirthAlleyAlphaScene } from '../scenes/RebirthAlleyAlphaScene';
@@ -38,19 +39,21 @@ export function mountRebirthAlpha(
   // subscribe before scene boot; receive hooks from the scene's create() and
   // shutdown() methods instead, including every restart.
   scene.setLifecycleHooks(attach, detach);
+  const bounds = container.getBoundingClientRect();
+  const viewport = alphaViewport(bounds.width || window.innerWidth, bounds.height || window.innerHeight);
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: container,
-    width: 480,
-    height: 270,
+    width: viewport.width,
+    height: viewport.height,
     backgroundColor: '#101a2a',
     pixelArt: true,
     roundPixels: true,
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
-      width: 480,
-      height: 270,
+      width: viewport.width,
+      height: viewport.height,
     },
     scene: [scene],
     render: { antialias: false },
