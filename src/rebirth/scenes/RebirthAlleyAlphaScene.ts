@@ -22,6 +22,7 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
   private enemySprites = new Map<string, Phaser.GameObjects.Sprite>();
   private enemyHealthBars = new Map<string, Phaser.GameObjects.Graphics>();
   private playerBars: Phaser.GameObjects.Graphics | null = null;
+  private hudLeft = 72;
   private exitIndicator: Phaser.GameObjects.Graphics | null = null;
   private objectiveLabel: Phaser.GameObjects.Text | null = null;
   private objectivePhase: AlleyObjectivePhase = 'fight';
@@ -103,6 +104,15 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     // The additional area uses real ENV-01 atlas tiles rather than empty bars.
     this.cameras.main.setScroll(-(this.scale.width - 480) / 2, 0);
     this.renderOriginalGround();
+    // World-space HUD is screen-fixed. Keep a minimum notch clearance even
+    // when iOS Safari reports zero safe-area inset in landscape browser tabs.
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-left:env(safe-area-inset-left,0px)';
+    document.body.append(probe);
+    const insetPx = parseFloat(getComputedStyle(probe).paddingLeft) || 0;
+    probe.remove();
+    const canvasPx = this.game.canvas.getBoundingClientRect().width || window.innerWidth;
+    this.hudLeft = Math.max(72, Math.ceil(insetPx * this.scale.width / canvasPx) + 16);
     const state = this.session.encounter.snapshot();
     this.playerSprite = this.add.sprite(
       state.player.position.x, state.player.position.y,
@@ -120,20 +130,20 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
     this.playerBars = this.add.graphics().setScrollFactor(0).setDepth(99);
     this.exitIndicator = this.add.graphics().setDepth(70);
     this.objectiveLabel = this.add.text(this.scale.width / 2, this.scale.height - 15, '', {
-      fontFamily: 'system-ui, sans-serif', fontSize: '12px', color: '#d7f7f1',
+      fontFamily: 'system-ui, sans-serif', fontSize: '14px', color: '#d7f7f1',
       backgroundColor: '#102333', padding: { x: 7, y: 3 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(105);
     this.clueNote = this.add.text(this.scale.width / 2, this.scale.height - 42, '', {
-      fontFamily: 'system-ui, sans-serif', fontSize: '11px', color: '#ffdf99',
+      fontFamily: 'system-ui, sans-serif', fontSize: '13px', color: '#ffdf99',
       backgroundColor: '#1b2c3c', padding: { x: 6, y: 3 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(106).setVisible(false);
     this.dialogueCaption = this.add.text(this.scale.width / 2, 72, '', {
-      fontFamily: 'system-ui, sans-serif', fontSize: '13px', color: '#fff3d9',
+      fontFamily: 'system-ui, sans-serif', fontSize: '15px', color: '#fff3d9',
       backgroundColor: '#172635', padding: { x: 8, y: 5 },
       wordWrap: { width: this.scale.width - 60 }, align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(110);
-    this.hud = this.add.text(12, 10, '', {
-      fontFamily: 'system-ui, sans-serif', fontSize: '13px',
+    this.hud = this.add.text(this.hudLeft, 9, '', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '14px',
       color: '#f0f7fa', backgroundColor: '#101a2a',
     }).setScrollFactor(0).setDepth(100);
     this.feedback = this.add.text(this.scale.width / 2, 22, '', {
@@ -311,19 +321,20 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
       if (bar) {
         bar.clear().setVisible(enemy.hp > 0);
         if (enemy.hp > 0) {
-          bar.fillStyle(0x06121c, 0.9).fillRoundedRect(enemy.position.x - 19, enemy.position.y - 48, 38, 6, 2);
+          bar.fillStyle(0x06121c, 0.9).fillRoundedRect(enemy.position.x - 22, enemy.position.y - 51, 44, 8, 2);
           bar.fillStyle(enemy.phase === 'telegraph' ? 0xffac56 : 0xd95168, 1)
-            .fillRect(enemy.position.x - 17, enemy.position.y - 46, 34 * enemy.hp / enemy.maxHp, 2);
+            .fillRect(enemy.position.x - 20, enemy.position.y - 49, 40 * enemy.hp / enemy.maxHp, 4);
         }
       }
     }
     this.playerBars?.clear();
     if (this.playerBars) {
-      this.playerBars.fillStyle(0x06121c, 0.95).fillRoundedRect(9, 33, 142, 27, 5);
-      this.playerBars.fillStyle(0x2a3946).fillRect(15, 39, 130, 6);
-      this.playerBars.fillStyle(0xe45d70).fillRect(15, 39, 130 * player.hp / player.maxHp, 6);
-      this.playerBars.fillStyle(0x2a3946).fillRect(15, 50, 130, 5);
-      this.playerBars.fillStyle(0x4db9e3).fillRect(15, 50, 130 * player.mp / player.maxMp, 5);
+      const x = this.hudLeft;
+      this.playerBars.fillStyle(0x06121c, 0.95).fillRoundedRect(x - 6, 32, 164, 34, 6);
+      this.playerBars.fillStyle(0x2a3946).fillRect(x, 39, 152, 8);
+      this.playerBars.fillStyle(0xe45d70).fillRect(x, 39, 152 * player.hp / player.maxHp, 8);
+      this.playerBars.fillStyle(0x2a3946).fillRect(x, 52, 152, 7);
+      this.playerBars.fillStyle(0x4db9e3).fillRect(x, 52, 152 * player.mp / player.maxMp, 7);
     }
     this.playerSprite.setDepth(Math.floor(player.position.y));
     this.hud?.setText(
@@ -347,23 +358,39 @@ export class RebirthAlleyAlphaScene extends Phaser.Scene {
 
   private showOutcome(cleared: boolean): void {
     if (this.outcomePanel) return;
-    const backdrop = this.add.graphics()
-      .fillStyle(0x07111d, 0.86).fillRoundedRect(-150, -57, 300, 114, 10)
-      .lineStyle(2, cleared ? 0x58d8be : 0xef7485, 0.95)
-      .strokeRoundedRect(-150, -57, 300, 114, 10);
+    const width = Math.min(386, this.scale.width - 48);
+    const half = width / 2;
+    const overlay = this.add.graphics()
+      .fillStyle(0x050d18, 0.64)
+      .fillRect(-this.scale.width / 2, -this.scale.height / 2,
+        this.scale.width, this.scale.height)
+      .fillStyle(0x0b1e30, 0.97)
+      .fillRoundedRect(-half, -77, width, 154, 14)
+      .lineStyle(2, cleared ? 0x58d8be : 0xef7485, 1)
+      .strokeRoundedRect(-half, -77, width, 154, 14);
+    const eyebrow = this.add.text(0, -56, cleared ? 'CHAPTER 01  ·  CLEAR' : 'CHAPTER 01  ·  RETRY', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '12px', color: '#93b9cb',
+      fontStyle: 'bold', letterSpacing: 2,
+    }).setOrigin(0.5);
     const title = this.add.text(0, -26, cleared ? '成功逃出巷弄' : '挑戰失敗', {
-      fontFamily: 'system-ui, sans-serif', fontSize: '22px',
+      fontFamily: 'system-ui, sans-serif', fontSize: '26px',
       color: cleared ? '#8df9d7' : '#ff8b9c', fontStyle: 'bold',
     }).setOrigin(0.5);
-    const detail = this.add.text(0, 14,
-      cleared ? '阿澤暫時安全了，下一段旅程即將開始' : '重新調整節奏，再試一次', {
-        fontFamily: 'system-ui, sans-serif', fontSize: '13px', color: '#e5f2f8',
+    const detail = this.add.text(0, 9,
+      cleared ? '阿澤暫時安全了，下一段旅程即將開始' : '調整戰鬥節奏，再挑戰一次', {
+        fontFamily: 'system-ui, sans-serif', fontSize: '14px', color: '#e5f2f8',
+        align: 'center', wordWrap: { width: width - 24 },
       }).setOrigin(0.5);
-    const instruction = this.add.text(0, 40, '點擊「重新挑戰」可再次進入', {
-      fontFamily: 'system-ui, sans-serif', fontSize: '11px', color: '#a8c1ce',
+    const clue = this.add.text(0, 36,
+      cleared ? (this.clueDiscovered ? '✓ 已記錄 B2 停車場線索' : '尚未發現巷弄中的隱藏線索') : '保留戰鬥經驗，再試一次', {
+        fontFamily: 'system-ui, sans-serif', fontSize: '13px',
+        color: this.clueDiscovered ? '#f5d28d' : '#9cb7c7',
+      }).setOrigin(0.5);
+    const instruction = this.add.text(0, 61, '點擊右上角「重新挑戰」再玩一次', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '13px', color: '#c4e7ec',
     }).setOrigin(0.5);
     this.outcomePanel = this.add.container(this.scale.width / 2, this.scale.height / 2,
-      [backdrop, title, detail, instruction]).setScrollFactor(0).setDepth(150);
+      [overlay, eyebrow, title, detail, clue, instruction]).setScrollFactor(0).setDepth(150);
   }
 
   private reasonText(reason?: string): string {
