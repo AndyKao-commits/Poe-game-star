@@ -110,6 +110,42 @@ describe('Rebirth DOM pointer adapter', () => {
     expect(f.changes).toHaveBeenCalledTimes(count);
     expect(f.controller.snapshot().pointerId).toBeNull();
   });
+  it('moves using touch events when Safari never emits pointerdown', () => {
+    const f = fixture();
+    const touch = (id: number, x: number, y: number) => ({
+      identifier: id, clientX: x, clientY: y,
+    });
+    const emitTouch = (type: string, changed: ReturnType<typeof touch>[], active: ReturnType<typeof touch>[]) => {
+      const event = new Event(type, { cancelable: true });
+      Object.defineProperties(event, {
+        changedTouches: { value: { item: (i: number) => changed[i], length: changed.length, [Symbol.iterator]: function* () { yield* changed; } } },
+        touches: { value: active },
+      });
+      f.element.dispatchEvent(event);
+    };
+    emitTouch('touchstart', [touch(7, 140, 160)], [touch(7, 140, 160)]);
+    emitTouch('touchmove', [touch(7, 196, 160)], [touch(7, 196, 160)]);
+    expect(f.controller.snapshot().stick.magnitude).toBeGreaterThan(0.9);
+    emitTouch('touchend', [touch(7, 196, 160)], []);
+    expect(f.controller.snapshot().pointerId).toBeNull();
+    expect(f.controller.snapshot().stick.magnitude).toBe(0);
+    f.adapter.dispose();
+  });
+
+  it('prefers pointer events when Safari emits both touch and pointer streams', () => {
+    const f = fixture();
+    const touch = { identifier: 3, clientX: 140, clientY: 160 };
+    const event = new Event('touchstart');
+    Object.defineProperty(event, 'changedTouches', { value: { item: () => touch } });
+    f.element.dispatchEvent(event);
+    f.element.dispatchEvent(pointer('pointerdown', 19, 140, 160));
+    f.element.dispatchEvent(pointer('pointermove', 19, 190, 160));
+    expect(f.controller.snapshot().pointerId).toBe(19);
+    expect(f.controller.snapshot().stick.magnitude).toBeGreaterThan(0);
+    f.element.dispatchEvent(pointer('pointerup', 19, 190, 160));
+    f.adapter.dispose();
+  });
+
   it('keeps moving when pointer capture is unavailable (iOS embedded browser fallback)', () => {
     const f = fixture();
     f.element.setPointerCapture = () => { throw new Error('capture unsupported'); };
